@@ -253,11 +253,13 @@ namespace numeric_lm_cut_heuristic {
             const vector<RelaxedOperator *> &triggered_operators =
             prop->precondition_of;
             for (RelaxedOperator *relaxed_op : triggered_operators) {
+                if (!relaxed_op->h_max_supporter || relaxed_op->h_max_supporter_cost < prop_cost) {
+                    relaxed_op->h_max_supporter = prop;
+                    relaxed_op->h_max_supporter_cost = prop_cost;
+                }
                 --relaxed_op->unsatisfied_preconditions;
                 assert(relaxed_op->unsatisfied_preconditions >= 0);
                 if (relaxed_op->unsatisfied_preconditions == 0) {
-                    relaxed_op->h_max_supporter = prop;
-                    relaxed_op->h_max_supporter_cost = prop_cost;
                     for (RelaxedProposition *effect : relaxed_op->effects) {
                         update_queue(prop,effect,relaxed_op);
                     }
