@@ -6,6 +6,7 @@
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <cmath>
 #include "../option_parser.h"
 #include "../plugin.h"
 #include "../task_tools.h"

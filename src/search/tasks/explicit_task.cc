@@ -4,6 +4,7 @@
 #include "../global_operator.h"
 
 #include <algorithm>
+#include <functional>
 #include <unordered_set>
 
 using namespace std;

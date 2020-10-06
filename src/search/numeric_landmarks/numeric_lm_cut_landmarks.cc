@@ -535,7 +535,7 @@ namespace numeric_lm_cut_heuristic {
             bool enqueued = enqueue_if_necessary(effect, m_cost.second);
             if (enqueued){
                 if (relaxed_op->found_new_max_supporter){
-                    update_precondition_of(relaxed_op->updated_max_supporter,relaxed_op,relaxed_op->updated_min_achiever_cost);
+                    relaxed_op->h_max_supporter_cost = relaxed_op->updated_min_achiever_cost;
                     relaxed_op->found_new_max_supporter = false;
                 }
             }
@@ -594,17 +594,6 @@ namespace numeric_lm_cut_heuristic {
         }
         return {1,target_cost};
     }
-    
-    void LandmarkCutLandmarks::update_precondition_of(RelaxedProposition *prop, RelaxedOperator *relaxed_op, ap_float cost){
-        // update this, it might be a very expensive operation because we look in a vector
-        relaxed_op->h_max_supporter = prop;
-        relaxed_op->h_max_supporter_cost = cost;
-        if (find(prop->precondition_of.begin(),prop->precondition_of.end(),relaxed_op) == prop->precondition_of.end()){
-            prop->precondition_of.push_back(relaxed_op);
-            //cout << "\t\t\tupdating preconditions of " << relaxed_op->name << " to " <<  prop->name << endl;
-        }
-    }
-
     
 }
 
