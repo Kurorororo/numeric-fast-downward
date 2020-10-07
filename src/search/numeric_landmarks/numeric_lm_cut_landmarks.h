@@ -33,21 +33,24 @@ namespace numeric_lm_cut_heuristic {
         int unsatisfied_preconditions;
         ap_float h_max_supporter_cost; // h_max_cost of h_max_supporter
         RelaxedProposition *h_max_supporter;
-        
-        ap_float updated_min_achiever_cost;
-        RelaxedProposition *updated_max_supporter;
-        bool found_new_max_supporter = false;
+        bool has_numeric_effect;
+        std::vector<ap_float> numeric_h_max_supporter_costs; // h_max_cost of h_max_supporter for numeric effects
+        std::vector<RelaxedProposition*> numeric_h_max_supporter;
+        std::vector<bool> found_new_max_supporter;
         
         string name;
         
         RelaxedOperator(std::vector<RelaxedProposition *> &&pre,
                         std::vector<RelaxedProposition *> &&eff,
                         std::vector<ap_float> &&num_eff,
-                        int op_id, ap_float base, string &n)
-        : original_op_id(op_id), preconditions(pre), effects(eff), numeric_effects(num_eff),  base_cost(base), name(n) {
+                        int op_id, ap_float base, string &n, bool has_numeric_effect)
+        : original_op_id(op_id), preconditions(pre), effects(eff), numeric_effects(num_eff),
+          base_cost(base), has_numeric_effect(has_numeric_effect), name(n), numeric_h_max_supporter_costs(num_eff.size()),
+          numeric_h_max_supporter(num_eff.size()), found_new_max_supporter(num_eff.size()) {
         }
         
         inline void update_h_max_supporter();
+        inline void update_numeric_h_max_supporter(int i);
     };
     
     struct RelaxedProposition {
@@ -80,7 +83,7 @@ namespace numeric_lm_cut_heuristic {
         void add_relaxed_operator(std::vector<RelaxedProposition *> &&precondition,
                                   std::vector<RelaxedProposition *> &&effects,
                                   std::vector<ap_float> &&numeric_effects,
-                                  int op_id, ap_float base_cost, string &n);
+                                  int op_id, ap_float base_cost, string &n, bool has_numeric_effect);
         RelaxedProposition *get_proposition(const FactProxy &fact);
         RelaxedProposition *get_proposition(const int &n_condition);
         void setup_exploration_queue();
@@ -105,7 +108,7 @@ namespace numeric_lm_cut_heuristic {
         void update_queue(RelaxedProposition *prec, RelaxedProposition *eff, RelaxedOperator *op);
         pair<ap_float,ap_float> calculate_numeric_achiever_cost(RelaxedProposition *prop, RelaxedProposition *effect, RelaxedOperator *relaxed_op, ap_float target_cost);
         ap_float calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op);
-        void update_precondition_of(RelaxedProposition *prop, RelaxedOperator *relaxed_op, ap_float cost);
+        void update_precondition_of(RelaxedProposition *prop, RelaxedOperator *relaxed_op);
         
         void mark_goal_plateau(RelaxedProposition *subgoal);
         void validate_h_max() const;
@@ -140,6 +143,14 @@ namespace numeric_lm_cut_heuristic {
             if (preconditions[i]->h_max_cost > h_max_supporter->h_max_cost)
                 h_max_supporter = preconditions[i];
         h_max_supporter_cost = h_max_supporter->h_max_cost;
+    }
+
+    inline void RelaxedOperator::update_numeric_h_max_supporter(int i) {
+        assert(!unsatisfied_preconditions);
+        for (size_t j = 0; j < preconditions.size(); ++j)
+            if (preconditions[j]->h_max_cost > numeric_h_max_supporter[i]->h_max_cost)
+                numeric_h_max_supporter[i] = preconditions[j];
+        numeric_h_max_supporter_costs[i] = numeric_h_max_supporter[i]->h_max_cost;
     }
 }
 

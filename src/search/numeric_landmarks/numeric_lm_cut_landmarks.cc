@@ -72,6 +72,8 @@ namespace numeric_lm_cut_heuristic {
                 goal_op_pre.push_back(get_proposition(goal));
             }
         }
+
+        bool has_numeric_effect = false;
         
         // add numeric goal conditions
         for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
@@ -81,6 +83,7 @@ namespace numeric_lm_cut_heuristic {
                 //LinearNumericCondition &num_values = numeric_task.get_condition(id_n_con);
                 goal_op_pre.push_back(get_proposition(id_n_con));
                 //cout << "Goal : " << num_values << " is a goal condition" << endl;
+                has_numeric_effect = true;
             }
         }
         
@@ -88,7 +91,7 @@ namespace numeric_lm_cut_heuristic {
         /* Use the invalid operator id -1 so accessing
          the artificial operator will generate an error. */
         string name_goal = "goal";
-        add_relaxed_operator(move(goal_op_pre), move(goal_op_eff), move(numeric_eff), -1, 0, name_goal);
+        add_relaxed_operator(move(goal_op_pre), move(goal_op_eff), move(numeric_eff), -1, 0, name_goal, has_numeric_effect);
         
         // Cross-reference relaxed operators.
         for (RelaxedOperator &op : relaxed_operators) {
@@ -130,6 +133,8 @@ namespace numeric_lm_cut_heuristic {
                 effects.push_back(get_proposition(eff.get_fact()));
             }
         }
+
+        bool has_numeric_effect = false;
         
         // add effects
         for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
@@ -142,20 +147,21 @@ namespace numeric_lm_cut_heuristic {
                 //cout << "adding effect of action " << op.get_name() << " " <<net << " on " << lnc << endl;
                 numeric_effect[i] = net;
                 effects.push_back(get_proposition(i));
+                has_numeric_effect = true;
             }
         }
         string name = op.get_name();
         add_relaxed_operator(
-                             move(precondition), move(effects), move(numeric_effect), op.get_id(), op.get_cost(), name);
+                             move(precondition), move(effects), move(numeric_effect), op.get_id(), op.get_cost(), name, has_numeric_effect);
     }
     
     void LandmarkCutLandmarks::add_relaxed_operator(
                                                     vector<RelaxedProposition *> &&precondition,
                                                     vector<RelaxedProposition *> &&effects,
                                                     vector<ap_float> &&numeric_effects,
-                                                    int op_id, ap_float base_cost, string &n) {
+                                                    int op_id, ap_float base_cost, string &n, bool has_numeric_effect) {
         RelaxedOperator relaxed_op(
-                                   move(precondition), move(effects), move(numeric_effects), op_id, base_cost,n);
+                                   move(precondition), move(effects), move(numeric_effects), op_id, base_cost,n, has_numeric_effect);
         if (relaxed_op.preconditions.empty())
             relaxed_op.preconditions.push_back(&artificial_precondition);
         relaxed_operators.push_back(relaxed_op);
@@ -199,9 +205,10 @@ namespace numeric_lm_cut_heuristic {
             op.unsatisfied_preconditions = op.preconditions.size();
             op.h_max_supporter = 0;
             op.h_max_supporter_cost = numeric_limits<int>::max();
-            op.found_new_max_supporter = false;
-            op.updated_max_supporter = 0;
-            op.updated_min_achiever_cost = 0;
+            std::fill(op.numeric_h_max_supporter_costs.begin(), op.numeric_h_max_supporter_costs.end(),
+                      numeric_limits<int>::max());
+            std::fill(op.numeric_h_max_supporter.begin(), op.numeric_h_max_supporter.end(), nullptr);
+            std::fill(op.found_new_max_supporter.begin(), op.found_new_max_supporter.end(), false);
         }
     }
     
@@ -322,15 +329,30 @@ namespace numeric_lm_cut_heuristic {
                             int target_cost = new_supp_cost + relaxed_op->cost;
                             for (RelaxedProposition *effect : relaxed_op->effects){
                                 //if(debug) cout << "\t  " << prop->name << " -> " << effect->name << " " << target_cost << endl;
-                                if (effect->is_numeric_condition){
-                                    pair<ap_float,ap_float> updated_cost = calculate_numeric_achiever_cost(relaxed_op->h_max_supporter,effect,relaxed_op,target_cost);
-                                    if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name << " : " << relaxed_op->name << " " <<  updated_cost.second << endl;
-                                    
-                                    enqueue_if_necessary(effect, updated_cost.second);
-                                }else{
+                                if (!effect->is_numeric_condition){
                                     if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << target_cost << endl;
                                     
                                     enqueue_if_necessary(effect, target_cost);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (relaxed_op->has_numeric_effect) {
+                    for (size_t i = 0; i < relaxed_op->numeric_h_max_supporter.size(); ++i) {
+                        if (relaxed_op->numeric_h_max_supporter[i] == prop) {
+                            int old_supp_cost = relaxed_op->numeric_h_max_supporter_costs[i];
+                            if (old_supp_cost > prop_cost) {
+                                relaxed_op->update_numeric_h_max_supporter(i);
+                                update_precondition_of(relaxed_op->numeric_h_max_supporter[i], relaxed_op);
+                                int new_supp_cost = relaxed_op->numeric_h_max_supporter_costs[i];
+                                if (new_supp_cost != old_supp_cost) {
+                                    int target_cost = new_supp_cost + relaxed_op->cost;
+                                    RelaxedProposition *effect = get_proposition(i);
+                                    pair<ap_float,ap_float> updated_cost = calculate_numeric_achiever_cost(relaxed_op->h_max_supporter,effect,relaxed_op,target_cost);
+                                    if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name << " : " << relaxed_op->name << " " <<  updated_cost.second << endl;
+
+                                    enqueue_if_necessary(effect, updated_cost.second);
                                 }
                             }
                         }
@@ -535,10 +557,10 @@ namespace numeric_lm_cut_heuristic {
         if (debug) cout << "\t" << prop->name << " -> " << effect->name <<  " : " << relaxed_op->name << ", cost : " << m_cost.second << ", m : " << m_cost.first << endl;
         if (!effect->explored){
             bool enqueued = enqueue_if_necessary(effect, m_cost.second);
-            if (enqueued){
-                if (relaxed_op->found_new_max_supporter){
-                    relaxed_op->h_max_supporter_cost = relaxed_op->updated_min_achiever_cost;
-                    relaxed_op->found_new_max_supporter = false;
+            if (enqueued && effect->is_numeric_condition) {
+                if (relaxed_op->found_new_max_supporter[effect->id_numeric_condition]) {
+                    update_precondition_of(relaxed_op->numeric_h_max_supporter[effect->id_numeric_condition], relaxed_op);
+                    relaxed_op->found_new_max_supporter[effect->id_numeric_condition] = false;
                 }
             }
             if (debug){
@@ -568,14 +590,12 @@ namespace numeric_lm_cut_heuristic {
             // min cost
             ap_float min_achiever =  numeric_limits<int>::max();
             RelaxedProposition *max_supporter;
-            RelaxedOperator * max_achiever;
             bool found = false;
             for (RelaxedOperator * achiever : effect->effect_of){
                 if (achiever->h_max_supporter){
                     if (achiever->h_max_supporter->h_max_cost < min_achiever){
                         min_achiever = achiever->h_max_supporter->h_max_cost;
                         max_supporter = achiever->h_max_supporter;
-                        max_achiever = achiever;
                         found = true;
                     }
                     //break;
@@ -585,10 +605,10 @@ namespace numeric_lm_cut_heuristic {
             if (relaxed_op->numeric_effects[id_effect] > 0 && numeric_initial_state[id_effect] > 0){
                 ap_float m = calculate_numeric_times(effect,relaxed_op);
                 ap_float local_target_cost = min_achiever + m * relaxed_op->cost;
-                if (found){
-                    relaxed_op->found_new_max_supporter = true;
-                    relaxed_op->updated_max_supporter = max_supporter;
-                    relaxed_op->updated_min_achiever_cost = min_achiever;
+                if (found) {
+                    relaxed_op->numeric_h_max_supporter_costs[id_effect] = min_achiever;
+                    relaxed_op->numeric_h_max_supporter[id_effect] = max_supporter;
+                    relaxed_op->found_new_max_supporter[id_effect] = true;
                 }
                 // add minimum cost of the achiever of this action
                 return {m,local_target_cost};
@@ -596,6 +616,13 @@ namespace numeric_lm_cut_heuristic {
         }
         return {1,target_cost};
     }
-    
+
+    void LandmarkCutLandmarks::update_precondition_of(RelaxedProposition *prop, RelaxedOperator *relaxed_op) {
+        // update this, it might be a very expensive operation because we look in a vector
+        if (prop && find(prop->precondition_of.begin(), prop->precondition_of.end(), relaxed_op) == prop->precondition_of.end()) {
+            prop->precondition_of.push_back(relaxed_op);
+            // cout << "\t\t\tupdating preconditions of " << relaxed_op->name << " to " <<  prop->name << endl;
+        }
+    }
 }
 
