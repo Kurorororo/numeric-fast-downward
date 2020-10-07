@@ -35,7 +35,7 @@ namespace numeric_lm_cut_heuristic {
         RelaxedProposition *h_max_supporter;
         bool has_numeric_effect;
         std::vector<ap_float> numeric_h_max_supporter_costs; // h_max_cost of h_max_supporter for numeric effects
-        std::vector<RelaxedProposition*> numeric_h_max_supporter;
+        std::vector<RelaxedProposition*> numeric_h_max_supporters;
         std::vector<bool> found_new_max_supporter;
         
         string name;
@@ -45,8 +45,8 @@ namespace numeric_lm_cut_heuristic {
                         std::vector<ap_float> &&num_eff,
                         int op_id, ap_float base, string &n, bool has_numeric_effect)
         : original_op_id(op_id), preconditions(pre), effects(eff), numeric_effects(num_eff),
-          base_cost(base), has_numeric_effect(has_numeric_effect), name(n), numeric_h_max_supporter_costs(num_eff.size()),
-          numeric_h_max_supporter(num_eff.size()), found_new_max_supporter(num_eff.size()) {
+          base_cost(base), has_numeric_effect(has_numeric_effect), numeric_h_max_supporter_costs(num_eff.size()), 
+          numeric_h_max_supporters(num_eff.size()), found_new_max_supporter(num_eff.size()), name(n) {
         }
         
         inline void update_h_max_supporter();
@@ -148,9 +148,9 @@ namespace numeric_lm_cut_heuristic {
     inline void RelaxedOperator::update_numeric_h_max_supporter(int i) {
         assert(!unsatisfied_preconditions);
         for (size_t j = 0; j < preconditions.size(); ++j)
-            if (preconditions[j]->h_max_cost > numeric_h_max_supporter[i]->h_max_cost)
-                numeric_h_max_supporter[i] = preconditions[j];
-        numeric_h_max_supporter_costs[i] = numeric_h_max_supporter[i]->h_max_cost;
+            if (preconditions[j]->h_max_cost > numeric_h_max_supporters[i]->h_max_cost)
+                numeric_h_max_supporters[i] = preconditions[j];
+        numeric_h_max_supporter_costs[i] = numeric_h_max_supporters[i]->h_max_cost;
     }
 }
 

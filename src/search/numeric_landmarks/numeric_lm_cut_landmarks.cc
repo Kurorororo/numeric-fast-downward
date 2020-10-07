@@ -207,7 +207,7 @@ namespace numeric_lm_cut_heuristic {
             op.h_max_supporter_cost = numeric_limits<int>::max();
             std::fill(op.numeric_h_max_supporter_costs.begin(), op.numeric_h_max_supporter_costs.end(),
                       numeric_limits<int>::max());
-            std::fill(op.numeric_h_max_supporter.begin(), op.numeric_h_max_supporter.end(), nullptr);
+            std::fill(op.numeric_h_max_supporters.begin(), op.numeric_h_max_supporters.end(), nullptr);
             std::fill(op.found_new_max_supporter.begin(), op.found_new_max_supporter.end(), false);
         }
     }
@@ -339,12 +339,12 @@ namespace numeric_lm_cut_heuristic {
                     }
                 }
                 if (relaxed_op->has_numeric_effect) {
-                    for (size_t i = 0; i < relaxed_op->numeric_h_max_supporter.size(); ++i) {
-                        if (relaxed_op->numeric_h_max_supporter[i] == prop) {
+                    for (size_t i = 0; i < relaxed_op->numeric_h_max_supporters.size(); ++i) {
+                        if (relaxed_op->numeric_h_max_supporters[i] == prop) {
                             int old_supp_cost = relaxed_op->numeric_h_max_supporter_costs[i];
                             if (old_supp_cost > prop_cost) {
                                 relaxed_op->update_numeric_h_max_supporter(i);
-                                update_precondition_of(relaxed_op->numeric_h_max_supporter[i], relaxed_op);
+                                update_precondition_of(relaxed_op->numeric_h_max_supporters[i], relaxed_op);
                                 int new_supp_cost = relaxed_op->numeric_h_max_supporter_costs[i];
                                 if (new_supp_cost != old_supp_cost) {
                                     int target_cost = new_supp_cost + relaxed_op->cost;
@@ -559,7 +559,7 @@ namespace numeric_lm_cut_heuristic {
             bool enqueued = enqueue_if_necessary(effect, m_cost.second);
             if (enqueued && effect->is_numeric_condition) {
                 if (relaxed_op->found_new_max_supporter[effect->id_numeric_condition]) {
-                    update_precondition_of(relaxed_op->numeric_h_max_supporter[effect->id_numeric_condition], relaxed_op);
+                    update_precondition_of(relaxed_op->numeric_h_max_supporters[effect->id_numeric_condition], relaxed_op);
                     relaxed_op->found_new_max_supporter[effect->id_numeric_condition] = false;
                 }
             }
@@ -607,7 +607,7 @@ namespace numeric_lm_cut_heuristic {
                 ap_float local_target_cost = min_achiever + m * relaxed_op->cost;
                 if (found) {
                     relaxed_op->numeric_h_max_supporter_costs[id_effect] = min_achiever;
-                    relaxed_op->numeric_h_max_supporter[id_effect] = max_supporter;
+                    relaxed_op->numeric_h_max_supporters[id_effect] = max_supporter;
                     relaxed_op->found_new_max_supporter[id_effect] = true;
                 }
                 // add minimum cost of the achiever of this action
