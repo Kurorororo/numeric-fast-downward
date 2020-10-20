@@ -1,6 +1,7 @@
 #ifndef TASKS_TRANSITION_NORMAL_FORM_TASK_H
 #define TASKS_TRANSITION_NORMAL_FORM_TASK_H
 
+#include <algorithm>
 #include <memory>
 #include "explicit_task.h"
 #include "../task_proxy.h"
