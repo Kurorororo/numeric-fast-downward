@@ -48,7 +48,6 @@ namespace numeric_lm_cut_heuristic {
     
     struct RelaxedProposition {
         std::vector<RelaxedOperator *> precondition_of;
-        std::vector<RelaxedOperator *> static_precondition_of;
         std::vector<RelaxedOperator *> effect_of;
         
         PropositionStatus status;

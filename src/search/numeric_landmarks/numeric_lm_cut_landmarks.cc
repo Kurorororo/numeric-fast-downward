@@ -271,12 +271,8 @@ namespace numeric_lm_cut_heuristic {
         priority_queue.add_virtual_pushes(num_propositions);
         for (pair<ap_float,RelaxedOperator *> m_relaxed_op : cut) {
             RelaxedOperator* relaxed_op = m_relaxed_op.second;
-            for (RelaxedProposition *effect : relaxed_op->effects){
-                ap_float m = calculate_numeric_times(effect, relaxed_op);
-                ap_float cost = relaxed_op->h_max_supporter_cost + relaxed_op->cost;
-                if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name << " " << m << endl;
-                enqueue_if_necessary(effect, cost);
-            }
+            for (RelaxedProposition *effect : relaxed_op->effects)
+                update_queue(relaxed_op->h_max_supporter, effect, relaxed_op);
         }
         while (!priority_queue.empty()) {
             pair<int, RelaxedProposition *> top_pair = priority_queue.pop();
