@@ -77,10 +77,47 @@ Here is a list of the current additions:
   
 ## Build 
 
-Follow the instructions of the original [Fast Downward](http://www.fast-downward.org/ObtainingAndRunningFastDownward) 
+### Install LPSolver
 
-Quick summary:
+#### CPLEX
+Install CPLEX.
+IBM provides a free academic lincense: https://www.ibm.com/academic/home
+
+Suppose that CPLEX is installed in `/opt/ibm/ILOG/CPLEX_Studio1210`.
+Then, export the following environment variables.
+
+```bash
+export DOWNWARD_CPLEX_ROOT=/opt/ibm/ILOG/CPLEX_Studio1210/cplex
+export DOWNWARD_CONCERT_ROOT=/opt/ibm/ILOG/CPLEX_Studio1210/concert
 ```
+
+#### OSI
+Instal open solver interface.
+
+```bash
+export DOWNWARD_COIN_ROOT=/path/to/osi
+sudo apt install zlib1g-dev
+wget http://www.coin-or.org/download/source/Osi/Osi-0.107.9.tgz
+cd Osi-0.107.9
+./configure CC="gcc"  CFLAGS="-pthread -Wno-long-long" \
+            CXX="g++" CXXFLAGS="-pthread -Wno-long-long" \
+            LDFLAGS="-L$DOWNWARD_CPLEX_ROOT/lib/x86-64_linux/static_pic" \
+            --without-lapack --enable-static=no \
+            --prefix="$DOWNWARD_COIN_ROOT" \
+            --disable-bzlib \
+            --with-cplex-incdir=$DOWNWARD_CPLEX_ROOT/include/ilcplex \
+            --with-cplex-lib="-lcplex -lm -ldl"
+
+make
+sudo make install
+cd ..
+rm -rf Osi-0.107.9
+rm Osi-0.107.9.tgz
+```
+
+#### build
+
+```bash
 cd numerical-fast-downward
 ./build.py release64
 ```
