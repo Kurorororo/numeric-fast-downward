@@ -184,7 +184,7 @@ namespace operator_counting {
         for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id){
             for (int pre : numeric_task.get_action_num_list(op_id)){
                 for (int i : numeric_task.get_numeric_conditions_id(pre)){
-                    lp::LPConstraint constraint(numeric_task.get_epsilon(i), infinity);
+                    lp::LPConstraint constraint(0, infinity);
                     constraint.insert(indices_u_c[i], 1.);
                     constraint.insert(indices_u_a[op_id], -1.);
                     if (!constraint.empty()) {
@@ -764,8 +764,16 @@ namespace operator_counting {
                     lower_bound = 1;
                 }
                 int fact_id = numeric_task.get_proposition(var, value);
-                lp_solver.set_constraint_lower_bound(index_constraints[var][value], lower_bound);
-                lp_solver.set_constraint_upper_bound(index_constraints[var][value], lower_bound);
+
+                if (lower_bound == 1) {
+                    // if the upper bound is lower than the lower bound, OSI raises error
+                    lp_solver.set_constraint_upper_bound(index_constraints[var][value], lower_bound);
+                    lp_solver.set_constraint_lower_bound(index_constraints[var][value], lower_bound);
+                } else {
+                    lp_solver.set_constraint_lower_bound(index_constraints[var][value], lower_bound);
+                    lp_solver.set_constraint_upper_bound(index_constraints[var][value], lower_bound);
+                }
+
                 if (landmark_constraints){
                     lp_solver.set_variable_lower_bound(indices_u_p[fact_id], 0);
                     lp_solver.set_variable_upper_bound(indices_u_p[fact_id], 1);
