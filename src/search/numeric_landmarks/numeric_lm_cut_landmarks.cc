@@ -16,8 +16,9 @@ double precision = 0.001;
 
 namespace numeric_lm_cut_heuristic {
     // construction and destruction
-    LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy) {
+    LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ignore_numeric) {
         numeric_task = NumericTaskProxy(task_proxy,false);
+        ignore_numeric_conditions = ignore_numeric;
         //verify_no_axioms(task_proxy);
         verify_no_conditional_effects(task_proxy);
         // Build propositions.
@@ -38,20 +39,22 @@ namespace numeric_lm_cut_heuristic {
             propositions[var_id].push_back(prop);
             ++num_propositions;
         }
-        
-        // add numeric conditions
-        for (int i = 0; i < numeric_task.get_n_numeric_conditions(); i++){
-            //LinearNumericCondition &num_values = numeric_task.get_condition(i);
-            int var_id = n_var + i;
-            RelaxedProposition prop;
-            prop.is_numeric_condition = true;
-            prop.id_numeric_condition = i;
-            stringstream name;
-            name << "numeric (" << numeric_task.get_condition(i) << ")";
-            prop.name =  name.str();
-            propositions[var_id].push_back(prop);
-            ++num_propositions;
-            //cout << "adding numeric precondition " << num_values << " : " << num_propositions << " " << var_id << endl;
+
+        if (!ignore_numeric_conditions) {
+            // add numeric conditions
+            for (int i = 0; i < numeric_task.get_n_numeric_conditions(); i++){
+                //LinearNumericCondition &num_values = numeric_task.get_condition(i);
+                int var_id = n_var + i;
+                RelaxedProposition prop;
+                prop.is_numeric_condition = true;
+                prop.id_numeric_condition = i;
+                stringstream name;
+                name << "numeric (" << numeric_task.get_condition(i) << ")";
+                prop.name =  name.str();
+                propositions[var_id].push_back(prop);
+                ++num_propositions;
+                //cout << "adding numeric precondition " << num_values << " : " << num_propositions << " " << var_id << endl;
+            }
         }
         
         // Build relaxed operators for operators and axioms.
@@ -73,15 +76,16 @@ namespace numeric_lm_cut_heuristic {
             }
         }
 
-        
-        // add numeric goal conditions
-        for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-            list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
-            if (numeric_goals.empty()) continue; // this is not a numeric goal
-            for (int id_n_con : numeric_goals){
-                //LinearNumericCondition &num_values = numeric_task.get_condition(id_n_con);
-                goal_op_pre.push_back(get_proposition(id_n_con));
-                //cout << "Goal : " << num_values << " is a goal condition" << endl;
+        if (!ignore_numeric_conditions) {
+            // add numeric goal conditions
+            for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
+                list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
+                if (numeric_goals.empty()) continue; // this is not a numeric goal
+                for (int id_n_con : numeric_goals){
+                    //LinearNumericCondition &num_values = numeric_task.get_condition(id_n_con);
+                    goal_op_pre.push_back(get_proposition(id_n_con));
+                    //cout << "Goal : " << num_values << " is a goal condition" << endl;
+                }
             }
         }
         
@@ -114,13 +118,15 @@ namespace numeric_lm_cut_heuristic {
                 precondition.push_back(get_proposition(pre));
             }
         }
-        
-        // numeric precondition
-        for (int pre : numeric_task.get_action_num_list(op.get_id())){
-            for (int i : numeric_task.get_numeric_conditions_id(pre)){
-                precondition.push_back(get_proposition(i));
-                LinearNumericCondition &num_values = numeric_task.get_condition(i);
-                //cout << "adding precondition " << num_values << " to action " << op.get_name() << endl;
+
+        if (!ignore_numeric_conditions) {
+            // numeric precondition
+            for (int pre : numeric_task.get_action_num_list(op.get_id())){
+                for (int i : numeric_task.get_numeric_conditions_id(pre)){
+                    precondition.push_back(get_proposition(i));
+                    LinearNumericCondition &num_values = numeric_task.get_condition(i);
+                    //cout << "adding precondition " << num_values << " to action " << op.get_name() << endl;
+                }
             }
         }
         
@@ -131,19 +137,22 @@ namespace numeric_lm_cut_heuristic {
             }
         }
 
-        // add effects
-        for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
-            ap_float net = 0;
-            LinearNumericCondition& lnc = numeric_task.get_condition(i);
-            for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
-                net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op.get_id())[n_id];
-            }
-            if (net > 0) {
-                //cout << "adding effect of action " << op.get_name() << " " <<net << " on " << lnc << endl;
-                numeric_effect[i] = net;
-                effects.push_back(get_proposition(i));
+        if (!ignore_numeric_conditions) {
+            // add effects
+            for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
+                ap_float net = 0;
+                LinearNumericCondition& lnc = numeric_task.get_condition(i);
+                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
+                    net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op.get_id())[n_id];
+                }
+                if (net > 0) {
+                    //cout << "adding effect of action " << op.get_name() << " " <<net << " on " << lnc << endl;
+                    numeric_effect[i] = net;
+                    effects.push_back(get_proposition(i));
+                }
             }
         }
+
         string name = op.get_name();
         add_relaxed_operator(
                              move(precondition), move(effects), move(numeric_effect), op.get_id(), op.get_cost(), name);
@@ -208,22 +217,24 @@ namespace numeric_lm_cut_heuristic {
         }
         numeric_initial_state.assign(numeric_task.get_n_conditions(),0);
         
-        // numeric_conditions
-        for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
-            LinearNumericCondition& lnc = numeric_task.get_condition(i);
-            ap_float net = lnc.constant - numeric_task.get_epsilon(i);
-            for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
-                int id_num = numeric_task.get_numeric_variable(n_id).id_abstract_task;
-                net += lnc.coefficients[n_id]*state.nval(id_num);
-                //cout << n_id << " " << state.nval(n_id) << " " << lnc.coefficients[n_id] << endl;
-            }
-            //cout << lnc << " evaluated in the initial state " << net << endl;
-            numeric_initial_state[i] = -net;
-            if (net > -precision) {
-                if (debug) cout << lnc << " is satisfied in initial state " << net << endl;
-                enqueue_if_necessary(get_proposition(i), 0);
-            }else{
-                if (debug) cout << lnc << " not satisfied " << net << endl;
+        if (!ignore_numeric_conditions) {
+            // numeric_conditions
+            for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
+                LinearNumericCondition& lnc = numeric_task.get_condition(i);
+                ap_float net = lnc.constant - numeric_task.get_epsilon(i);
+                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
+                    int id_num = numeric_task.get_numeric_variable(n_id).id_abstract_task;
+                    net += lnc.coefficients[n_id]*state.nval(id_num);
+                    //cout << n_id << " " << state.nval(n_id) << " " << lnc.coefficients[n_id] << endl;
+                }
+                //cout << lnc << " evaluated in the initial state " << net << endl;
+                numeric_initial_state[i] = -net;
+                if (net > -precision) {
+                    if (debug) cout << lnc << " is satisfied in initial state " << net << endl;
+                    enqueue_if_necessary(get_proposition(i), 0);
+                }else{
+                    if (debug) cout << lnc << " not satisfied " << net << endl;
+                }
             }
         }
         
@@ -324,14 +335,15 @@ namespace numeric_lm_cut_heuristic {
              if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
             second_exploration_queue.push_back(init_prop);
         }
-        
-        for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
-            
-            if (numeric_initial_state[i] <= 0) {
-                RelaxedProposition *init_prop = get_proposition(i);
-                init_prop->status = BEFORE_GOAL_ZONE;
-                 if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
-                second_exploration_queue.push_back(init_prop);
+
+        if (!ignore_numeric_conditions) { 
+            for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i) {
+                if (numeric_initial_state[i] <= 0) {
+                    RelaxedProposition *init_prop = get_proposition(i);
+                    init_prop->status = BEFORE_GOAL_ZONE;
+                     if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
+                    second_exploration_queue.push_back(init_prop);
+                }
             }
         }
         

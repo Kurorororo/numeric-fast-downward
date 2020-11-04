@@ -66,6 +66,7 @@ namespace numeric_lm_cut_heuristic {
         RelaxedProposition artificial_goal;
         int num_propositions;
         int n_var;
+        bool ignore_numeric_conditions;
         std::vector<ap_float> numeric_initial_state;
         
         AdaptiveQueue<RelaxedProposition *> priority_queue;
@@ -107,7 +108,7 @@ namespace numeric_lm_cut_heuristic {
         using CostCallback = std::function<void (ap_float)>;
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
-        LandmarkCutLandmarks(const TaskProxy &task_proxy);
+        LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ignore_numeric = false);
         virtual ~LandmarkCutLandmarks();
         
         /*
