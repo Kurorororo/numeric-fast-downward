@@ -1,7 +1,7 @@
 #ifndef GENERALIZED_SUBGOALING_HEURISTIC_H
 #define GENERALIZED_SUBGOALING_HEURISTIC_H
 
-#include "heuristic.h"
+#include "../heuristic.h"
 #include "../lp/lp_solver.h"
 #include "../numeric_operator_counting/numeric_helper.h"
 #include "../priority_queue.h"
@@ -27,7 +27,7 @@ protected:
     vector<unordered_map<int, int>> action_to_variable_index;
     vector<unordered_map<int, int>> conjnct_to_constraint_index;
     unordered_map<vector<int>, int> preconditions_to_id;
-    vector<int, int> action_to_preconditions_id;
+    vector<int> action_to_preconditions_id;
     vector<set<int>> condition_to_action; // index condition, value set of action with that preconditions
     vector<double> dist;
     vector<bool> open;
@@ -46,7 +46,7 @@ protected:
     void update_cost_if_necessary(int cond, HeapQueue<int> &q, double current_cost);
     void generate_possible_achievers();
     void generate_preconditions();
-    void generate_linear_programs();
+    void generate_linear_programs(lp::LPSolverType solver_type, lp::LPConstraintType constraint_type);
 public:
 	GeneralizedSubgoalingHeuristic(const options::Options &options);
 	~GeneralizedSubgoalingHeuristic();
