@@ -98,7 +98,7 @@ namespace generalized_subgoaling_heuristic {
             }
         }
 
-        vector<int> temp_conditions;
+        set<int> temp_conditions;
         
         // explore
         while(!q.empty()){
@@ -116,7 +116,6 @@ namespace generalized_subgoaling_heuristic {
                 } else if (first < dist[cn]) {
                     open[cn] = true;
                     q.push(top_pair.first, cn);
-                    first = -1.0;
                     break;
                 }
 
@@ -129,8 +128,8 @@ namespace generalized_subgoaling_heuristic {
                 set<int> &actions = condition_to_action[cn];
                 for (auto gr : actions) {
                     active_actions[gr] = true;
-                    for (auto c : possible_preconditions_achievers[gr])
-                        temp_conditions.push_back(c);
+                    temp_conditions.insert(possible_preconditions_achievers[gr].begin(),
+                                           possible_preconditions_achievers[gr].end());
                 }
             }
 
@@ -138,16 +137,18 @@ namespace generalized_subgoaling_heuristic {
                 if (!closed[c]) {
                     update_constraints(c, state);
                     lps[c]->solve();
-                    double result = lps[c]->get_infinity();
                     if (lps[c]->has_optimal_solution()) {
                         double epsilon = 0.01;
-                        double objective_value = lps[c]->get_objective_value();
-                        result = ceil(objective_value - epsilon);
-                        update_cost_if_necessary(c, q, result);
+                        double result = lps[c]->get_objective_value();
+                        double current_cost = result + first;
+                        update_cost_if_necessary(c, q, current_cost);
                     }
                 }
             }
         }
+
+        if (dist[preconditions_to_id.size() - 1] == max_float)
+            return DEAD_END;
 
         return dist[preconditions_to_id.size() - 1];
     }
@@ -158,10 +159,11 @@ namespace generalized_subgoaling_heuristic {
         for (auto &entry : conjunct_to_constraint_index[preconditions_id]) {
             if (entry.first < n_propositons) {
                 auto var_val = numeric_task.get_var_val(entry.first);
-                if (state[var_val.first].get_value() == var_val.second)
+                if (state[var_val.first].get_value() == var_val.second) {
                     lp->set_constraint_lower_bound(entry.second, 0);
-                else
+                } else {
                     lp->set_constraint_lower_bound(entry.second, 1);
+                }
             } else {
                 int c = entry.first - n_propositons;
                 LinearNumericCondition &num_values = numeric_task.get_condition(c);
@@ -198,12 +200,10 @@ namespace generalized_subgoaling_heuristic {
     }
     
     void GeneralizedSubgoalingHeuristic::generate_preconditions(){
-        cout << "generate preconditions" << endl;
         size_t n_propositions = numeric_task.get_n_propositions();
         action_to_preconditions_id.assign(task_proxy.get_operators().size()+1,-1);
         int num_preconditions = 0;
         for (size_t op_id = 0; op_id < task_proxy.get_operators().size(); ++op_id){
-            cout << "op_id=" << op_id << endl;
             vector<int> preconditions;
             for (int c : numeric_task.get_action_pre_list(op_id))
                 preconditions.push_back(c);
@@ -213,18 +213,12 @@ namespace generalized_subgoaling_heuristic {
             }
             sort(preconditions.begin(), preconditions.end());
 
-            cout << "preconditions" << endl;
-            for (int c : preconditions)
-                cout << " " << c;
-            cout << endl;
-
             if (preconditions_to_id.find(preconditions) == preconditions_to_id.end()){
                 preconditions_to_id[preconditions] = num_preconditions++;
                 condition_to_action.push_back(set<int>());
             }
 
             int preconditions_id = preconditions_to_id[preconditions];
-            cout << "preconditions id =" << preconditions_id << endl;
             condition_to_action[preconditions_id].insert(op_id);
             action_to_preconditions_id[op_id] = preconditions_id;
         }
@@ -244,7 +238,6 @@ namespace generalized_subgoaling_heuristic {
             for (int c : goals)
                 goal_preconditions.push_back(c+n_propositions);
         }
-        cout << "#preconditions=" << num_preconditions << endl;
         sort(goal_preconditions.begin(), goal_preconditions.end());
         preconditions_to_id[goal_preconditions] = num_preconditions;
         condition_to_action.push_back(set<int>());
@@ -253,7 +246,6 @@ namespace generalized_subgoaling_heuristic {
     }
     
     void GeneralizedSubgoalingHeuristic::generate_possible_achievers(){
-        cout << "generate possible achievers" << endl;
         size_t n_propositions = numeric_task.get_n_propositions();
         effect_of.assign(n_propositions,set<int>());
         auto ops = task_proxy.get_operators();
@@ -314,7 +306,6 @@ namespace generalized_subgoaling_heuristic {
     }
 
     void GeneralizedSubgoalingHeuristic::generate_linear_programs(lp::LPSolverType solver_type, lp::LPConstraintType constraint_type) {
-        cout << "generate lp" << endl;
         lps.assign(preconditions_to_id.size(),nullptr);
         action_to_variable_index.assign(preconditions_to_id.size(),unordered_map<int, int>());
         conjunct_to_constraint_index.assign(preconditions_to_id.size(),unordered_map<int, int>());
@@ -353,7 +344,6 @@ namespace generalized_subgoaling_heuristic {
                 constraints.push_back(constraint);
             }
             lp->load_problem(lp::LPObjectiveSense::MINIMIZE, variables, constraints);
-            cout << "LP for preconditions " << c << endl;
             lps[c] = lp;
         }
     }
