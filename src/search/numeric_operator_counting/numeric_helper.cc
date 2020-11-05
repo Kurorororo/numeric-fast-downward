@@ -298,33 +298,19 @@ namespace numeric_helper {
             
             if (redundant_constraints){
                 set<int> original_list = actions[op_id].num_list;
-                for (size_t i = 0; i < original_list.size(); ++i){
-                    std::set<int>::iterator it_i = original_list.begin();
-                    std::advance(it_i, i);
-                    list<int> list_i = numeric_conditions_id[*it_i];
-                    list<int>::iterator nc_it_i = list_i.begin();
-                    list<int>::iterator nc_end_i = list_i.end();
-                    for (;nc_it_i != nc_end_i; ++nc_it_i){
-                        int x = *nc_it_i;//*numeric_conditions_id[*it_i].begin();
-                        for (size_t j = i + 1; j < original_list.size(); ++j){
-                            // add the two
-                            std::set<int>::iterator it_j = original_list.begin();
-                            std::advance(it_j, j);
-                            list<int> list_j = numeric_conditions_id[*it_j];
-                            list<int>::iterator nc_it_j = list_j.begin();
-                            list<int>::iterator nc_end_j = list_j.end();
-                            for (;nc_it_j != nc_end_j; ++nc_it_j){
-                                int y = *nc_it_j;
-                                LinearNumericCondition redundant = numeric_conditions[x] + numeric_conditions[y];
-                                if (redundant.empty()) continue;
-                                numeric_conditions.push_back(redundant);
-                                actions[op_id].num_list.insert(numeric_conditions_id.size());
-                                numeric_conditions_id.push_back(list<int>(1,n_conditions));
-                                fact_to_axiom_map.push_back(-2);
-                                n_conditions++;
-                                achievers.push_back(set<int>());
-                                proposition_names.push_back("");
-                            }
+                for (auto x : original_list){
+                    for (auto y : original_list){
+                        if (x < y) {
+                            LinearNumericCondition redundant = numeric_conditions[x] + numeric_conditions[y];
+                            //cout << numeric_conditions[x] << " + "  << numeric_conditions[y] << " = " << redundant << endl;
+                            if (redundant.empty()) continue;
+                            numeric_conditions.push_back(redundant);
+                            actions[op_id].num_list.insert(numeric_conditions_id.size());
+                            numeric_conditions_id.push_back(list<int>(1,n_conditions));
+                            fact_to_axiom_map.push_back(-2);
+                            n_conditions++;
+                            achievers.push_back(set<int>());
+                            proposition_names.push_back("");
                         }
                     }
                 }
@@ -493,7 +479,7 @@ namespace numeric_helper {
                         //numeric_conditions_id[fact_to_axiom_map[axiom_table[goal_id]]])
                         numeric_goals[g_id].push_back(id_n_con);
                         fact_to_axiom_map[goal_id] = -2; // this is a special number to indicate that the goal is numeric
-                       // cout << "\t" << numeric_conditions[id_n_con] << endl;
+                        //cout << "\t" << numeric_conditions[id_n_con] << endl;
                     }
                 }
             }
@@ -503,28 +489,22 @@ namespace numeric_helper {
 
             std::vector<std::list<int>> original_list = numeric_goals;
             for (size_t t = 0; t < original_list.size(); ++t){
-                for (size_t i = 0; i < original_list[t].size(); ++i){
-                    std::list<int>::iterator it_i = original_list[t].begin();
-                    std::advance(it_i, i);
-                    int x = *it_i;
-                    for (size_t j = i + 1; j < original_list[t].size(); ++j){
-                        // add the two
-                        list<int>::iterator it_j = original_list[t].begin();
-                        std::advance(it_j, j);
-                        int y = *it_j;
-                        LinearNumericCondition redundant = numeric_conditions[x] + numeric_conditions[y];
-                        if (redundant.empty()) continue;
-//                        cout << "adding "  << redundant << " from " << numeric_conditions[x] << " and " << numeric_conditions[y]  << " to goal" << endl;
-//                        cout << "\tbefore " << numeric_conditions.size() << " " << numeric_conditions_id.size() << endl;
-                        numeric_conditions.push_back(redundant);
-                        numeric_goals[t].push_back(n_conditions);
-                        numeric_conditions_id.push_back(list<int>(n_conditions));
-                        fact_to_axiom_map.push_back(-2);
-                        n_conditions++;
-                        //achievers.push_back(set<int>());
-                        //proposition_names.push_back("");
-//                        cout << "\tafter " << numeric_conditions.size() << " " << numeric_conditions_id.size() << " " << n_conditions << endl;
-                        
+                for (auto x : original_list[t]) {
+                    for (auto y : original_list[t]) {
+                        if (x < y) {
+                            LinearNumericCondition redundant = numeric_conditions[x] + numeric_conditions[y];
+                            if (redundant.empty()) continue;
+                            //cout << "adding "  << redundant << " from " << numeric_conditions[x] << " and " << numeric_conditions[y]  << " to goal" << endl;
+                            //cout << "\tbefore " << numeric_conditions.size() << " " << numeric_conditions_id.size() << endl;
+                            numeric_conditions.push_back(redundant);
+                            numeric_goals[t].push_back(n_conditions);
+                            numeric_conditions_id.push_back(list<int>(n_conditions));
+                            fact_to_axiom_map.push_back(-2);
+                            n_conditions++;
+                            achievers.push_back(set<int>());
+                            proposition_names.push_back("");
+                            //cout << "\tafter " << numeric_conditions.size() << " " << numeric_conditions_id.size() << " " << n_conditions << endl;
+                        }
                     }
                 }
             }
