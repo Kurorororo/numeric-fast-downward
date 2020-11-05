@@ -25,7 +25,7 @@ protected:
 
     vector<shared_ptr<lp::LPSolver>> lps;
     vector<unordered_map<int, int>> action_to_variable_index;
-    vector<unordered_map<int, int>> conjnct_to_constraint_index;
+    vector<unordered_map<int, int>> conjunct_to_constraint_index;
     unordered_map<vector<int>, int> preconditions_to_id;
     vector<int> action_to_preconditions_id;
     vector<set<int>> condition_to_action; // index condition, value set of action with that preconditions
