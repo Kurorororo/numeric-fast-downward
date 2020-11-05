@@ -43,6 +43,7 @@ protected:
     vector<vector<double>> net_effects; // index: action, index n_condition, value: net effect;
     double max_float;
     void update_constraints(int preconditions_id, const State &state);
+    double min_over_possible_achievers(int nc_id);
     void update_cost_if_necessary(int cond, HeapQueue<int> &q, double current_cost);
     void generate_possible_achievers();
     void generate_preconditions();

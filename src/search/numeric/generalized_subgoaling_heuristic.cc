@@ -3,6 +3,7 @@
 #include "../option_parser.h"
 #include "../plugin.h"
 #include "../task_tools.h"
+#include "../utils/markup.h"
 
 using namespace std;
 using namespace numeric_helper;
@@ -12,7 +13,14 @@ namespace generalized_subgoaling_heuristic {
     
     
     static Heuristic *_parse(OptionParser &parser) {
-        parser.document_synopsis("Generalized subgoaling heuristic", "");
+        parser.document_synopsis("Generalized subgoaling heuristic",
+            " " + utils::format_paper_reference(
+            {"Enrico Scala", "Patrik Haslum", "Sylvie Thie'baux", "Miquel Ramirez"},
+            "Subgoaling Techniques for Satisficing and Optimal Numeric Planning",
+            "https://www.jair.org/index.php/jair/article/view/11875/26598",
+            "Jornal of Artificial Intelligence Research 68 (2020) (JAIR)",
+            "691-752",
+            "AI Acess Foundation 2020"));
         parser.document_language_support("action costs", "supported");
         parser.document_language_support("conditional effects", "supported");
         parser.document_language_support("numeric", "supported");
@@ -140,7 +148,7 @@ namespace generalized_subgoaling_heuristic {
                     if (lps[c]->has_optimal_solution()) {
                         double epsilon = 0.01;
                         double result = lps[c]->get_objective_value();
-                        double current_cost = result + first;
+                        double current_cost = result + min_over_possible_achievers(c);
                         update_cost_if_necessary(c, q, current_cost);
                     }
                 }
@@ -182,6 +190,17 @@ namespace generalized_subgoaling_heuristic {
                 lp->set_variable_upper_bound(entry.second, 0.0);
             }
         }
+    }
+
+    double GeneralizedSubgoalingHeuristic::min_over_possible_achievers(int nc_id) {
+        set<int> & achievers = possible_preconditions_achievers_inverted[nc_id];
+        double min_cost = max_float;
+        for (int op : achievers){
+            int preconditions_id = action_to_preconditions_id[op];
+            min_cost = min(min_cost,dist[preconditions_id]);
+            if (min_cost == 0) return 0;
+        }
+        return min_cost;
     }
 
     void GeneralizedSubgoalingHeuristic::update_cost_if_necessary(int cond, HeapQueue<int> &q, double current_cost) {
