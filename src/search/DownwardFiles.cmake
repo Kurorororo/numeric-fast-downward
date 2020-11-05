@@ -471,6 +471,7 @@ fast_downward_plugin(
 	numeric/repetition_add_heuristic.cc
 	numeric/repetition_FF_heuristic.cc
 	numeric/rmax_heuristic.cc
+	numeric/generalized_subgoaling_heuristic.cc
    DEPENDS LP_SOLVER
 )
 
