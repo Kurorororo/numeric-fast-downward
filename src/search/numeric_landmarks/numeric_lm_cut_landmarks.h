@@ -82,10 +82,11 @@ namespace numeric_lm_cut_heuristic {
         void setup_exploration_queue();
         void setup_exploration_queue_state(const State &state);
         void first_exploration(const State &state);
-        void first_exploration_incremental(std::vector<pair<ap_float, RelaxedOperator *>> &cut);
+        void first_exploration_incremental(std::vector<RelaxedOperator *> &cut);
         void second_exploration(const State &state,
                                 std::vector<RelaxedProposition *> &queue,
-                                std::vector<std::pair<ap_float, RelaxedOperator *>> &cut);
+                                std::vector<RelaxedOperator *> &cut,
+                                std::unordered_map<int, ap_float> &operator_to_m);
         
         bool enqueue_if_necessary(RelaxedProposition *prop, int cost) {
             assert(cost >= 0);

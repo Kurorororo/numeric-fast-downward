@@ -115,10 +115,10 @@ namespace numeric_helper {
             //artificial_variables[num_id].coefficients.assign(n_numeric_variables,0);
             if(num_variables[num_id].get_var_type() == regular){
                 artificial_variables[num_id].coefficients[id_numeric_variable_inv[num_id]] = 1;
-                //cout << num_id << " regular " << artificial_variables[num_id] << endl;
+                //cout << num_id << " regular " << artificial_variables[num_id] << " " << num_variables[num_id].get_name() << endl;
             } else if (num_variables[num_id].get_var_type()){
                 artificial_variables[num_id].constant = num_variables[num_id].get_initial_state_value();
-                //cout << num_id << " constant : " << num_variables[num_id].get_initial_state_value() << " " << artificial_variables[num_id] << endl;
+                //cout << num_id << " constant : " << num_variables[num_id].get_initial_state_value() << " " << artificial_variables[num_id] << " " << num_variables[num_id].get_name() << endl;
 
             }
         }
@@ -242,7 +242,7 @@ namespace numeric_helper {
                     break;
                 }
             }
-           // cout << ax.get_true_fact().get_variable().get_id() << " " << ax.get_id() << endl;
+            //cout << ax.get_true_fact().get_variable().get_id() << " " << ax.get_id() << endl;
             // TODO add this
             fact_to_axiom_map[ax.get_true_fact().get_variable().get_id()] = ax.get_id();
         }
@@ -291,11 +291,12 @@ namespace numeric_helper {
                     actions[op_id].pre_list.insert(propositions[pre_var_id][condition.get_value()]);
                 }else{
                     //cout << op.get_id() << " " << op.get_name() << endl;
-                    //cout << "\t" << numeric_conditions[fact_to_axiom_map[pre_var_id]] << ", fact " << fact_to_axiom_map[pre_var_id] << endl;
                     actions[op_id].num_list.insert(fact_to_axiom_map[pre_var_id]);
+                    //for (auto num_id : numeric_conditions_id[fact_to_axiom_map[pre_var_id]])
+                    //    cout << "\t" << numeric_conditions[num_id] << ", fact " << fact_to_axiom_map[pre_var_id] << endl;
                 }
             }
-            
+
             if (redundant_constraints){
                 set<int> original_list = actions[op_id].num_list;
                 for (size_t i = 0; i < original_list.size(); ++i){
@@ -316,6 +317,7 @@ namespace numeric_helper {
                             for (;nc_it_j != nc_end_j; ++nc_it_j){
                                 int y = *nc_it_j;
                                 LinearNumericCondition redundant = numeric_conditions[x] + numeric_conditions[y];
+                                //cout << numeric_conditions[x] << " + "  << numeric_conditions[y] << " = " << redundant << endl;
                                 if (redundant.empty()) continue;
                                 numeric_conditions.push_back(redundant);
                                 actions[op_id].num_list.insert(numeric_conditions_id.size());
@@ -493,7 +495,7 @@ namespace numeric_helper {
                         //numeric_conditions_id[fact_to_axiom_map[axiom_table[goal_id]]])
                         numeric_goals[g_id].push_back(id_n_con);
                         fact_to_axiom_map[goal_id] = -2; // this is a special number to indicate that the goal is numeric
-                       // cout << "\t" << numeric_conditions[id_n_con] << endl;
+                        //cout << "\t" << numeric_conditions[id_n_con] << endl;
                     }
                 }
             }
@@ -524,7 +526,7 @@ namespace numeric_helper {
                         //achievers.push_back(set<int>());
                         //proposition_names.push_back("");
 //                        cout << "\tafter " << numeric_conditions.size() << " " << numeric_conditions_id.size() << " " << n_conditions << endl;
-                        
+
                     }
                 }
             }
