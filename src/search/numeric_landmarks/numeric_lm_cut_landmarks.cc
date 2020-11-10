@@ -354,29 +354,35 @@ namespace numeric_lm_cut_heuristic {
             const vector<RelaxedOperator *> &triggered_operators =
             prop->precondition_of;
             for (RelaxedOperator *relaxed_op : triggered_operators) {
-                if (relaxed_op->h_max_supporter == prop) {
+                if (relaxed_op->h_max_supporter == prop
+                    && operator_to_m.find(relaxed_op->original_op_id) == operator_to_m.end()) {
+                    ap_float min_m = numeric_limits<ap_float>::max();
                     bool reached_goal_zone = false;
                     for (RelaxedProposition *effect : relaxed_op->effects) {
                         if (debug) cout << "\t" << prop->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << relaxed_op->cost << endl;
                         if (effect->status == GOAL_ZONE) {
-                            if (debug) cout << "\t\t  adding " << relaxed_op->name << " to the cut " << endl;
                             assert(relaxed_op->cost > 0);
-                            reached_goal_zone = true;
                             ap_float m = calculate_numeric_times(effect,relaxed_op);
-                            auto result = operator_to_m.find(relaxed_op->original_op_id);
-                            if (result == operator_to_m.end()) {
-                                cut.push_back(relaxed_op);
-                                operator_to_m[relaxed_op->original_op_id] = m;
-                            } else if (m < result->second) {
-                                operator_to_m[relaxed_op->original_op_id] = m;
+                            if (m < min_m) {
+                                if (!reached_goal_zone) {
+                                    if (debug) cout << "\t\t  adding " << relaxed_op->name << " to the cut " << endl;
+                                    cut.push_back(relaxed_op);
+                                    reached_goal_zone = true;
+                                }
+                                min_m = m;
                             }
-                            if (m <= 1.0)
-                                break;
-                        } else if (effect->status != BEFORE_GOAL_ZONE) {
-                            assert(effect->status == REACHED);
-                            effect->status = BEFORE_GOAL_ZONE;
-                            if (debug) cout << "\t\t  adding " << effect->name << " to the queue " << endl;
-                            second_exploration_queue.push_back(effect);
+                        }
+                    }
+                    if (reached_goal_zone)
+                        operator_to_m[relaxed_op->original_op_id] = min_m;
+                    if (min_m > 1.0) {
+                        for (RelaxedProposition *effect : relaxed_op->effects) {
+                            if (effect->status != BEFORE_GOAL_ZONE && effect->status != GOAL_ZONE && min_m > 1.0) {
+                                assert(effect->status == REACHED);
+                                effect->status = BEFORE_GOAL_ZONE;
+                                if (debug) cout << "\t\t  adding " << effect->name << " to the queue " << endl;
+                                second_exploration_queue.push_back(effect);
+                            }
                         }
                     }
                 }
