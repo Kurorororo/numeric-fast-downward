@@ -526,6 +526,7 @@ namespace numeric_helper {
                         //achievers.push_back(set<int>());
                         //proposition_names.push_back("");
 //                        cout << "\tafter " << numeric_conditions.size() << " " << numeric_conditions_id.size() << " " << n_conditions << endl;
+
                     }
                 }
             }
