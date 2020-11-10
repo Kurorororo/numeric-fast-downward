@@ -115,10 +115,10 @@ namespace numeric_helper {
             //artificial_variables[num_id].coefficients.assign(n_numeric_variables,0);
             if(num_variables[num_id].get_var_type() == regular){
                 artificial_variables[num_id].coefficients[id_numeric_variable_inv[num_id]] = 1;
-                //cout << num_id << " regular " << artificial_variables[num_id] << endl;
+                //cout << num_id << " regular " << artificial_variables[num_id] << " " << num_variables[num_id].get_name() << endl;
             } else if (num_variables[num_id].get_var_type()){
                 artificial_variables[num_id].constant = num_variables[num_id].get_initial_state_value();
-                //cout << num_id << " constant : " << num_variables[num_id].get_initial_state_value() << " " << artificial_variables[num_id] << endl;
+                //cout << num_id << " constant : " << num_variables[num_id].get_initial_state_value() << " " << artificial_variables[num_id] << " " << num_variables[num_id].get_name() << endl;
 
             }
         }
@@ -242,7 +242,7 @@ namespace numeric_helper {
                     break;
                 }
             }
-           // cout << ax.get_true_fact().get_variable().get_id() << " " << ax.get_id() << endl;
+            //cout << ax.get_true_fact().get_variable().get_id() << " " << ax.get_id() << endl;
             // TODO add this
             fact_to_axiom_map[ax.get_true_fact().get_variable().get_id()] = ax.get_id();
         }

@@ -44,7 +44,6 @@ namespace lm_cut_numeric_heuristic {
             return DEAD_END;
         return total_cost;
     }
-    
     static Heuristic *_parse(OptionParser &parser) {
         parser.document_synopsis("Landmark-cut heuristic", "");
         parser.document_language_support("action costs", "supported");
