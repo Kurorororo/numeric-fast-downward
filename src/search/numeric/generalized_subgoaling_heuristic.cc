@@ -130,8 +130,9 @@ namespace generalized_subgoaling_heuristic {
                 closed[cn] = true;
 
                 // check goal
-                if (cn == preconditions_to_id.size() - 1)
+                if (cn == preconditions_to_id.size() - 1) {
                     return dist[cn];
+                }
 
                 set<int> &actions = condition_to_action[cn];
                 for (auto gr : actions) {
@@ -349,14 +350,20 @@ namespace generalized_subgoaling_heuristic {
                     }
                 } else {
                     int numeric_conjunct = conjunct - n_propositions;
-                    for (int gr : possible_achievers_inverted[numeric_conjunct]) {
-                        if (action_to_variable_index[c].find(gr) == action_to_variable_index[c].end()) {
-                            int cost = ops[gr].get_cost();
-                            lp::LPVariable m_a(0.0, 0.0, cost, "m_a_" + ops[gr].get_name());
-                            action_to_variable_index[c][gr] = variables.size();
-                            variables.push_back(m_a);
+                    for (OperatorProxy gr : task_proxy.get_operators()) {                            
+                        LinearNumericCondition &nc = numeric_task.get_condition(numeric_conjunct);
+                        double cumulative_effect = 0;//nc.constant;
+                        for (size_t v = 0; v < numeric_task.get_n_numeric_variables(); ++v)
+                            cumulative_effect+=(nc.coefficients[v]*numeric_task.get_action_eff_list(gr.get_id())[v]);
+                        if (cumulative_effect != 0.0) {
+                            if (action_to_variable_index[c].find(gr.get_id()) == action_to_variable_index[c].end()) {
+                                int cost = gr.get_cost();
+                                lp::LPVariable m_a(0.0, 0.0, cost, "m_a_" + gr.get_name());
+                                action_to_variable_index[c][gr.get_id()] = variables.size();
+                                variables.push_back(m_a);
+                            }
+                            constraint.insert(action_to_variable_index[c][gr.get_id()], cumulative_effect);
                         }
-                        constraint.insert(action_to_variable_index[c][gr], net_effects[gr][numeric_conjunct]);
                     }
                 }
                 conjunct_to_constraint_index[c][conjunct] = constraints.size();
