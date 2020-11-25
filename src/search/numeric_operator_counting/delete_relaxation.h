@@ -107,8 +107,9 @@ namespace operator_counting {
         virtual bool update_constraints(const State &state, lp::LPSolver &lp_solver);
         static bool basic_constraints;
         static bool landmark_constraints;
-        static bool enhanced_constraints;
         static bool enhanced_seq_constraints;
+        static bool relevance_constraints;
+        static bool dominance_constraints;
         static bool inverse_constraints;
         static bool temporal_constraints;
     };
