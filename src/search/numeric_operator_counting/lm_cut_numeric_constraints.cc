@@ -13,11 +13,15 @@
 using namespace std;
 
 namespace operator_counting {
+LMCutNumericConstraints::LMCutNumericConstraints(const Options &opts) {
+    ignore_numeric = opts.get<bool>("ignore_numeric");
+}
+
 void LMCutNumericConstraints::initialize_constraints(
     const shared_ptr<AbstractTask> task, vector<lp::LPConstraint> & /*constraints*/,
     double /*infinity*/) {
     TaskProxy task_proxy(*task);
-    landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(task_proxy);
+    landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(task_proxy, ignore_numeric);
 
 }
 
@@ -74,9 +78,13 @@ static shared_ptr<ConstraintGenerator> _parse(OptionParser &parser) {
             "2268-2274",
             "2013"));
 
+    parser.add_option<bool>("ignore_numeric", "ignore numeric conditions", "false");
+
     if (parser.dry_run())
         return nullptr;
-    return make_shared<LMCutNumericConstraints>();
+
+    Options opts = parser.parse();
+    return make_shared<LMCutNumericConstraints>(opts);
 }
 
 static PluginShared<ConstraintGenerator> _plugin("lmcutnumeric_constraints", _parse);

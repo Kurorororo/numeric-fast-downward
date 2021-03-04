@@ -12,8 +12,10 @@ class LandmarkCutNumericLandmarks;
 
 namespace operator_counting {
 class LMCutNumericConstraints : public ConstraintGenerator {
+    bool ignore_numeric;
     std::unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks> landmark_generator;
 public:
+    LMCutNumericConstraints(const Options &opts);
     virtual void initialize_constraints(
         const std::shared_ptr<AbstractTask> task,
         std::vector<lp::LPConstraint> &constraints,

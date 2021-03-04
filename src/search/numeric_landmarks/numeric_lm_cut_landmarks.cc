@@ -16,8 +16,9 @@ double precision = 0.001;
 
 namespace numeric_lm_cut_heuristic {
     // construction and destruction
-    LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy) {
+    LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ignore_numeric) {
         numeric_task = NumericTaskProxy(task_proxy,false);
+        ignore_numeric_conditions = ignore_numeric;
         //verify_no_axioms(task_proxy);
         verify_no_conditional_effects(task_proxy);
         // Build propositions.
@@ -38,20 +39,22 @@ namespace numeric_lm_cut_heuristic {
             propositions[var_id].push_back(prop);
             ++num_propositions;
         }
-        
-        // add numeric conditions
-        for (int i = 0; i < numeric_task.get_n_numeric_conditions(); i++){
-            //LinearNumericCondition &num_values = numeric_task.get_condition(i);
-            int var_id = n_var + i;
-            RelaxedProposition prop;
-            prop.is_numeric_condition = true;
-            prop.id_numeric_condition = i;
-            stringstream name;
-            name << "numeric (" << numeric_task.get_condition(i) << ")";
-            prop.name =  name.str();
-            propositions[var_id].push_back(prop);
-            ++num_propositions;
-            //cout << "adding numeric precondition " << num_values << " : " << num_propositions << " " << var_id << endl;
+
+        if (!ignore_numeric_conditions) {
+            // add numeric conditions
+            for (int i = 0; i < numeric_task.get_n_numeric_conditions(); i++){
+                //LinearNumericCondition &num_values = numeric_task.get_condition(i);
+                int var_id = n_var + i;
+                RelaxedProposition prop;
+                prop.is_numeric_condition = true;
+                prop.id_numeric_condition = i;
+                stringstream name;
+                name << "numeric (" << numeric_task.get_condition(i) << ")";
+                prop.name =  name.str();
+                propositions[var_id].push_back(prop);
+                ++num_propositions;
+                //cout << "adding numeric precondition " << num_values << " : " << num_propositions << " " << var_id << endl;
+            }
         }
         
         // Build relaxed operators for operators and axioms.
@@ -72,15 +75,17 @@ namespace numeric_lm_cut_heuristic {
                 goal_op_pre.push_back(get_proposition(goal));
             }
         }
-        
-        // add numeric goal conditions
-        for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-            list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
-            if (numeric_goals.empty()) continue; // this is not a numeric goal
-            for (int id_n_con : numeric_goals){
-                //LinearNumericCondition &num_values = numeric_task.get_condition(id_n_con);
-                goal_op_pre.push_back(get_proposition(id_n_con));
-                //cout << "Goal : " << num_values << " is a goal condition" << endl;
+
+        if (!ignore_numeric_conditions) {
+            // add numeric goal conditions
+            for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
+                list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
+                if (numeric_goals.empty()) continue; // this is not a numeric goal
+                for (int id_n_con : numeric_goals){
+                    //LinearNumericCondition &num_values = numeric_task.get_condition(id_n_con);
+                    goal_op_pre.push_back(get_proposition(id_n_con));
+                    //cout << "Goal : " << num_values << " is a goal condition" << endl;
+                }
             }
         }
         
@@ -94,7 +99,6 @@ namespace numeric_lm_cut_heuristic {
         for (RelaxedOperator &op : relaxed_operators) {
             for (RelaxedProposition *pre : op.preconditions){
                 pre->precondition_of.push_back(&op);
-                pre->static_precondition_of.push_back(&op);
             }
             for (RelaxedProposition *eff : op.effects)
                 eff->effect_of.push_back(&op);
@@ -114,13 +118,15 @@ namespace numeric_lm_cut_heuristic {
                 precondition.push_back(get_proposition(pre));
             }
         }
-        
-        // numeric precondition
-        for (int pre : numeric_task.get_action_num_list(op.get_id())){
-            for (int i : numeric_task.get_numeric_conditions_id(pre)){
-                precondition.push_back(get_proposition(i));
-                LinearNumericCondition &num_values = numeric_task.get_condition(i);
-                //cout << "adding precondition " << num_values << " to action " << op.get_name() << endl;
+
+        if (!ignore_numeric_conditions) {
+            // numeric precondition
+            for (int pre : numeric_task.get_action_num_list(op.get_id())){
+                for (int i : numeric_task.get_numeric_conditions_id(pre)){
+                    precondition.push_back(get_proposition(i));
+                    LinearNumericCondition &num_values = numeric_task.get_condition(i);
+                    //cout << "adding precondition " << num_values << " to action " << op.get_name() << endl;
+                }
             }
         }
         
@@ -130,20 +136,23 @@ namespace numeric_lm_cut_heuristic {
                 effects.push_back(get_proposition(eff.get_fact()));
             }
         }
-        
-        // add effects
-        for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
-            ap_float net = 0;
-            LinearNumericCondition& lnc = numeric_task.get_condition(i);
-            for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
-                net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op.get_id())[n_id];
-            }
-            if (net > 0) {
-                //cout << "adding effect of action " << op.get_name() << " " <<net << " on " << lnc << endl;
-                numeric_effect[i] = net;
-                effects.push_back(get_proposition(i));
+
+        if (!ignore_numeric_conditions) {
+            // add effects
+            for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
+                ap_float net = 0;
+                LinearNumericCondition& lnc = numeric_task.get_condition(i);
+                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
+                    net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op.get_id())[n_id];
+                }
+                if (net > 0) {
+                    //cout << "adding effect of action " << op.get_name() << " " <<net << " on " << lnc << endl;
+                    numeric_effect[i] = net;
+                    effects.push_back(get_proposition(i));
+                }
             }
         }
+
         string name = op.get_name();
         add_relaxed_operator(
                              move(precondition), move(effects), move(numeric_effect), op.get_id(), op.get_cost(), name);
@@ -184,7 +193,6 @@ namespace numeric_lm_cut_heuristic {
             for (RelaxedProposition &prop : var_props) {
                 prop.status = UNREACHED;
                 prop.explored = false;
-                prop.precondition_of = prop.static_precondition_of;
             }
         }
         
@@ -192,16 +200,11 @@ namespace numeric_lm_cut_heuristic {
         artificial_precondition.status = UNREACHED;
         artificial_goal.explored = false;
         artificial_precondition.explored = false;
-        artificial_goal.precondition_of = artificial_goal.static_precondition_of;
-        artificial_precondition.precondition_of = artificial_precondition.static_precondition_of;
         
         for (RelaxedOperator &op : relaxed_operators) {
             op.unsatisfied_preconditions = op.preconditions.size();
             op.h_max_supporter = 0;
             op.h_max_supporter_cost = numeric_limits<int>::max();
-            op.found_new_max_supporter = false;
-            op.updated_max_supporter = 0;
-            op.updated_min_achiever_cost = 0;
         }
     }
     
@@ -214,22 +217,24 @@ namespace numeric_lm_cut_heuristic {
         }
         numeric_initial_state.assign(numeric_task.get_n_conditions(),0);
         
-        // numeric_conditions
-        for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
-            LinearNumericCondition& lnc = numeric_task.get_condition(i);
-            ap_float net = lnc.constant - numeric_task.get_epsilon(i);
-            for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
-                int id_num = numeric_task.get_numeric_variable(n_id).id_abstract_task;
-                net += lnc.coefficients[n_id]*state.nval(id_num);
-                //cout << n_id << " " << state.nval(n_id) << " " << lnc.coefficients[n_id] << endl;
-            }
-            //cout << lnc << " evaluated in the initial state " << net << endl;
-            numeric_initial_state[i] = -net;
-            if (net > -precision) {
-                if (debug) cout << lnc << " is satisfied in initial state " << net << endl;
-                enqueue_if_necessary(get_proposition(i), 0);
-            }else{
-                if (debug) cout << lnc << " not satisfied " << net << endl;
+        if (!ignore_numeric_conditions) {
+            // numeric_conditions
+            for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
+                LinearNumericCondition& lnc = numeric_task.get_condition(i);
+                ap_float net = lnc.constant - numeric_task.get_epsilon(i);
+                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
+                    int id_num = numeric_task.get_numeric_variable(n_id).id_abstract_task;
+                    net += lnc.coefficients[n_id]*state.nval(id_num);
+                    //cout << n_id << " " << state.nval(n_id) << " " << lnc.coefficients[n_id] << endl;
+                }
+                //cout << lnc << " evaluated in the initial state " << net << endl;
+                numeric_initial_state[i] = -net;
+                if (net > -precision) {
+                    if (debug) cout << lnc << " is satisfied in initial state " << net << endl;
+                    enqueue_if_necessary(get_proposition(i), 0);
+                }else{
+                    if (debug) cout << lnc << " not satisfied " << net << endl;
+                }
             }
         }
         
@@ -258,39 +263,26 @@ namespace numeric_lm_cut_heuristic {
                 if (relaxed_op->unsatisfied_preconditions == 0) {
                     relaxed_op->h_max_supporter = prop;
                     relaxed_op->h_max_supporter_cost = prop_cost;
-                    for (RelaxedProposition *effect : relaxed_op->effects) {
-                        update_queue(prop,effect,relaxed_op);
-                    }
+                    for (RelaxedProposition *effect : relaxed_op->effects)
+                        update_queue(prop, effect, relaxed_op);
                 }
             }
         }
     }
     
     void LandmarkCutLandmarks::first_exploration_incremental(
-                                                             vector<pair<ap_float, RelaxedOperator *>> &cut) {
+                                                             vector<RelaxedOperator *> &cut) {
         assert(priority_queue.empty());
         /* We pretend that this queue has had as many pushes already as we
          have propositions to avoid switching from bucket-based to
          heap-based too aggressively. This should prevent ever switching
          to heap-based in problems where action costs are at most 1.
          */
-         if (debug) cout << "  incremental exploration : " << endl;
+        if (debug) cout << "  incremental exploration : " << endl;
         priority_queue.add_virtual_pushes(num_propositions);
-        for (pair<ap_float,RelaxedOperator *> m_relaxed_op : cut) {
-            RelaxedOperator* relaxed_op = m_relaxed_op.second;
-            ap_float cost = relaxed_op->h_max_supporter_cost + relaxed_op->cost;
-            for (RelaxedProposition *effect : relaxed_op->effects){
-                if (effect->is_numeric_condition){
-                    pair<ap_float,ap_float> updated_cost = calculate_numeric_achiever_cost(relaxed_op->h_max_supporter,effect,relaxed_op,cost);
-                    if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name << " " << updated_cost.second << endl;
-
-                    enqueue_if_necessary(effect, updated_cost.second);
-                }else{
-                    if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name << " " << cost << endl;
-
-                    enqueue_if_necessary(effect, cost);
-                }
-            }
+        for (RelaxedOperator *relaxed_op : cut) {
+            for (RelaxedProposition *effect : relaxed_op->effects)
+                update_queue(relaxed_op->h_max_supporter, effect, relaxed_op);
         }
         while (!priority_queue.empty()) {
             pair<int, RelaxedProposition *> top_pair = priority_queue.pop();
@@ -317,20 +309,8 @@ namespace numeric_lm_cut_heuristic {
                             //cout << new_supp_cost << " " << old_supp_cost << endl;
                             //if (new_supp_cost >  old_supp_cost) continue;
                             assert(new_supp_cost < old_supp_cost);
-                            int target_cost = new_supp_cost + relaxed_op->cost;
-                            for (RelaxedProposition *effect : relaxed_op->effects){
-                                //if(debug) cout << "\t  " << prop->name << " -> " << effect->name << " " << target_cost << endl;
-                                if (effect->is_numeric_condition){
-                                    pair<ap_float,ap_float> updated_cost = calculate_numeric_achiever_cost(relaxed_op->h_max_supporter,effect,relaxed_op,target_cost);
-                                    if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name << " : " << relaxed_op->name << " " <<  updated_cost.second << endl;
-                                    
-                                    enqueue_if_necessary(effect, updated_cost.second);
-                                }else{
-                                    if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << target_cost << endl;
-                                    
-                                    enqueue_if_necessary(effect, target_cost);
-                                }
-                            }
+                            for (RelaxedProposition *effect : relaxed_op->effects)
+                                update_queue(relaxed_op->h_max_supporter, effect, relaxed_op);
                         }
                     }
                 }
@@ -340,10 +320,10 @@ namespace numeric_lm_cut_heuristic {
     
     void LandmarkCutLandmarks::second_exploration(
                                                   const State &state, vector<RelaxedProposition *> &second_exploration_queue,
-                                                  vector<pair<ap_float, RelaxedOperator *>> &cut) {
+                                                  vector<RelaxedOperator *> &cut, unordered_map<int, ap_float> &operator_to_m) {
         assert(second_exploration_queue.empty());
         assert(cut.empty());
-         if (debug) cout << "  second exploration" << endl;
+        if (debug) cout << "  second exploration" << endl;
         artificial_precondition.status = BEFORE_GOAL_ZONE;
         second_exploration_queue.push_back(&artificial_precondition);
         
@@ -351,17 +331,18 @@ namespace numeric_lm_cut_heuristic {
             if (numeric_task.is_numeric_axiom(init_fact.get_variable().get_id())) continue;
             RelaxedProposition *init_prop = get_proposition(init_fact);
             init_prop->status = BEFORE_GOAL_ZONE;
-             if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
+            if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
             second_exploration_queue.push_back(init_prop);
         }
-        
-        for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i){
-            
-            if (numeric_initial_state[i] <= 0) {
-                RelaxedProposition *init_prop = get_proposition(i);
-                init_prop->status = BEFORE_GOAL_ZONE;
-                 if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
-                second_exploration_queue.push_back(init_prop);
+
+        if (!ignore_numeric_conditions) { 
+            for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i) {
+                if (numeric_initial_state[i] <= 0) {
+                    RelaxedProposition *init_prop = get_proposition(i);
+                    init_prop->status = BEFORE_GOAL_ZONE;
+                    if (debug) cout << "\t\t  adding " << init_prop->name << " to the queue " << endl;
+                    second_exploration_queue.push_back(init_prop);
+                }
             }
         }
         
@@ -373,24 +354,33 @@ namespace numeric_lm_cut_heuristic {
             const vector<RelaxedOperator *> &triggered_operators =
             prop->precondition_of;
             for (RelaxedOperator *relaxed_op : triggered_operators) {
-                if (relaxed_op->h_max_supporter == prop) {
+                if (relaxed_op->h_max_supporter == prop
+                    && operator_to_m.find(relaxed_op->original_op_id) == operator_to_m.end()) {
+                    ap_float min_m = numeric_limits<ap_float>::max();
                     bool reached_goal_zone = false;
                     for (RelaxedProposition *effect : relaxed_op->effects) {
-                         if (debug) cout << "\t" << prop->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << relaxed_op->cost << endl;
+                        if (debug) cout << "\t" << prop->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << relaxed_op->cost << endl;
                         if (effect->status == GOAL_ZONE) {
-                             if (debug) cout << "\t\t  adding " << relaxed_op->name << " to the cut " << endl;
                             assert(relaxed_op->cost > 0);
-                            reached_goal_zone = true;
-                            cut.push_back({calculate_numeric_times(effect,relaxed_op),relaxed_op});
-                            break;
+                            ap_float m = calculate_numeric_times(effect,relaxed_op);
+                            if (m < min_m) {
+                                if (!reached_goal_zone) {
+                                    if (debug) cout << "\t\t  adding " << relaxed_op->name << " to the cut " << endl;
+                                    cut.push_back(relaxed_op);
+                                    reached_goal_zone = true;
+                                }
+                                min_m = m;
+                            }
                         }
                     }
-                    if (!reached_goal_zone) {
+                    if (reached_goal_zone)
+                        operator_to_m[relaxed_op->original_op_id] = min_m;
+                    if (min_m > 1.0) {
                         for (RelaxedProposition *effect : relaxed_op->effects) {
-                            if (effect->status != BEFORE_GOAL_ZONE) {
+                            if (effect->status != BEFORE_GOAL_ZONE && effect->status != GOAL_ZONE && min_m > 1.0) {
                                 assert(effect->status == REACHED);
                                 effect->status = BEFORE_GOAL_ZONE;
-                                 if (debug) cout << "\t\t  adding " << effect->name << " to the queue " << endl;
+                                if (debug) cout << "\t\t  adding " << effect->name << " to the queue " << endl;
                                 second_exploration_queue.push_back(effect);
                             }
                         }
@@ -455,7 +445,8 @@ namespace numeric_lm_cut_heuristic {
         // ("second_exploration_queue" even inside second_exploration),
         // but having them here saves reallocations and hence provides a
         // measurable speed boost.
-        vector<pair<ap_float,RelaxedOperator *>> cut;
+        vector<RelaxedOperator *> cut;
+        unordered_map<int, ap_float> operator_to_m;
         Landmark landmark;
         vector<RelaxedProposition *> second_exploration_queue;
         first_exploration(state);
@@ -468,28 +459,30 @@ namespace numeric_lm_cut_heuristic {
             ++num_iterations;
             mark_goal_plateau(&artificial_goal);
             assert(cut.empty());
-            second_exploration(state, second_exploration_queue, cut);
+            second_exploration(state, second_exploration_queue, cut, operator_to_m);
             assert(!cut.empty());
             ap_float cut_cost = numeric_limits<ap_float>::max();
             ap_float cut_cost_single = numeric_limits<ap_float>::max();
             ap_float m_single = numeric_limits<ap_float>::max();
-            for (pair<ap_float,RelaxedOperator *> opcut : cut){
-                if (opcut.first*opcut.second->cost < cut_cost){
-                    cut_cost = min(cut_cost, opcut.first*opcut.second->cost);
-                    cut_cost_single = opcut.second->cost;
-                    m_single = opcut.first;
+            for (RelaxedOperator* op : cut){
+                ap_float m = operator_to_m[op->original_op_id];
+                if (m*op->cost < cut_cost){
+                    cut_cost = min(cut_cost, m*op->cost);
+                    cut_cost_single = op->cost;
+                    m_single = m;
                 }
             }
             if (debug) cout << "  cut cost " << artificial_goal.h_max_cost << " " << cut_cost << endl;
             
-            for (pair<ap_float,RelaxedOperator *> opcut : cut){
-                if (debug) cout << "\tcut " << opcut.second->name << " " << opcut.second->cost;
-                if (opcut.first > 0){
-                    opcut.second->cost -= cut_cost_single * m_single/opcut.first;
+            for (RelaxedOperator* op : cut){
+                ap_float m = operator_to_m[op->original_op_id];
+                if (debug) cout << "\tcut " << op->name << " " << op->cost;
+                if (m > 0){
+                    op->cost -= cut_cost_single * m_single/m;
                 } else {
-                    opcut.second->cost = 0;
+                    op->cost = 0;
                 }
-                if (debug) cout << " -> " << opcut.second->cost << ", m: " << opcut.first << endl;
+                if (debug) cout << " -> " << op->cost << ", m: " << m << endl;
             }
             
             if (cost_callback) {
@@ -498,8 +491,8 @@ namespace numeric_lm_cut_heuristic {
             if (debug) cout << "  cut cost " << cut_cost << endl;
             if (landmark_callback) {
                 landmark.clear();
-                for (pair<ap_float,RelaxedOperator *> opcut : cut)
-                    landmark.push_back({opcut.first, opcut.second->original_op_id});
+                for (RelaxedOperator *op: cut)
+                    landmark.push_back({operator_to_m[op->original_op_id], op->original_op_id});
                 
                 landmark_callback(landmark, cut_cost);
             }
@@ -507,6 +500,7 @@ namespace numeric_lm_cut_heuristic {
             first_exploration_incremental(cut);
             // validate_h_max();  // too expensive to use even in regular debug mode
             cut.clear();
+            operator_to_m.clear();
             
             /*
              Note: This could perhaps be made more efficient, for example by
@@ -523,28 +517,22 @@ namespace numeric_lm_cut_heuristic {
             artificial_goal.status = REACHED;
             artificial_precondition.status = REACHED;
         }
-        //cout << "iteration " << num_iterations << endl;
         return false;
     }
-    
-    void LandmarkCutLandmarks::update_queue(RelaxedProposition *prop, RelaxedProposition *effect, RelaxedOperator *relaxed_op){
-        ap_float target_cost = prop->h_max_cost + relaxed_op->cost;
-        pair<ap_float,ap_float> m_cost = calculate_numeric_achiever_cost(prop,effect,relaxed_op,target_cost);
-        if (debug) cout << "\t" << prop->name << " -> " << effect->name <<  " : " << relaxed_op->name << ", cost : " << m_cost.second << ", m : " << m_cost.first << endl;
-        if (!effect->explored){
-            bool enqueued = enqueue_if_necessary(effect, m_cost.second);
-            if (enqueued){
-                if (relaxed_op->found_new_max_supporter){
-                    update_precondition_of(relaxed_op->updated_max_supporter,relaxed_op,relaxed_op->updated_min_achiever_cost);
-                    relaxed_op->found_new_max_supporter = false;
-                }
+
+    void LandmarkCutLandmarks::update_queue(RelaxedProposition *prop, RelaxedProposition *effect, RelaxedOperator *relaxed_op) {
+        if (effect->is_numeric_condition) {
+            int id_effect = effect->id_numeric_condition;
+            if (relaxed_op->numeric_effects[id_effect] > 0 && numeric_initial_state[id_effect] > 0) {
+                ap_float m = calculate_numeric_times(effect, relaxed_op);
+                ap_float target_cost = prop->h_max_cost + m * relaxed_op->cost;
+                if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << target_cost << " " << m << endl;
+                enqueue_if_necessary(effect, target_cost);
             }
-            if (debug){
-            if (enqueued) cout << "\t\t\t\tenqueued" << endl;
-            else cout << "\t\t\t\tskipped" << endl;
-                }
-        }else{
-            //if(debug) cout << "\t\t\t\t" <<effect->name << " effect already explored, no need to reinsert" << endl;
+        } else {
+            ap_float target_cost = prop->h_max_cost + relaxed_op->cost;
+            if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << target_cost << endl;
+            enqueue_if_necessary(effect, target_cost);
         }
     }
     
@@ -557,54 +545,5 @@ namespace numeric_lm_cut_heuristic {
         }
         return 1;
     }
-    
-    pair<ap_float,ap_float> LandmarkCutLandmarks::calculate_numeric_achiever_cost(RelaxedProposition *prop, RelaxedProposition *effect, RelaxedOperator *relaxed_op, ap_float target_cost) {
-        // new target cost
-
-        if (effect->is_numeric_condition){
-            int id_effect = effect->id_numeric_condition;
-            // min cost
-            ap_float min_achiever =  numeric_limits<int>::max();
-            RelaxedProposition *max_supporter;
-            RelaxedOperator * max_achiever;
-            bool found = false;
-            for (RelaxedOperator * achiever : effect->effect_of){
-                if (achiever->h_max_supporter){
-                    if (achiever->h_max_supporter->h_max_cost < min_achiever){
-                        min_achiever = achiever->h_max_supporter->h_max_cost;
-                        max_supporter = achiever->h_max_supporter;
-                        max_achiever = achiever;
-                        found = true;
-                    }
-                    //break;
-                }
-            }
-            
-            if (relaxed_op->numeric_effects[id_effect] > 0 && numeric_initial_state[id_effect] > 0){
-                ap_float m = calculate_numeric_times(effect,relaxed_op);
-                ap_float local_target_cost = min_achiever + m * relaxed_op->cost;
-                if (found){
-                    relaxed_op->found_new_max_supporter = true;
-                    relaxed_op->updated_max_supporter = max_supporter;
-                    relaxed_op->updated_min_achiever_cost = min_achiever;
-                }
-                // add minimum cost of the achiever of this action
-                return {m,local_target_cost};
-            }
-        }
-        return {1,target_cost};
-    }
-    
-    void LandmarkCutLandmarks::update_precondition_of(RelaxedProposition *prop, RelaxedOperator *relaxed_op, ap_float cost){
-        // update this, it might be a very expensive operation because we look in a vector
-        relaxed_op->h_max_supporter = prop;
-        relaxed_op->h_max_supporter_cost = cost;
-        if (find(prop->precondition_of.begin(),prop->precondition_of.end(),relaxed_op) == prop->precondition_of.end()){
-            prop->precondition_of.push_back(relaxed_op);
-            //cout << "\t\t\tupdating preconditions of " << relaxed_op->name << " to " <<  prop->name << endl;
-        }
-    }
-
-    
 }
 

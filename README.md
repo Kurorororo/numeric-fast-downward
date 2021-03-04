@@ -1,6 +1,6 @@
 # Numerical Fast Downward 
 
-This is a work-in-progress repository for an extension of Numerical Fast Downward. 
+This is a work-in-progress repository for an extension of Numerical Fast Downward and developed by Chiara Piacentini and Ryo Kuroiwa. 
 
 Numerical Fast Downward (NFD), an extension of Fast Downward, has been originally developed by Johannes Aldinger and Bernhard Nebel. 
 
@@ -16,12 +16,23 @@ Numerical Fast Downward (NFD), an extension of Fast Downward, has been originall
 ```
 
 Here is a list of the current additions:
+  - numerical LM-cut heuristic
+    ```
+    @inproceedings{kuroiwa2020lmcut
+      title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
+      author={Kuroiwa, Ryo and Shleyfman, Alexander and Piacentini, Chiara and Castro, Margarita P and J Christopher},
+      booktitle={Proc. ICAPS},
+      year={2020}
+    }
+    ```
+
   - numerical delete-relaxation IP/LP heuristics
-  
     ```
     @inproceedings{piacentini2018linear,
       title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
       author={Piacentini, Chiara and Castro, Margarita P and Cir{\'e}, Andr{\'e} Augusto and Beck, J Christopher},
+      booktitle={Proc. AAAI},
+      pages={6254--6261}
       year={2018}
     }
     ```
@@ -32,7 +43,7 @@ Here is a list of the current additions:
     @inproceedings{piacentini2018compiling,
       title={Compiling Optimal Numeric Planning to Mixed Integer Linear Programming.},
       author={Piacentini, Chiara and Castro, Margarita P and Cir{\'e}, Andr{\'e} Augusto and Beck, J Christopher},
-      booktitle={ICAPS},
+      booktitle={Proc. ICAPS},
       pages={383--387},
       year={2018}
     }
@@ -43,21 +54,10 @@ Here is a list of the current additions:
     ```
     @inproceedings{wilhelm2018stubborn,
     title={On Stubborn Sets and Planning with Resources.},
-    author={Wilhelm, Anna and Steinmetz, Marcel and Hoffmann, J{\"o}rg},
-    booktitle={ICAPS},
+    author={wilhelm, anna and steinmetz, marcel and hoffmann, j{\"o}rg},
+    booktitle={Proc. ICAPS},
     pages={288--297},
     year={2018}
-    }
-    ```
-
-- subgoling-based hmax heuristic
-
-    ```
-    @article{scala2016heuristics,
-    title={Heuristics for numeric planning via subgoaling},
-    author={Scala, Enrico and Haslum, Patrik and Thi{\'e}baux, Sylvie and others},
-    year={2016},
-    publisher={AAAI Press}
     }
     ```
 
@@ -67,20 +67,68 @@ Here is a list of the current additions:
     @inproceedings{scala2017landmarks,
     title={Landmarks for Numeric Planning Problems.},
     author={Scala, Enrico and Haslum, Patrik and Magazzeni, Daniele and Thi{\'e}baux, Sylvie},
-    booktitle={IJCAI},
+    booktitle={Proc. IJCAI},
     pages={4384--4390},
     year={2017}
     }
     ```
 
-- numerical lm-cut heuristic
-  
+- subgoling-based heuristics
+
+    ```
+    @article{scala2016heuristics,
+    title={Subgoaling Techniques for Satisficing and Optimal Numeric Planning},
+    author={Scala, Enrico and Haslum, Patrik and Thi{\'e}baux, Sylvie and Ramirez, Miquel},
+    year={2020},
+    journal={JAIR},
+    volume={68},
+    pages={691--752}
+    }
+    ```
+
 ## Build 
 
-Follow the instructions of the original [Fast Downward](http://www.fast-downward.org/ObtainingAndRunningFastDownward) 
+### Install LPSolver
 
-Quick summary:
+#### CPLEX
+Install CPLEX.
+IBM provides a free academic lincense: https://www.ibm.com/academic/home
+
+Suppose that CPLEX is installed in `/opt/ibm/ILOG/CPLEX_Studio1210`.
+Then, export the following environment variables.
+
+```bash
+export DOWNWARD_CPLEX_ROOT=/opt/ibm/ILOG/CPLEX_Studio1210/cplex
+export DOWNWARD_CONCERT_ROOT=/opt/ibm/ILOG/CPLEX_Studio1210/concert
 ```
+
+#### OSI
+Instal open solver interface.
+
+```bash
+export DOWNWARD_COIN_ROOT=/path/to/osi
+sudo apt install zlib1g-dev
+wget http://www.coin-or.org/download/source/Osi/Osi-0.107.9.tgz
+cd Osi-0.107.9
+./configure CC="gcc"  CFLAGS="-pthread -Wno-long-long" \
+            CXX="g++" CXXFLAGS="-pthread -Wno-long-long" \
+            LDFLAGS="-L$DOWNWARD_CPLEX_ROOT/lib/x86-64_linux/static_pic" \
+            --without-lapack --enable-static=no \
+            --prefix="$DOWNWARD_COIN_ROOT" \
+            --disable-bzlib \
+            --with-cplex-incdir=$DOWNWARD_CPLEX_ROOT/include/ilcplex \
+            --with-cplex-lib="-lcplex -lm -ldl"
+
+make
+sudo make install
+cd ..
+rm -rf Osi-0.107.9
+rm Osi-0.107.9.tgz
+```
+
+#### build
+
+```bash
 cd numerical-fast-downward
 ./build.py release64
 ```
@@ -88,10 +136,74 @@ cd numerical-fast-downward
 ## Run
 
 Follow the instructions of the original [Fast Downward](http://www.fast-downward.org/ObtainingAndRunningFastDownward) 
+Please use Python 2.7.x. Currently, Python 3.x is not supported.
 
 Quick summary:
 ```
 fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(blind)
+```
+
+### Numeric Heuristics
+
+#### Numeric LM-cut (h^{LM-cut}) (Kuroiwa et al. 2020)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true))"
+```
+
+#### Propositional LM-cut (Kuroiwa et al. 2020)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(ignore_numeric=true, redundant_constraints=true))"
+```
+
+#### Interval Relaxatoin Based hmax (h^{irmax}) (Aldinger and Nebel 2017)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(irhmax(redundant_constraints=true))"
+```
+#### Subgoaling-based hmax (\hat{h}^{rmax}_{hbd+}) (Scala et al. 2020)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(hrmax(restrict_achievers=true, redundant_constraints=true))"
+```
+
+#### Numeric Landmark Heuristic (h^{lm+}_{hbd}) (Scala et al. 2017)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lm_numeric],cplex,lp), redundant_constraints=true)"
+```
+
+#### Generalized Subgoaling Heuristic (h^{gen}_{hbd}) (Scala et al. 2020)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(hgen(cplex,lp, redundant_constraints=true))"
+```
+
+### Operator-counting (OC) Heuristics
+
+#### OC with the Numeric LM-cut and SEQ Constraints (h^{LM-cut,SEQ}_{LP}) (Kuroiwa et al. 2020)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints,state_equation_constraints,numeric_state_equation_constraints],cplex,lp,redundant_constraints=true))"
+```
+
+#### OC with the Numeric LM-cut Constraints (h^{LM-cut}_{LP}) (Kuroiwa et al. 2020)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints],cplex,lp,redundant_constraints=true))"
+```
+
+#### OC with the Delete-relaxation and SEQ Constraints using IP (h^C_{IP}) (Piacentini et al. 2018)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,inverse,relevance]),state_equation_constraints,numeric_state_equation_constraints],cplex,ip,redundant_constraints=true))"
+```
+
+#### OC with the Delete-relaxation and SEQ Constraints using LP (h^C_{LP}) (Piacentini et al. 2018)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,inverse,relevance]),state_equation_constraints,numeric_state_equation_constraints],cplex,lp,redundant_constraints=true))"
+```
+
+#### OC with the SEQ Constraints (h^{SEQ}_{LP}) (Piacentini et al. 2018)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([state_equation_constraints,numeric_state_equation_constraints],cplex,lp,redundant_constraints=true))"
+```
+
+### Resource Transformation of Classical Planning (Wilhelm, Steinmetz, and Hoffmann 2018)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(transform=resource, redundant_constraints=true))"
 ```
 
 # ORIGINAL README (Fast Downward) 

@@ -16,7 +16,7 @@ namespace lm_cut_numeric_heuristic {
     // construction and destruction
     LandmarkCutNumericHeuristic::LandmarkCutNumericHeuristic(const Options &opts)
     : Heuristic(opts),
-    landmark_generator(nullptr) {
+    landmark_generator(nullptr), ignore_numeric(opts.get<bool>("ignore_numeric")) {
     }
     
     LandmarkCutNumericHeuristic::~LandmarkCutNumericHeuristic() {
@@ -26,7 +26,7 @@ namespace lm_cut_numeric_heuristic {
     void LandmarkCutNumericHeuristic::initialize() {
         cout << "Initializing landmark cut heuristic..." << endl;
         // TODO we don't need a pointer if we initialize in the constructor.
-        landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(task_proxy);
+        landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(task_proxy, ignore_numeric);
     }
     
     ap_float LandmarkCutNumericHeuristic::compute_heuristic(const GlobalState &global_state) {
@@ -44,7 +44,7 @@ namespace lm_cut_numeric_heuristic {
             return DEAD_END;
         return total_cost;
     }
-    
+
     static Heuristic *_parse(OptionParser &parser) {
         parser.document_synopsis("Landmark-cut heuristic", "");
         parser.document_language_support("action costs", "supported");
@@ -54,6 +54,8 @@ namespace lm_cut_numeric_heuristic {
         parser.document_property("consistent", "no");
         parser.document_property("safe", "yes");
         parser.document_property("preferred operators", "no");
+
+        parser.add_option<bool>("ignore_numeric", "ignore numeric conditions", "false");
         
         Heuristic::add_options_to_parser(parser);
         Options opts = parser.parse();

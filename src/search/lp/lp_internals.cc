@@ -142,6 +142,7 @@ unique_ptr<OsiSolverInterface> create_lp_solver(LPSolverType solver_type) {
 }
 
     void  set_time_limit(std::unique_ptr<OsiSolverInterface> const & lp_solver, LPSolverType solver_type, double time) {
+        string missing_symbol;
         switch (solver_type) {
             case LPSolverType::CLP:
 #ifdef COIN_HAS_CLP

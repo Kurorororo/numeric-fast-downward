@@ -27,6 +27,11 @@ namespace rmax_heuristic {
         parser.document_property("consistent", "yes for tasks without axioms");
         parser.document_property("safe", "yes for tasks without axioms");
         parser.document_property("preferred operators", "no");
+
+        parser.add_option<bool>("restrict_achievers",
+                                "restric achievers to actions whose preconditions are cheaper than"
+                                "the numeric effect to achieve (Scala et al. JAIR 2020)",
+                                "false");
         
         Heuristic::add_options_to_parser(parser);
         Options opts = parser.parse();
@@ -45,6 +50,8 @@ namespace rmax_heuristic {
                                               const GlobalState& global_state) {
         State state = convert_global_state(global_state);
         OperatorsProxy ops = task_proxy.get_operators();
+
+        if (restrict_achievers) all_achievers.assign(numeric_task.get_n_conditions(),set<int>());
         
         // check if goals are satisfied
         cond_dist.assign(numeric_task.get_n_propositions(),max_float);
@@ -52,7 +59,6 @@ namespace rmax_heuristic {
         action_dist.assign(ops.size(),max_float);
         //is_init_state.assign(numeric_task.get_n_conditions(),false);
         closed.assign(ops.size(),false);
-        achieve.assign(ops.size(),set<int>());
         action_comp_number_execution.assign(ops.size(),vector<double>(numeric_task.get_n_conditions(),-1));
 
         HeapQueue<int> a_plus; // cannot use adaptive queue when costs are non integer
@@ -232,6 +238,7 @@ namespace rmax_heuristic {
                 }
                 
                 if (rep_needed >= 0) {
+                    if (restrict_achievers) all_achievers[nc_id].insert(gr_id);
                     // add new distance
                     double new_distance = rep_needed * c_a + min_over_possible_achievers(nc_id);//action_dist[gr_id];
                     if (new_distance < current_distance) {
@@ -245,7 +252,7 @@ namespace rmax_heuristic {
     }
     
     double RMaxHeuristic::min_over_possible_achievers(int nc_id){
-        set<int> & achievers = possible_achievers_inverted[nc_id];
+        set<int> & achievers = restrict_achievers ? all_achievers[nc_id] : possible_achievers_inverted[nc_id];
         double min_cost = max_float;
         for (int op : achievers){
             min_cost = min(min_cost,action_dist[op]);
@@ -361,6 +368,7 @@ namespace rmax_heuristic {
     RMaxHeuristic::RMaxHeuristic(const options::Options& options)
     : IntervalRelaxationHeuristic(options)
     {
+        restrict_achievers = options.get<bool>("restrict_achievers");
         numeric_task = NumericTaskProxy(task_proxy);
         max_float = 999999;
         generate_possible_achievers();

@@ -184,7 +184,7 @@ namespace operator_counting {
         for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id){
             for (int pre : numeric_task.get_action_num_list(op_id)){
                 for (int i : numeric_task.get_numeric_conditions_id(pre)){
-                    lp::LPConstraint constraint(numeric_task.get_epsilon(i), infinity);
+                    lp::LPConstraint constraint(0, infinity);
                     constraint.insert(indices_u_c[i], 1.);
                     constraint.insert(indices_u_a[op_id], -1.);
                     if (!constraint.empty()) {
@@ -385,7 +385,7 @@ namespace operator_counting {
         fill(action_eliminated.begin(), action_eliminated.end(), false);
         
         // extract landmark
-        if (landmark_constraints && !enhanced_seq_constraints){
+        if (landmark_constraints && !dominance_constraints){
             vector<set<int>> & landmarks_table = factory->get_landmarks_table();
             //build_first_achiever(landmarks_table);
             // TODO delete this
@@ -393,15 +393,16 @@ namespace operator_counting {
         }else{
             build_achiever();
         }
-        if (!enhanced_constraints) return;
-        bool iterate = true;
-        
-        relevant_action_reduction(state);
+
+        if (relevance_constraints)
+            relevant_action_reduction(state);
+
+        bool iterate = dominance_constraints;
 
         while(iterate){
             iterate = enhanced_seq_constraints ? dominated_seq_action_elimination(state) : dominated_action_elimination(state);
             if (iterate)
-                iterate = relevant_action_reduction(state);
+                iterate = relevance_constraints && relevant_action_reduction(state);
         }
     }
     
@@ -764,8 +765,16 @@ namespace operator_counting {
                     lower_bound = 1;
                 }
                 int fact_id = numeric_task.get_proposition(var, value);
-                lp_solver.set_constraint_lower_bound(index_constraints[var][value], lower_bound);
-                lp_solver.set_constraint_upper_bound(index_constraints[var][value], lower_bound);
+
+                if (lower_bound == 1) {
+                    // if the upper bound is lower than the lower bound, OSI raises error
+                    lp_solver.set_constraint_upper_bound(index_constraints[var][value], lower_bound);
+                    lp_solver.set_constraint_lower_bound(index_constraints[var][value], lower_bound);
+                } else {
+                    lp_solver.set_constraint_lower_bound(index_constraints[var][value], lower_bound);
+                    lp_solver.set_constraint_upper_bound(index_constraints[var][value], lower_bound);
+                }
+
                 if (landmark_constraints){
                     lp_solver.set_variable_lower_bound(indices_u_p[fact_id], 0);
                     lp_solver.set_variable_upper_bound(indices_u_p[fact_id], 1);
@@ -808,7 +817,7 @@ namespace operator_counting {
             }
         }
 
-        if (enhanced_constraints){
+        if (relevance_constraints || dominance_constraints){
             for (size_t i = 0; i < fact_eliminated.size(); ++i){
                 if (fact_eliminated[i]){
                     if (fact_landmarks.find(i)!=fact_landmarks.end()) continue;
@@ -875,11 +884,9 @@ namespace operator_counting {
         for (string c : constraints){
             if (c == "basic") DeleteRelaxationConstraints::basic_constraints = true;
             else if (c == "landmarks")  DeleteRelaxationConstraints::landmark_constraints = true;
-            else if (c == "enhanced")  DeleteRelaxationConstraints::enhanced_constraints = true;
-            else if (c == "enhanced_seq")  {
-                DeleteRelaxationConstraints::enhanced_constraints = true;
-                DeleteRelaxationConstraints::enhanced_seq_constraints = true;
-            }
+            else if (c == "enhanced_seq") DeleteRelaxationConstraints::enhanced_seq_constraints = true;
+            else if (c == "relevance")  DeleteRelaxationConstraints::relevance_constraints = true;
+            else if (c == "dominance")  DeleteRelaxationConstraints::dominance_constraints = true;
             else if (c == "inverse")  DeleteRelaxationConstraints::inverse_constraints = true;
             else if (c == "temporal") DeleteRelaxationConstraints::temporal_constraints = true;
             else cout <<"unknown option" << endl;
@@ -917,8 +924,9 @@ namespace operator_counting {
     
     bool DeleteRelaxationConstraints::basic_constraints = false;
     bool DeleteRelaxationConstraints::landmark_constraints = false;
-    bool DeleteRelaxationConstraints::enhanced_constraints = false;
     bool DeleteRelaxationConstraints::enhanced_seq_constraints = false;
+    bool DeleteRelaxationConstraints::relevance_constraints = false;
+    bool DeleteRelaxationConstraints::dominance_constraints = false;
     bool DeleteRelaxationConstraints::inverse_constraints = false;
     bool DeleteRelaxationConstraints::temporal_constraints = false;
 

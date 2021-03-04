@@ -1,6 +1,7 @@
 #ifndef TASKS_TNF_NO_GOAL_TASK_H
 #define TASKS_TNF_NO_GOAL_TASK_H
 
+#include <algorithm>
 #include <memory>
 #include "../tasks/transition_normal_form_task.h"
 #include "../tasks/explicit_task.h"

@@ -34,17 +34,13 @@ namespace numeric_lm_cut_heuristic {
         ap_float h_max_supporter_cost; // h_max_cost of h_max_supporter
         RelaxedProposition *h_max_supporter;
         
-        ap_float updated_min_achiever_cost;
-        RelaxedProposition *updated_max_supporter;
-        bool found_new_max_supporter = false;
-        
         string name;
         
         RelaxedOperator(std::vector<RelaxedProposition *> &&pre,
                         std::vector<RelaxedProposition *> &&eff,
                         std::vector<ap_float> &&num_eff,
                         int op_id, ap_float base, string &n)
-        : original_op_id(op_id), preconditions(pre), effects(eff), numeric_effects(num_eff),  base_cost(base), name(n) {
+        : original_op_id(op_id), preconditions(pre), effects(eff), numeric_effects(num_eff), base_cost(base), name(n) {
         }
         
         inline void update_h_max_supporter();
@@ -52,7 +48,6 @@ namespace numeric_lm_cut_heuristic {
     
     struct RelaxedProposition {
         std::vector<RelaxedOperator *> precondition_of;
-        std::vector<RelaxedOperator *> static_precondition_of;
         std::vector<RelaxedOperator *> effect_of;
         
         PropositionStatus status;
@@ -71,6 +66,7 @@ namespace numeric_lm_cut_heuristic {
         RelaxedProposition artificial_goal;
         int num_propositions;
         int n_var;
+        bool ignore_numeric_conditions;
         std::vector<ap_float> numeric_initial_state;
         
         AdaptiveQueue<RelaxedProposition *> priority_queue;
@@ -86,10 +82,11 @@ namespace numeric_lm_cut_heuristic {
         void setup_exploration_queue();
         void setup_exploration_queue_state(const State &state);
         void first_exploration(const State &state);
-        void first_exploration_incremental(std::vector<pair<ap_float, RelaxedOperator *>> &cut);
+        void first_exploration_incremental(std::vector<RelaxedOperator *> &cut);
         void second_exploration(const State &state,
                                 std::vector<RelaxedProposition *> &queue,
-                                std::vector<std::pair<ap_float, RelaxedOperator *>> &cut);
+                                std::vector<RelaxedOperator *> &cut,
+                                std::unordered_map<int, ap_float> &operator_to_m);
         
         bool enqueue_if_necessary(RelaxedProposition *prop, int cost) {
             assert(cost >= 0);
@@ -103,9 +100,7 @@ namespace numeric_lm_cut_heuristic {
         }
         
         void update_queue(RelaxedProposition *prec, RelaxedProposition *eff, RelaxedOperator *op);
-        pair<ap_float,ap_float> calculate_numeric_achiever_cost(RelaxedProposition *prop, RelaxedProposition *effect, RelaxedOperator *relaxed_op, ap_float target_cost);
         ap_float calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op);
-        void update_precondition_of(RelaxedProposition *prop, RelaxedOperator *relaxed_op, ap_float cost);
         
         void mark_goal_plateau(RelaxedProposition *subgoal);
         void validate_h_max() const;
@@ -114,7 +109,7 @@ namespace numeric_lm_cut_heuristic {
         using CostCallback = std::function<void (ap_float)>;
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
-        LandmarkCutLandmarks(const TaskProxy &task_proxy);
+        LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ignore_numeric = false);
         virtual ~LandmarkCutLandmarks();
         
         /*
