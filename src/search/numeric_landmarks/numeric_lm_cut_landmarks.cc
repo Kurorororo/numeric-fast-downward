@@ -517,7 +517,6 @@ namespace numeric_lm_cut_heuristic {
             artificial_goal.status = REACHED;
             artificial_precondition.status = REACHED;
         }
-        //cout << "iteration " << num_iterations << endl;
         return false;
     }
 
