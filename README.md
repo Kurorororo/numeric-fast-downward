@@ -16,7 +16,7 @@ Numeric Fast Downward (NFD), an extension of Fast Downward, has been originally 
 ```
 
 Here is a list of the current additions:
-  - numerical LM-cut heuristic
+  - numeric LM-cut heuristic
     ```
     @inproceedings{kuroiwa2020lmcut
       title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
@@ -26,7 +26,7 @@ Here is a list of the current additions:
     }
     ```
 
-  - numerical delete-relaxation IP/LP heuristics
+  - numeric delete-relaxation IP/LP heuristics
     ```
     @inproceedings{piacentini2018linear,
       title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
