@@ -1,8 +1,8 @@
-# Numerical Fast Downward 
+# Numeric Fast Downward 
 
 This is a work-in-progress repository for an extension of Numerical Fast Downward and developed by Chiara Piacentini and Ryo Kuroiwa. 
 
-Numerical Fast Downward (NFD), an extension of Fast Downward, has been originally developed by Johannes Aldinger and Bernhard Nebel. 
+Numeric Fast Downward (NFD), an extension of Fast Downward, has been originally developed by Johannes Aldinger and Bernhard Nebel. 
 
 ```
 @inproceedings{aldinger2017interval,
