@@ -154,7 +154,7 @@ void NumericConstraints::action_precondition_constraint(
       for (int i : numeric_task.get_numeric_conditions_id(pre)) {
         for (int t = t_min; t < t_max; ++t) {
           LinearNumericCondition &lnc = numeric_task.get_condition(i);
-          double big_m = lnc.constant;
+          double big_m = lnc.constant - numeric_task.get_epsilon(i);
 
           for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
             double w = lnc.coefficients[nv_id];
