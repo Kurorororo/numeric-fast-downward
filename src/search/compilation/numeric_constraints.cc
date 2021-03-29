@@ -53,6 +53,7 @@ void NumericConstraints::initialize_constraints(
     const std::shared_ptr<AbstractTask> task,
     std::vector<lp::LPConstraint> &constraints, double infinity) {
   cout << "initializing constraints for numeric" << endl;
+  initialize_numeric_mutex();
   initial_state_constraint(task, constraints);
   goal_state_constraint(task, constraints, infinity, t_max);
   compute_big_m_values(task, t_min, t_max);
@@ -271,16 +272,13 @@ void NumericConstraints::goal_state_constraint(
   if (first) first = false;
 }
 
-void NumericConstraints::mutex_relaxtion_constraint(
-    const std::shared_ptr<AbstractTask> task,
-    std::vector<lp::LPConstraint> &constraints, double infinity, int t_min,
-    int t_max) {
+void NumericConstraints::initialize_numeric_mutex() {
   size_t n_actions = numeric_task.get_n_actions();
+  numeric_mutex.resize(n_actions, std::vector<bool>(n_actions, false));
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 == op_id2) continue;
-      bool mutex = false;
+      if (op_id1 == op_id2 || numeric_mutex[op_id1][op_id2]) continue;
       for (int pre : numeric_task.get_action_num_list(op_id1)) {
         for (int i : numeric_task.get_numeric_conditions_id(pre)) {
           LinearNumericCondition &lnc = numeric_task.get_condition(i);
@@ -291,14 +289,26 @@ void NumericConstraints::mutex_relaxtion_constraint(
           }
 
           if (net < 0.0) {
-            mutex = true;
+            numeric_mutex[op_id1][op_id2] = true;
+            numeric_mutex[op_id2][op_id1] = true;
             break;
           }
         }
-        if (mutex) break;
+        if (numeric_mutex[op_id1][op_id2]) break;
       }
+    }
+  }
+}
 
-      if (mutex) {
+void NumericConstraints::mutex_relaxtion_constraint(
+    const std::shared_ptr<AbstractTask> task,
+    std::vector<lp::LPConstraint> &constraints, double infinity, int t_min,
+    int t_max) {
+  size_t n_actions = numeric_task.get_n_actions();
+  int n_numeric_variables = numeric_task.get_n_numeric_variables();
+  for (size_t op_id1 = 0; op_id1 < n_actions - 1; ++op_id1) {
+    for (size_t op_id2 = op_id1 + 1; op_id2 < n_actions; ++op_id2) {
+      if (numeric_mutex[op_id1][op_id2]) {
         for (int t = t_min; t < t_max; ++t) {
           lp::LPConstraint constraint(-infinity, 1);
           constraint.insert((*index_opt)[op_id1][t], 1);

@@ -30,6 +30,7 @@ class NumericConstraints : public IPConstraintGenerator {
   std::vector<std::vector<double>> small_m;
   std::vector<std::vector<double>> k_over;
   std::vector<std::vector<double>> k_under;
+  std::vector<std::vector<bool>> numeric_mutex;
 
   numeric_helper::NumericTaskProxy numeric_task;
 
@@ -52,6 +53,7 @@ class NumericConstraints : public IPConstraintGenerator {
       const std::shared_ptr<AbstractTask> task,
       std::vector<lp::LPConstraint> &constraints, double infinity, int t_min,
       int t_max);
+  void initialize_numeric_mutex();
   void mutex_relaxtion_constraint(const std::shared_ptr<AbstractTask> task,
                                   std::vector<lp::LPConstraint> &constraints,
                                   double infinity, int t_min, int t_max);
