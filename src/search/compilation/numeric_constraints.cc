@@ -111,10 +111,10 @@ void NumericConstraints::initial_state_constraint(
 void NumericConstraints::compute_big_m_values(
     const std::shared_ptr<AbstractTask> task, int t_min, int t_max) {
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
-  large_m.resize(n_numeric_variables, std::vector<double>(t_max, 0.0));
-  small_m.resize(n_numeric_variables, std::vector<double>(t_max, 0.0));
-  k_over.resize(n_numeric_variables, std::vector<double>(t_max, 0.0));
-  k_under.resize(n_numeric_variables, std::vector<double>(t_max, 0.0));
+  large_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+  small_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+  k_over.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+  k_under.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
 
   size_t n_actions = numeric_task.get_n_actions();
   TaskProxy task_proxy(*task);
@@ -122,24 +122,24 @@ void NumericConstraints::compute_big_m_values(
   for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
     int id_num = numeric_task.get_numeric_variable(nv_id).id_abstract_task;
     double initial_value = initial_state.nval(id_num);
-    large_m[nv_id][0] = initial_value;
-    small_m[nv_id][0] = initial_value;
+    large_m[0][nv_id] = initial_value;
+    small_m[0][nv_id] = initial_value;
   }
 
   for (int t = std::max(t_min, 1); t < t_max; ++t) {
     for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
-      k_over[nv_id][t] = large_m[nv_id][t - 1];
-      k_under[nv_id][t] = small_m[nv_id][t - 1];
+      k_over[t][nv_id] = large_m[t - 1][nv_id];
+      k_under[t][nv_id] = small_m[t - 1][nv_id];
       for (size_t op_id = 0; op_id < n_actions; ++op_id) {
         double k = numeric_task.get_action_eff_list(op_id)[nv_id];
         if (k > 0.0) {
-          k_over[nv_id][t] += k;
+          k_over[t][nv_id] += k;
         } else {
-          k_under[nv_id][t] += k;
+          k_under[t][nv_id] += k;
         }
       }
-      large_m[nv_id][t] = k_over[nv_id][t];
-      small_m[nv_id][t] = k_under[nv_id][t];
+      large_m[t][nv_id] = k_over[t][nv_id];
+      small_m[t][nv_id] = k_under[t][nv_id];
     }
   }
 }
@@ -159,9 +159,9 @@ void NumericConstraints::action_precondition_constraint(
           for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
             double w = lnc.coefficients[nv_id];
             if (w < 0.0) {
-              big_m += w * large_m[nv_id][t];
+              big_m += w * large_m[t][nv_id];
             } else {
-              big_m += w * small_m[nv_id][t];
+              big_m += w * small_m[t][nv_id];
             }
           }
 
