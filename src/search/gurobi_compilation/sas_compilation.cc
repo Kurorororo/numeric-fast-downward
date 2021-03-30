@@ -178,7 +178,7 @@ void GurobiSASStateChangeModel::update_state_change_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     int t_min, int t_max) {
   TaskProxy task_proxy(*task);
-  for (int t = t_min; t < t_max - 1; ++t) {
+  for (int t = std::max(t_min - 1, 0); t < t_max - 1; ++t) {
     VariablesProxy vars = task_proxy.get_variables();
     for (VariableProxy var : vars) {
       int n_vals = var.get_domain_size();

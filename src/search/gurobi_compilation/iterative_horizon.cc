@@ -38,7 +38,7 @@ void GurobiIterativeHorizon::initialize() {
   } else {
     initial_h = result.get_h_value();
     current_t = std::ceil(initial_h) + 1;
-    cout << "initial time horizon " << current_t - 1 << endl;
+    cout << "initial time horizon " << current_t << endl;
   }
   model->initialize(current_t);
 }
@@ -48,7 +48,7 @@ SearchStatus GurobiIterativeHorizon::step() {
 
   if (last_iteration) model->add_sequence_constraint();
 
-  std::cout << "horizon = " << current_t - 1 << std::endl;
+  std::cout << "horizon = " << current_t << std::endl;
   double plan_cost = model->compute_plan();
 
   if (plan_cost >= 0) {
