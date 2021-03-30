@@ -534,6 +534,16 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME GUROBI_IP_COMPILATION
+    HELP "IP compilations (Gurobi)"
+    SOURCES 
+        gurobi_compilation/iterative_horizon.cc
+        gurobi_compilation/ip_compilation.cc
+        gurobi_compilation/ip_constraint_generator.cc
+        gurobi_compilation/sas_compilation.cc
+)
+
+fast_downward_plugin(
     NAME PDBS
     HELP "Plugin containing the code for PDBs"
     SOURCES

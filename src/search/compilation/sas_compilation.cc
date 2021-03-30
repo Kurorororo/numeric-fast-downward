@@ -379,17 +379,17 @@ void SASStateChangeModel::mutex_proposition_constraint(
   }
 
   for (auto group : get_mutex_group()) {
-    for (auto fact : group) {
-      int var = fact.var;
-      int val1 = fact.value;
-      int n_val = var_id_to_domain_size[var];
-      for (int t = t_min; t < t_max; ++t) {
-        lp::LPConstraint constraint(-infinity, 1.);
+    for (int t = t_min; t < t_max; ++t) {
+      lp::LPConstraint constraint(-infinity, 1.);
+      for (auto fact : group) {
+        int var = fact.var;
+        int val1 = fact.value;
+        int n_val = var_id_to_domain_size[var];
         for (int val2 = 0; val2 < n_val; ++val2) {
           constraint.insert(index_var[var][val2][val1][t], 1.);
         }
-        constraints.push_back((constraint));
       }
+      constraints.push_back((constraint));
     }
   }
 }
@@ -437,12 +437,8 @@ void SASStateChangeModel::mutex_proposition_constraint(
 
 static shared_ptr<IPConstraintGenerator> _parse(OptionParser &parser) {
   parser.document_synopsis(
-      "State based model",
-      "For each fact, a permanent constraint is added that considers the net "
-      "change of the fact, i.e., the total number of times the fact is added "
-      "minus the total number of times is removed. The bounds of each "
-      "constraint depend on the current state and the goal state and are "
-      "updated in each state. For details, see" +
+      "SAS state change model",
+      "For details, see" +
           utils::format_paper_reference(
               {"Menkes van den Briel", "Thomas Vossen", "Subbarao Kambhampati"},
               "Reviving integer programming approaches for AI planning: A "
