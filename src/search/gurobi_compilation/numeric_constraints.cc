@@ -90,12 +90,14 @@ void NumericConstraints::initialize_repetable_actions(
       for (int i : numeric_task.get_numeric_conditions_id(pre)) {
         LinearNumericCondition &lnc = numeric_task.get_condition(i);
         ap_float net = 0;
+        ap_float coefficent_sum = 0.0;
         for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
           net += lnc.coefficients[nv_id] *
                  numeric_task.get_action_eff_list(op_id)[nv_id];
+          coefficent_sum += lnc.coefficients[nv_id];
         }
 
-        if (net < 0.0) {
+        if (net < 0.0 || coefficent_sum == 0.0) {
           is_repetable = false;
           break;
         }
