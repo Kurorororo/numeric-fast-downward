@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "../lp/lp_solver.h"
+#include "../scalar_evaluator.h"
 #include "../search_engine.h"
 #include "../task_proxy.h"
 #include "../utils/countdown_timer.h"

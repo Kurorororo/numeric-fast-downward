@@ -12,7 +12,7 @@ namespace gurobi_ip_compilation {
 class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
  protected:
   int current_horizon;
-  std::vector<std::vector<std::vector<GRBVar *>>> y;
+  std::vector<std::vector<std::vector<std::vector<GRBVar>>>> y;
   std::vector<std::vector<std::vector<std::set<int>>>> sc_actions;
   std::vector<std::vector<std::set<int>>> add_actions;
   std::vector<std::vector<std::pair<int, std::set<int>>>> effs_actions;
@@ -36,14 +36,16 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
                                       int t_min, int t_max);
   void effect_constraint(const std::shared_ptr<AbstractTask> task,
                          std::shared_ptr<GRBModel> model,
-                         std::vector<GRBVar *> &x, int t_min, int t_max);
+                         std::vector<std::vector<GRBVar>> &x, int t_min,
+                         int t_max);
   void mutex_relaxtion_constraint(const std::shared_ptr<AbstractTask> task,
                                   std::shared_ptr<GRBModel> model,
-                                  std::vector<GRBVar *> &x, int t_min,
-                                  int t_max);
+                                  std::vector<std::vector<GRBVar>> &x,
+                                  int t_min, int t_max);
   void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                std::shared_ptr<GRBModel> model,
-                               std::vector<GRBVar *> &x, int t_min, int t_max);
+                               std::vector<std::vector<GRBVar>> &x, int t_min,
+                               int t_max);
   void mutex_proposition_constraint(const std::shared_ptr<AbstractTask> task,
                                     std::shared_ptr<GRBModel> model, int t_min,
                                     int t_max);
@@ -51,16 +53,14 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
  public:
   GurobiSASStateChangeModel();
 
-  virtual ~GurobiSASStateChangeModel();
-
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
                           std::shared_ptr<GRBModel> model,
-                          std::vector<GRBVar *> &x);
+                          std::vector<std::vector<GRBVar>> &x);
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,
-                      std::vector<GRBVar *> &x);
+                      std::vector<std::vector<GRBVar>> &x);
 };
 }  // namespace gurobi_ip_compilation
 #endif

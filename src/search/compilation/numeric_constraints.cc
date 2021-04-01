@@ -251,7 +251,8 @@ void NumericConstraints::goal_state_constraint(
     if (numeric_goals.empty()) continue;  // this is not a numeric goal
     for (int id_n_con : numeric_goals) {
       LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
-      lp::LPConstraint constraint(-lnc.constant, infinity);
+      lp::LPConstraint constraint(
+          numeric_task.get_epsilon(id_n_con) - lnc.constant, infinity);
       for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables();
            ++n_id) {
         double coefficient = lnc.coefficients[n_id];

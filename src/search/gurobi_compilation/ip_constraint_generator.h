@@ -16,11 +16,11 @@ class GurobiIPConstraintGenerator {
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
                           std::shared_ptr<GRBModel> model,
-                          std::vector<GRBVar *> &x) = 0;
+                          std::vector<std::vector<GRBVar>> &x) = 0;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,
-                      std::vector<GRBVar *> &x) = 0;
+                      std::vector<std::vector<GRBVar>> &x) = 0;
 };
 }  // namespace gurobi_ip_compilation
 

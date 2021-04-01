@@ -13,19 +13,9 @@ using namespace numeric_helper;
 
 GurobiSASStateChangeModel::GurobiSASStateChangeModel() : current_horizon(0) {}
 
-GurobiSASStateChangeModel::~GurobiSASStateChangeModel() {
-  for (auto v1 : y) {
-    for (auto v2 : v1) {
-      for (auto v3 : v2) {
-        delete[] v3;
-      }
-    }
-  }
-}
-
 void GurobiSASStateChangeModel::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<GRBVar *> &x) {
+    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x) {
   cout << "inigializing SAS SC" << endl;
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
@@ -85,7 +75,7 @@ void GurobiSASStateChangeModel::initialize(
 void GurobiSASStateChangeModel::update(const int horizon,
                                        const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
-                                       std::vector<GRBVar *> &x) {
+                                       std::vector<std::vector<GRBVar>> &x) {
   cout << "adding constraint from SAS SC" << endl;
   bool first = current_horizon == 0;
   int t_min = current_horizon;
@@ -106,17 +96,23 @@ void GurobiSASStateChangeModel::add_variables(
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
   VariablesProxy vars = task_proxy.get_variables();
-  y.resize(t_max, std::vector<std::vector<GRBVar *>>(vars.size()));
+  y.resize(t_max, std::vector<std::vector<std::vector<GRBVar>>>(vars.size()));
 
   for (int t = t_min; t < t_max; ++t) {
     for (VariableProxy var : vars) {
       int n_vals = var.get_domain_size();
       std::vector<char> types(n_vals, GRB_BINARY);
-      y[t][var.get_id()].resize(n_vals);
+      y[t][var.get_id()].resize(n_vals, std::vector<GRBVar>(n_vals));
+      std::string base_name =
+          "y^" + std::to_string(var.get_id()) + "_" + std::to_string(t);
 
-      for (int val = 0; val < n_vals; ++val) {
-        y[t][var.get_id()][val] =
-            model->addVars(NULL, NULL, NULL, types.data(), NULL, n_vals);
+      for (int val1 = 0; val1 < n_vals; ++val1) {
+        for (int val2 = 0; val2 < n_vals; ++val2) {
+          std::string name = base_name + "_" + std::to_string(val1) + "_" +
+                             std::to_string(val2);
+          y[t][var.get_id()][val1][val2] =
+              model->addVar(0, 1, 0, GRB_BINARY, name);
+        }
       }
     }
   }
@@ -134,14 +130,14 @@ void GurobiSASStateChangeModel::initial_state_constraint(
     std::vector<double> coeffs(n_vals, 1);
     int initial_value = initial_state[i_var].get_value();
     GRBLinExpr lhs;
-    lhs.addTerms(coeffs.data(), y[0][i_var][initial_value], n_vals);
+    lhs.addTerms(coeffs.data(), y[0][i_var][initial_value].data(), n_vals);
     model->addConstr(lhs == 1);
 
     {
       for (int in_val = 0; in_val < n_vals; in_val++) {
         if (in_val == initial_value) continue;
         GRBLinExpr lhs;
-        lhs.addTerms(coeffs.data(), y[0][i_var][in_val], n_vals);
+        lhs.addTerms(coeffs.data(), y[0][i_var][in_val].data(), n_vals);
         model->addConstr(lhs == 0);
       }
     }
@@ -186,7 +182,7 @@ void GurobiSASStateChangeModel::update_state_change_constraint(
       std::vector<double> coeff(n_vals, 1);
       for (int val1 = 0; val1 < n_vals; val1++) {
         GRBLinExpr lhs;
-        lhs.addTerms(coeff.data(), y[t + 1][i_var][val1], n_vals);
+        lhs.addTerms(coeff.data(), y[t + 1][i_var][val1].data(), n_vals);
         GRBLinExpr rhs;
         for (int val2 = 0; val2 < n_vals; val2++) {
           rhs.addTerms(coeff.data(), &y[t][i_var][val2][val1], 1);
@@ -199,7 +195,7 @@ void GurobiSASStateChangeModel::update_state_change_constraint(
 
 void GurobiSASStateChangeModel::effect_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    std::vector<GRBVar *> &x, int t_min, int t_max) {
+    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   TaskProxy task_proxy(*task);
   VariablesProxy vars = task_proxy.get_variables();
   for (VariableProxy var : vars) {
@@ -248,7 +244,7 @@ void GurobiSASStateChangeModel::effect_constraint(
 
 void GurobiSASStateChangeModel::mutex_relaxtion_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    std::vector<GRBVar *> &x, int t_min, int t_max) {
+    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
     for (int op_mutex_id : numeric_task.get_mutex_actions(op_id)) {
       for (int t = t_min; t < t_max; ++t) {
@@ -260,7 +256,7 @@ void GurobiSASStateChangeModel::mutex_relaxtion_constraint(
 
 void GurobiSASStateChangeModel::precondition_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    std::vector<GRBVar *> &x, int t_min, int t_max) {
+    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   TaskProxy task_proxy(*task);
   VariablesProxy vars = task_proxy.get_variables();
   for (VariableProxy var : vars) {

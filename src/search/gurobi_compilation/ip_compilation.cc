@@ -2,6 +2,7 @@
 
 #include "../option_parser.h"
 #include "../plugin.h"
+#include "../task_proxy.h"
 
 using namespace std;
 using namespace gurobi_ip_compilation;
@@ -21,42 +22,39 @@ GurobiIPCompilation::GurobiIPCompilation(
   model = std::make_shared<GRBModel>(*env);
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
-  op_costs.resize(ops.size());
   for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
     const OperatorProxy &op = ops[op_id];
     ap_float cost = op.get_cost();
-    op_costs[op_id] = cost;
     if (cost < min_action_cost) min_action_cost = cost;
   }
 }
 
-GurobiIPCompilation::~GurobiIPCompilation() {
-  for (auto v : x) delete[] v;
-  delete env;
-}
+GurobiIPCompilation::~GurobiIPCompilation() { delete env; }
 
 void GurobiIPCompilation::initialize(const int horizon) {
-  std::vector<char> types(op_costs.size(), GRB_BINARY);
-  int t_min = x.size();
-  x.resize(horizon);
-  for (int t = t_min; t < horizon; ++t) {
-    x[t] = model->addVars(NULL, NULL, op_costs.data(), types.data(), NULL,
-                          op_costs.size());
-  }
+  add_variables(0, horizon);
   for (auto generator : constraint_generators)
     generator->initialize(horizon, task, model, x);
 }
 
 void GurobiIPCompilation::update(const int horizon) {
-  std::vector<char> types(op_costs.size(), GRB_BINARY);
   int t_min = x.size();
-  x.resize(horizon);
-  for (int t = t_min; t < horizon; ++t) {
-    x[t] = model->addVars(NULL, NULL, op_costs.data(), types.data(), NULL,
-                          op_costs.size());
-  }
+  add_variables(t_min, horizon);
   for (auto generator : constraint_generators)
     generator->update(horizon, task, model, x);
+}
+
+void GurobiIPCompilation::add_variables(const int t_min, const int t_max) {
+  TaskProxy task_proxy(*task);
+  OperatorsProxy ops = task_proxy.get_operators();
+  x.resize(t_max, std::vector<GRBVar>(ops.size()));
+  for (int t = t_min; t < t_max; ++t) {
+    for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
+      const OperatorProxy &op = ops[op_id];
+      std::string name = "x_" + std::to_string(op_id) + "_" + std::to_string(t);
+      x[t][op_id] = model->addVar(0, 1, op.get_cost(), GRB_BINARY, name);
+    }
+  }
 }
 
 void GurobiIPCompilation::add_sequence_constraint() {
@@ -66,12 +64,12 @@ void GurobiIPCompilation::add_sequence_constraint() {
   int horizon = x.size();
   for (int t = 0; t < horizon; ++t) {
     GRBLinExpr sum_t;
-    sum_t.addTerms(coeff.data(), x[t], ops.size());
+    sum_t.addTerms(coeff.data(), x[t].data(), ops.size());
     model->addConstr(sum_t <= 1);
 
     if (t > 0) {
       GRBLinExpr sum_t_1;
-      sum_t_1.addTerms(coeff.data(), x[t - 1], ops.size());
+      sum_t_1.addTerms(coeff.data(), x[t - 1].data(), ops.size());
       model->addConstr(sum_t_1 <= sum_t);
     }
   }
@@ -90,15 +88,14 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
   SearchEngine::Plan plan;
+  int t_max = x.size();
 
-  for (auto v : x) {
-    double *values = model->get(GRB_DoubleAttr_X, v, ops.size());
+  for (int t = 0; t < t_max; ++t) {
     for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
-      int n = values[op_id];
+      int n = x[t][op_id].get(GRB_DoubleAttr_X);
       for (int i = 0; i < n; ++i)
         plan.push_back(ops[op_id].get_global_operator());
     }
-    delete[] values;
   }
 
   return plan;
