@@ -134,9 +134,15 @@ void NumericConstraints::compute_big_m_values(
       for (size_t op_id = 0; op_id < n_actions; ++op_id) {
         double k = numeric_task.get_action_eff_list(op_id)[nv_id];
         if (k > 0.0) {
-          k_over[t][nv_id] += k;
+          if (num_repetition > 1 && repetable[op_id])
+            k_over[t][nv_id] += num_repetition * k;
+          else
+            k_over[t][nv_id] += k;
         } else {
-          k_under[t][nv_id] += k;
+          if (num_repetition > 1 && repetable[op_id])
+            k_under[t][nv_id] += num_repetition * k;
+          else
+            k_under[t][nv_id] += k;
         }
       }
       large_m[t][nv_id] = k_over[t][nv_id];
