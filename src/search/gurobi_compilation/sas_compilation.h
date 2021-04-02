@@ -38,17 +38,16 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
                          std::shared_ptr<GRBModel> model,
                          std::vector<std::vector<GRBVar>> &x, int t_min,
                          int t_max);
-  void mutex_relaxtion_constraint(const std::shared_ptr<AbstractTask> task,
-                                  std::shared_ptr<GRBModel> model,
-                                  std::vector<std::vector<GRBVar>> &x,
-                                  int t_min, int t_max);
-  void precondition_constraint(const std::shared_ptr<AbstractTask> task,
-                               std::shared_ptr<GRBModel> model,
-                               std::vector<std::vector<GRBVar>> &x, int t_min,
-                               int t_max);
   void mutex_proposition_constraint(const std::shared_ptr<AbstractTask> task,
                                     std::shared_ptr<GRBModel> model, int t_min,
                                     int t_max);
+  virtual void mutex_relaxtion_constraint(
+      const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
+      std::vector<std::vector<GRBVar>> &x, int t_min, int t_max);
+  virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
+                                       std::shared_ptr<GRBModel> model,
+                                       std::vector<std::vector<GRBVar>> &x,
+                                       int t_min, int t_max);
 
  public:
   GurobiSASStateChangeModel();
@@ -56,11 +55,11 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
                           std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x);
+                          std::vector<std::vector<GRBVar>> &x) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,
-                      std::vector<std::vector<GRBVar>> &x);
+                      std::vector<std::vector<GRBVar>> &x) override;
 };
 }  // namespace gurobi_ip_compilation
 #endif

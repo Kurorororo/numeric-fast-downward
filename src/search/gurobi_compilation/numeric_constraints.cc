@@ -1,7 +1,6 @@
 #include "numeric_constraints.h"
 
 #include "../globals.h"
-#include "../lp/lp_solver.h"
 #include "../numeric_operator_counting/numeric_helper.h"
 #include "../option_parser.h"
 #include "../plugin.h"
@@ -19,6 +18,7 @@ void NumericConstraints::initialize(const int horizon,
                                     const std::shared_ptr<AbstractTask> task,
                                     std::shared_ptr<GRBModel> model,
                                     std::vector<std::vector<GRBVar>> &x) {
+  cout << "initializing numeric" << endl;
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
   initialize_numeric_mutex();
@@ -33,6 +33,7 @@ void NumericConstraints::update(const int horizon,
                                 const std::shared_ptr<AbstractTask> task,
                                 std::shared_ptr<GRBModel> model,
                                 std::vector<std::vector<GRBVar>> &x) {
+  cout << "adding constraint from numeric" << endl;
   bool first = current_horizon == 0;
   int t_min = current_horizon;
   int t_max = horizon;
@@ -78,7 +79,6 @@ void NumericConstraints::initialize_numeric_mutex() {
 void NumericConstraints::initialize_repetable_actions(
     std::vector<std::vector<GRBVar>> &x) {
   size_t n_actions = numeric_task.get_n_actions();
-  numeric_mutex.resize(n_actions, std::vector<bool>(n_actions, false));
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
   repetable.resize(n_actions, false);
 

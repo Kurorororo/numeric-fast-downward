@@ -16,7 +16,7 @@ GurobiSASStateChangeModel::GurobiSASStateChangeModel() : current_horizon(0) {}
 void GurobiSASStateChangeModel::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x) {
-  cout << "inigializing SAS SC" << endl;
+  cout << "initializing SAS SC" << endl;
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
   OperatorsProxy ops = task_proxy.get_operators();

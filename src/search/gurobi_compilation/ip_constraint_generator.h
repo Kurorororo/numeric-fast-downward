@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "action_precedence_graph.h"
 #include "gurobi_c++.h"
 
 class AbstractTask;
@@ -21,6 +22,9 @@ class GurobiIPConstraintGenerator {
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,
                       std::vector<std::vector<GRBVar>> &x) = 0;
+  virtual void add_action_precedence(
+      const std::shared_ptr<AbstractTask> task,
+      std::shared_ptr<ActionPrecedenceGraph> graph) {}
 };
 }  // namespace gurobi_ip_compilation
 

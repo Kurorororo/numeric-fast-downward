@@ -11,7 +11,7 @@ class NumericTaskProxy;
 
 namespace gurobi_ip_compilation {
 class NumericConstraints : public GurobiIPConstraintGenerator {
- private:
+ protected:
   int current_horizon;
   int num_repetition;
   std::vector<std::vector<GRBVar>> y;
@@ -24,7 +24,6 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
 
   numeric_helper::NumericTaskProxy numeric_task;
 
-  void initialize_numeric_mutex();
   void initialize_repetable_actions(std::vector<std::vector<GRBVar>> &x);
   void compute_big_m_values(const std::shared_ptr<AbstractTask> task, int t_min,
                             int t_max);
@@ -38,10 +37,6 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
   void goal_state_constraint(const std::shared_ptr<AbstractTask> task,
                              std::shared_ptr<GRBModel> model, int t_max,
                              bool first);
-  void precondition_constraint(const std::shared_ptr<AbstractTask> task,
-                               std::shared_ptr<GRBModel> model,
-                               std::vector<std::vector<GRBVar>> &x, int t_min,
-                               int t_max);
   void simple_effect_constraint(const std::shared_ptr<AbstractTask> task,
                                 std::shared_ptr<GRBModel> model,
                                 std::vector<std::vector<GRBVar>> &x, int t_min,
@@ -54,6 +49,11 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
                                   std::shared_ptr<GRBModel> model,
                                   std::vector<std::vector<GRBVar>> &x,
                                   int t_min, int t_max);
+  virtual void initialize_numeric_mutex();
+  virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
+                                       std::shared_ptr<GRBModel> model,
+                                       std::vector<std::vector<GRBVar>> &x,
+                                       int t_min, int t_max);
 
  public:
   NumericConstraints(const Options &opts);
@@ -61,11 +61,11 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
                           std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x);
+                          std::vector<std::vector<GRBVar>> &x) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,
-                      std::vector<std::vector<GRBVar>> &x);
+                      std::vector<std::vector<GRBVar>> &x) override;
 };
 }  // namespace gurobi_ip_compilation
 #endif

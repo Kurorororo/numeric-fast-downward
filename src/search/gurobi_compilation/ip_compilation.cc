@@ -1,5 +1,7 @@
 #include "ip_compilation.h"
 
+#include <cmath>
+
 #include "../option_parser.h"
 #include "../plugin.h"
 #include "../task_proxy.h"
@@ -9,15 +11,21 @@ using namespace gurobi_ip_compilation;
 
 GurobiIPCompilation::GurobiIPCompilation(
     const options::Options &opts, const std::shared_ptr<AbstractTask> &task)
-    : constraint_generators(
+    : add_lazy_constraints(opts.get<bool>("lazy_constraints")),
+      add_user_cuts(opts.get<bool>("user_cuts")),
+      max_num_cuts(opts.get<int>("max_num_cuts")),
+      min_action_cost(std::numeric_limits<ap_float>::max()),
+      constraint_generators(
           opts.get_list<std::shared_ptr<GurobiIPConstraintGenerator>>(
               "gurobi_ipmodel")),
       task(task),
       env(new GRBEnv()),
-      min_action_cost(std::numeric_limits<ap_float>::max()) {
+      graph(nullptr),
+      callback(nullptr) {
+  if (add_user_cuts) add_lazy_constraints = true;
   env->set(GRB_IntParam_Threads, opts.get<int>("threads"));
-  if (opts.get<bool>("lazy_constraints"))
-    env->set(GRB_IntParam_LazyConstraints, 1);
+  if (add_lazy_constraints) env->set(GRB_IntParam_LazyConstraints, 1);
+  if (add_user_cuts) env->set(GRB_IntParam_PreCrush, 1);
   env->set(GRB_IntParam_OutputFlag, 0);
   model = std::make_shared<GRBModel>(*env);
   TaskProxy task_proxy(*task);
@@ -27,14 +35,26 @@ GurobiIPCompilation::GurobiIPCompilation(
     ap_float cost = op.get_cost();
     if (cost < min_action_cost) min_action_cost = cost;
   }
+
+  if (add_lazy_constraints || add_user_cuts)
+    graph = std::make_shared<ActionPrecedenceGraph>(ops.size());
 }
 
 GurobiIPCompilation::~GurobiIPCompilation() { delete env; }
 
 void GurobiIPCompilation::initialize(const int horizon) {
   add_variables(0, horizon);
-  for (auto generator : constraint_generators)
+  for (auto generator : constraint_generators) {
     generator->initialize(horizon, task, model, x);
+    if (add_lazy_constraints || add_user_cuts)
+      generator->add_action_precedence(task, graph);
+  }
+
+  if (add_lazy_constraints || add_user_cuts) {
+    callback = std::make_shared<ActionCycleEliminationCallback>(
+        max_num_cuts, add_user_cuts, x, graph);
+    model->setCallback(callback.get());
+  }
 }
 
 void GurobiIPCompilation::update(const int horizon) {
@@ -76,7 +96,15 @@ void GurobiIPCompilation::add_sequence_constraint() {
 }
 
 ap_float GurobiIPCompilation::compute_plan() {
-  model->optimize();
+  try {
+    model->optimize();
+  } catch (GRBException e) {
+    std::cout << "Error number: " << e.getErrorCode() << std::endl;
+    std::cout << e.getMessage() << std::endl;
+  } catch (...) {
+    std::cout << "Error during optimize" << std::endl;
+  }
+
   int status = model->get(GRB_IntAttr_Status);
 
   if (status == GRB_OPTIMAL) return model->get(GRB_DoubleAttr_ObjVal);
@@ -91,10 +119,36 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
   int t_max = x.size();
 
   for (int t = 0; t < t_max; ++t) {
-    for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
-      int n = x[t][op_id].get(GRB_DoubleAttr_X);
-      for (int i = 0; i < n; ++i)
-        plan.push_back(ops[op_id].get_global_operator());
+    if (add_lazy_constraints || add_user_cuts) {
+      std::vector<int> nodes;
+      std::unordered_map<int, int> ns;
+      for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
+        int n = std::round(x[t][op_id].get(GRB_DoubleAttr_X));
+        if (n > 0) {
+          nodes.push_back(op_id);
+          ns[op_id] = n;
+        }
+      }
+      if (nodes.size() > 0) {
+        auto subplan = graph->topological_sort(nodes);
+
+        if (subplan.size() != nodes.size()) {
+          std::cout << "plan contains a cycle" << std::endl;
+          return SearchEngine::Plan();
+        }
+
+        for (auto op_id : subplan) {
+          for (int i = 0; i < ns[op_id]; ++i)
+            plan.push_back(ops[op_id].get_global_operator());
+        }
+      }
+    } else {
+      for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
+        int n = std::round(x[t][op_id].get(GRB_DoubleAttr_X));
+
+        for (int i = 0; i < n; ++i)
+          plan.push_back(ops[op_id].get_global_operator());
+      }
     }
   }
 
