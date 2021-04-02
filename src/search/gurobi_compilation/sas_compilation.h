@@ -41,9 +41,8 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
   void mutex_proposition_constraint(const std::shared_ptr<AbstractTask> task,
                                     std::shared_ptr<GRBModel> model, int t_min,
                                     int t_max);
-  virtual void mutex_relaxtion_constraint(
-      const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-      std::vector<std::vector<GRBVar>> &x, int t_min, int t_max);
+  virtual void initialize_mutex(const std::shared_ptr<AbstractTask> task,
+                                std::vector<std::vector<bool>> &action_mutex);
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
@@ -52,10 +51,10 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
  public:
   GurobiSASStateChangeModel();
 
-  virtual void initialize(const int horizon,
-                          const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x) override;
+  virtual void initialize(
+      const int horizon, const std::shared_ptr<AbstractTask> task,
+      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+      std::vector<std::vector<bool>> &action_mutex) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

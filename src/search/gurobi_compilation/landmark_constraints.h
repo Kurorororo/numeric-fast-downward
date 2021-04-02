@@ -23,10 +23,10 @@ class LandmarkConstraints : public GurobiIPConstraintGenerator {
   set<int> action_landmarks;
 
  public:
-  virtual void initialize(const int horizon,
-                          const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x) override;
+  virtual void initialize(
+      const int horizon, const std::shared_ptr<AbstractTask> task,
+      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+      std::vector<std::vector<bool>> &action_mutex) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

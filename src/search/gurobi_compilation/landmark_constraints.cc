@@ -12,10 +12,10 @@ using namespace std;
 using namespace numeric_helper;
 using namespace gurobi_ip_compilation;
 
-void LandmarkConstraints::initialize(const int horizon,
-                                     const std::shared_ptr<AbstractTask> task,
-                                     std::shared_ptr<GRBModel> model,
-                                     std::vector<std::vector<GRBVar>> &x) {
+void LandmarkConstraints::initialize(
+    const int horizon, const std::shared_ptr<AbstractTask> task,
+    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+    std::vector<std::vector<bool>> &action_mutex) {
   factory = new landmarks::LandmarkFactoryScala(task);
   vector<set<int>> &landmarks_table = factory->get_landmarks_table();
   TaskProxy task_proxy(*task);

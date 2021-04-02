@@ -16,11 +16,12 @@ NumericConstraintsWithCuts::NumericConstraintsWithCuts(const Options &opts)
 
 void NumericConstraintsWithCuts::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x) {
+    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+    std::vector<std::vector<bool>> &action_mutex) {
   cout << "initializing numeric with cuts" << endl;
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
-  initialize_numeric_mutex();
+  initialize_numeric_mutex(action_mutex);
   initialize_action_precedence();
 
   if (num_repetition > 1) NumericConstraints::initialize_repetable_actions(x);
@@ -62,16 +63,10 @@ void NumericConstraintsWithCuts::initialize_action_precedence() {
   }
 }
 
-void NumericConstraintsWithCuts::initialize_numeric_mutex() {
-  size_t n_actions = numeric_task.get_n_actions();
-  numeric_mutex.resize(n_actions, std::vector<bool>(n_actions, false));
-}
-
 void NumericConstraintsWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<ActionPrecedenceGraph> graph) {
   size_t n_actions = numeric_task.get_n_actions();
-  int n_numeric_variables = numeric_task.get_n_numeric_variables();
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
       if (op_id1 != op_id2 && action_precedence[op_id1][op_id2]) {
@@ -85,7 +80,8 @@ void NumericConstraintsWithCuts::precondition_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
-  for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
+  int n_actions = numeric_task.get_n_actions();
+  for (int op_id = 0; op_id < n_actions; ++op_id) {
     for (int pre : numeric_task.get_action_num_list(op_id)) {
       for (int i : numeric_task.get_numeric_conditions_id(pre)) {
         auto positive_actions = net_positive_actions.find(i);

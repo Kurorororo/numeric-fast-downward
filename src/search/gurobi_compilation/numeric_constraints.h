@@ -45,11 +45,8 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
                                 std::shared_ptr<GRBModel> model,
                                 std::vector<std::vector<GRBVar>> &x, int t_min,
                                 int t_max);
-  void mutex_relaxtion_constraint(const std::shared_ptr<AbstractTask> task,
-                                  std::shared_ptr<GRBModel> model,
-                                  std::vector<std::vector<GRBVar>> &x,
-                                  int t_min, int t_max);
-  virtual void initialize_numeric_mutex();
+  virtual void initialize_numeric_mutex(
+      std::vector<std::vector<bool>> &action_mutex);
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
@@ -58,10 +55,10 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
  public:
   NumericConstraints(const Options &opts);
 
-  virtual void initialize(const int horizon,
-                          const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x) override;
+  virtual void initialize(
+      const int horizon, const std::shared_ptr<AbstractTask> task,
+      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+      std::vector<std::vector<bool>> &action_mutex) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

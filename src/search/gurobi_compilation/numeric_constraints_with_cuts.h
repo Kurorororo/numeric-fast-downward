@@ -11,7 +11,8 @@ namespace gurobi_ip_compilation {
 class NumericConstraintsWithCuts : public NumericConstraints {
  protected:
   virtual void initialize_action_precedence();
-  virtual void initialize_numeric_mutex() override;
+  virtual void initialize_numeric_mutex(
+      std::vector<std::vector<bool>> &action_mutex) override {}
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
@@ -23,10 +24,10 @@ class NumericConstraintsWithCuts : public NumericConstraints {
  public:
   NumericConstraintsWithCuts(const Options &opts);
 
-  virtual void initialize(const int horizon,
-                          const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x) override;
+  virtual void initialize(
+      const int horizon, const std::shared_ptr<AbstractTask> task,
+      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+      std::vector<std::vector<bool>> &action_mutex) override;
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
       std::shared_ptr<ActionPrecedenceGraph> graph) override;

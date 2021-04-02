@@ -17,7 +17,8 @@ class GurobiIPConstraintGenerator {
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
                           std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x) = 0;
+                          std::vector<std::vector<GRBVar>> &x,
+                          std::vector<std::vector<bool>> &action_mutex) = 0;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

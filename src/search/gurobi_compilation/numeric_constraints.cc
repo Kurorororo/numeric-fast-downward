@@ -14,14 +14,14 @@ using namespace numeric_helper;
 NumericConstraints::NumericConstraints(const Options &opts)
     : current_horizon(0), num_repetition(opts.get<int>("num_repetition")) {}
 
-void NumericConstraints::initialize(const int horizon,
-                                    const std::shared_ptr<AbstractTask> task,
-                                    std::shared_ptr<GRBModel> model,
-                                    std::vector<std::vector<GRBVar>> &x) {
+void NumericConstraints::initialize(
+    const int horizon, const std::shared_ptr<AbstractTask> task,
+    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+    std::vector<std::vector<bool>> &action_mutex) {
   cout << "initializing numeric" << endl;
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
-  initialize_numeric_mutex();
+  initialize_numeric_mutex(action_mutex);
 
   if (num_repetition > 1) initialize_repetable_actions(x);
 
@@ -44,17 +44,17 @@ void NumericConstraints::update(const int horizon,
   precondition_constraint(task, model, x, t_min, t_max);
   simple_effect_constraint(task, model, x, t_min, t_max);
   linear_effect_constraint(task, model, x, t_min, t_max);
-  mutex_relaxtion_constraint(task, model, x, t_min, t_max);
   current_horizon = horizon;
 }
 
-void NumericConstraints::initialize_numeric_mutex() {
+void NumericConstraints::initialize_numeric_mutex(
+    std::vector<std::vector<bool>> &action_mutex) {
   size_t n_actions = numeric_task.get_n_actions();
   numeric_mutex.resize(n_actions, std::vector<bool>(n_actions, false));
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 == op_id2 || numeric_mutex[op_id1][op_id2]) continue;
+      if (op_id1 == op_id2 || action_mutex[op_id1][op_id2]) continue;
       for (int pre : numeric_task.get_action_num_list(op_id1)) {
         for (int i : numeric_task.get_numeric_conditions_id(pre)) {
           LinearNumericCondition &lnc = numeric_task.get_condition(i);
@@ -65,12 +65,12 @@ void NumericConstraints::initialize_numeric_mutex() {
           }
 
           if (net < 0.0) {
-            numeric_mutex[op_id1][op_id2] = true;
-            numeric_mutex[op_id2][op_id1] = true;
+            action_mutex[op_id1][op_id2] = true;
+            action_mutex[op_id2][op_id1] = true;
             break;
           }
         }
-        if (numeric_mutex[op_id1][op_id2]) break;
+        if (action_mutex[op_id1][op_id2]) break;
       }
     }
   }
@@ -280,22 +280,6 @@ void NumericConstraints::goal_state_constraint(
           lhs.addTerms(&coefficient, &y[t_max - 1][var], 1);
       }
       model->addConstr(lhs >= numeric_task.get_epsilon(id_n_con), name);
-    }
-  }
-}
-
-void NumericConstraints::mutex_relaxtion_constraint(
-    const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
-  size_t n_actions = numeric_task.get_n_actions();
-  int n_numeric_variables = numeric_task.get_n_numeric_variables();
-  for (size_t op_id1 = 0; op_id1 < n_actions - 1; ++op_id1) {
-    for (size_t op_id2 = op_id1 + 1; op_id2 < n_actions; ++op_id2) {
-      if (numeric_mutex[op_id1][op_id2]) {
-        for (int t = t_min; t < t_max; ++t) {
-          model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
-        }
-      }
     }
   }
 }

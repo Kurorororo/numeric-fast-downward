@@ -23,12 +23,16 @@ GurobiIPCompilation::GurobiIPCompilation(
       env(new GRBEnv()),
       graph(nullptr),
       callback(nullptr) {
-  if (add_user_cuts) add_lazy_constraints = true;
   env->set(GRB_IntParam_Threads, opts.get<int>("threads"));
+
+  if (add_user_cuts) add_lazy_constraints = true;
   if (add_lazy_constraints) env->set(GRB_IntParam_LazyConstraints, 1);
   if (add_user_cuts) env->set(GRB_IntParam_PreCrush, 1);
+
   env->set(GRB_IntParam_OutputFlag, 0);
+
   model = std::make_shared<GRBModel>(*env);
+
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
   for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
@@ -36,6 +40,8 @@ GurobiIPCompilation::GurobiIPCompilation(
     ap_float cost = op.get_cost();
     if (cost < min_action_cost) min_action_cost = cost;
   }
+
+  action_mutex.resize(ops.size(), std::vector<bool>(ops.size(), false));
 
   if (add_lazy_constraints || add_user_cuts)
     graph = std::make_shared<ActionPrecedenceGraph>(ops.size());
@@ -45,11 +51,14 @@ GurobiIPCompilation::~GurobiIPCompilation() { delete env; }
 
 void GurobiIPCompilation::initialize(const int horizon) {
   add_variables(0, horizon);
+
   for (auto generator : constraint_generators) {
-    generator->initialize(horizon, task, model, x);
+    generator->initialize(horizon, task, model, x, action_mutex);
     if (add_lazy_constraints || add_user_cuts)
       generator->add_action_precedence(task, graph);
   }
+
+  add_mutex_constraints(0, horizon);
 
   if (add_lazy_constraints || add_user_cuts) {
     callback = std::make_shared<ActionCycleEliminationCallback>(
@@ -61,8 +70,11 @@ void GurobiIPCompilation::initialize(const int horizon) {
 void GurobiIPCompilation::update(const int horizon) {
   int t_min = x.size();
   add_variables(t_min, horizon);
+
   for (auto generator : constraint_generators)
     generator->update(horizon, task, model, x);
+
+  add_mutex_constraints(t_min, horizon);
 }
 
 void GurobiIPCompilation::add_variables(const int t_min, const int t_max) {
@@ -74,6 +86,21 @@ void GurobiIPCompilation::add_variables(const int t_min, const int t_max) {
       const OperatorProxy &op = ops[op_id];
       std::string name = "x_" + std::to_string(op_id) + "_" + std::to_string(t);
       x[t][op_id] = model->addVar(0, 1, op.get_cost(), GRB_BINARY, name);
+    }
+  }
+}
+
+void GurobiIPCompilation::add_mutex_constraints(const int t_min,
+                                                const int t_max) {
+  TaskProxy task_proxy(*task);
+  OperatorsProxy ops = task_proxy.get_operators();
+  for (size_t op_id1 = 0; op_id1 < ops.size() - 1; ++op_id1) {
+    for (size_t op_id2 = op_id1 + 1; op_id2 < ops.size(); ++op_id2) {
+      if (action_mutex[op_id1][op_id2]) {
+        for (int t = t_min; t < t_max; ++t) {
+          model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
+        }
+      }
     }
   }
 }

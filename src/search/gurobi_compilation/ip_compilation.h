@@ -20,6 +20,7 @@ class GurobiIPCompilation {
 
  private:
   void add_variables(const int t_min, const int t_max);
+  void add_mutex_constraints(const int t_min, const int t_max);
 
   bool add_lazy_constraints;
   bool add_user_cuts;
@@ -31,6 +32,7 @@ class GurobiIPCompilation {
   GRBEnv *env;
   std::vector<std::vector<GRBVar>> x;
   std::shared_ptr<GRBModel> model;
+  std::vector<std::vector<bool>> action_mutex;
   std::shared_ptr<ActionPrecedenceGraph> graph;
   std::shared_ptr<ActionCycleEliminationCallback> callback;
 

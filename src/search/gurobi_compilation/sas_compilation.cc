@@ -15,7 +15,8 @@ GurobiSASStateChangeModel::GurobiSASStateChangeModel() : current_horizon(0) {}
 
 void GurobiSASStateChangeModel::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x) {
+    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
+    std::vector<std::vector<bool>> &action_mutex) {
   cout << "initializing SAS SC" << endl;
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
@@ -68,6 +69,7 @@ void GurobiSASStateChangeModel::initialize(
       }
     }
   }
+  initialize_mutex(task, action_mutex);
   update(horizon, task, model, x);
   initial_state_constraint(task, model);
 }
@@ -85,7 +87,6 @@ void GurobiSASStateChangeModel::update(const int horizon,
   update_state_change_constraint(task, model, t_min, t_max);
   precondition_constraint(task, model, x, t_min, t_max);
   effect_constraint(task, model, x, t_min, t_max);
-  mutex_relaxtion_constraint(task, model, x, t_min, t_max);
   mutex_proposition_constraint(task, model, t_min, t_max);
   current_horizon = horizon;
 }
@@ -242,14 +243,13 @@ void GurobiSASStateChangeModel::effect_constraint(
   }
 }
 
-void GurobiSASStateChangeModel::mutex_relaxtion_constraint(
-    const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
+void GurobiSASStateChangeModel::initialize_mutex(
+    const std::shared_ptr<AbstractTask> task,
+    std::vector<std::vector<bool>> &action_mutex) {
   for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
     for (int op_mutex_id : numeric_task.get_mutex_actions(op_id)) {
-      for (int t = t_min; t < t_max; ++t) {
-        model->addConstr(x[t][op_id] + x[t][op_mutex_id] <= 1);
-      }
+      action_mutex[op_id][op_mutex_id] = true;
+      action_mutex[op_mutex_id][op_id] = true;
     }
   }
 }

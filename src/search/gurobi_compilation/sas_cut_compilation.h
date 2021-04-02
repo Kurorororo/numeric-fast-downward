@@ -13,13 +13,10 @@ class GurobiSASStateChangeModelWithCuts : public GurobiSASStateChangeModel {
  private:
   std::vector<std::vector<bool>> action_mutex;
 
-  void initialize_mutex_actions(const std::shared_ptr<AbstractTask> task);
-
  protected:
-  // constraints
-  virtual void mutex_relaxtion_constraint(
-      const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-      std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) override;
+  virtual void initialize_mutex(
+      const std::shared_ptr<AbstractTask> task,
+      std::vector<std::vector<bool>> &action_mutex) override;
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
@@ -28,10 +25,6 @@ class GurobiSASStateChangeModelWithCuts : public GurobiSASStateChangeModel {
  public:
   GurobiSASStateChangeModelWithCuts();
 
-  virtual void initialize(const int horizon,
-                          const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x) override;
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
       std::shared_ptr<ActionPrecedenceGraph> graph) override;

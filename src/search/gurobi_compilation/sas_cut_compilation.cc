@@ -14,12 +14,12 @@ using namespace numeric_helper;
 GurobiSASStateChangeModelWithCuts::GurobiSASStateChangeModelWithCuts()
     : GurobiSASStateChangeModel() {}
 
-void GurobiSASStateChangeModelWithCuts::initialize_mutex_actions(
-    const std::shared_ptr<AbstractTask> task) {
+void GurobiSASStateChangeModelWithCuts::initialize_mutex(
+    const std::shared_ptr<AbstractTask> task,
+    std::vector<std::vector<bool>> &action_mutex) {
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
   VariablesProxy vars = task_proxy.get_variables();
-  action_mutex.resize(ops.size(), std::vector<bool>(ops.size(), false));
 
   for (size_t op_id1 = 0; op_id1 < ops.size(); ++op_id1) {
     vector<int> postcondition(vars.size(), -1);
@@ -39,28 +39,6 @@ void GurobiSASStateChangeModelWithCuts::initialize_mutex_actions(
           action_mutex[op_id2][op_id1] = true;
           break;
         }
-      }
-    }
-  }
-}
-
-void GurobiSASStateChangeModelWithCuts::initialize(
-    const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x) {
-  cout << "initializing SAS SC with cuts" << endl;
-  initialize_mutex_actions(task);
-  GurobiSASStateChangeModel::initialize(horizon, task, model, x);
-}
-
-void GurobiSASStateChangeModelWithCuts::mutex_relaxtion_constraint(
-    const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
-  for (size_t op_id1 = 0; op_id1 < numeric_task.get_n_actions() - 1; ++op_id1) {
-    for (size_t op_id2 = op_id1 + 1; op_id2 < numeric_task.get_n_actions();
-         ++op_id2) {
-      if (!action_mutex[op_id1][op_id2]) continue;
-      for (int t = t_min; t < t_max; ++t) {
-        model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
       }
     }
   }
