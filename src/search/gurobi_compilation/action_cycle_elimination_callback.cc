@@ -26,6 +26,7 @@ void ActionCycleEliminationCallback::callback() {
         }
         if (num_cuts >= max_num_cuts) break;
       }
+      num_added_cuts += num_cuts;
     } else if (add_user_cut && where == GRB_CB_MIPNODE) {
       if (getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL) {
         size_t num_ops = x[0].size();
@@ -48,6 +49,7 @@ void ActionCycleEliminationCallback::callback() {
           }
           if (num_cuts >= max_num_cuts) break;
         }
+        num_added_cuts += num_cuts;
       }
     }
   } catch (GRBException e) {

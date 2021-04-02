@@ -24,6 +24,7 @@ class GurobiIPCompilation {
   bool add_lazy_constraints;
   bool add_user_cuts;
   int max_num_cuts;
+  int node_count;
   ap_float min_action_cost;
 
   const std::shared_ptr<AbstractTask> task;
@@ -40,6 +41,7 @@ class GurobiIPCompilation {
   void initialize(const int horizon);
   void update(const int horizon);
   void add_sequence_constraint();
+  void print_statistics() const;
 
   ap_float get_min_action_cost();
   ap_float compute_plan();

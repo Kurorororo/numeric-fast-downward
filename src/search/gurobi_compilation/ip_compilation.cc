@@ -14,6 +14,7 @@ GurobiIPCompilation::GurobiIPCompilation(
     : add_lazy_constraints(opts.get<bool>("lazy_constraints")),
       add_user_cuts(opts.get<bool>("user_cuts")),
       max_num_cuts(opts.get<int>("max_num_cuts")),
+      node_count(0),
       min_action_cost(std::numeric_limits<ap_float>::max()),
       constraint_generators(
           opts.get_list<std::shared_ptr<GurobiIPConstraintGenerator>>(
@@ -105,6 +106,8 @@ ap_float GurobiIPCompilation::compute_plan() {
     std::cout << "Error during optimize" << std::endl;
   }
 
+  node_count += model->get(GRB_DoubleAttr_NodeCount);
+
   int status = model->get(GRB_IntAttr_Status);
 
   if (status == GRB_OPTIMAL) return model->get(GRB_DoubleAttr_ObjVal);
@@ -156,3 +159,18 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
 }
 
 ap_float GurobiIPCompilation::get_min_action_cost() { return min_action_cost; }
+
+void GurobiIPCompilation::print_statistics() const {
+  int num_vars = model->get(GRB_IntAttr_NumVars);
+  int num_constraints = model->get(GRB_IntAttr_NumConstrs);
+  int num_cuts = 0;
+
+  if (add_lazy_constraints || add_user_cuts) {
+    num_cuts = callback->get_num_cuts();
+    std::cout << "Cuts: " << num_cuts << std::endl;
+  }
+
+  std::cout << "Vars: " << num_vars << std::endl;
+  std::cout << "Constraints: " << num_constraints - num_cuts << std::endl;
+  std::cout << "Nodes: " << node_count << std::endl;
+}

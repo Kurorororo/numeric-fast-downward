@@ -57,6 +57,7 @@ SearchStatus GurobiIterativeHorizon::step() {
     if (plan_cost == initial_h || plan_cost <= optimal_cost_bound ||
         last_iteration) {
       set_plan(model->extract_plan());
+      model->print_statistics();
       return SOLVED;
     }
     current_t = std::ceil(plan_cost / min_action_cost);

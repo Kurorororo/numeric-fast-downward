@@ -55,9 +55,10 @@ void GurobiSASStateChangeModelWithCuts::initialize(
 void GurobiSASStateChangeModelWithCuts::mutex_relaxtion_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
-  for (size_t op_id1 = 0; op_id1 < numeric_task.get_n_actions(); ++op_id1) {
-    for (size_t op_id2 = 0; op_id2 < numeric_task.get_n_actions(); ++op_id2) {
-      if (op_id1 == op_id2 || !action_mutex[op_id1][op_id2]) continue;
+  for (size_t op_id1 = 0; op_id1 < numeric_task.get_n_actions() - 1; ++op_id1) {
+    for (size_t op_id2 = op_id1 + 1; op_id2 < numeric_task.get_n_actions();
+         ++op_id2) {
+      if (!action_mutex[op_id1][op_id2]) continue;
       for (int t = t_min; t < t_max; ++t) {
         model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
       }
