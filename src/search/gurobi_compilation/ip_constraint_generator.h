@@ -8,8 +8,6 @@
 #include "gurobi_c++.h"
 
 class AbstractTask;
-class State;
-
 namespace gurobi_ip_compilation {
 
 class GurobiIPConstraintGenerator {
