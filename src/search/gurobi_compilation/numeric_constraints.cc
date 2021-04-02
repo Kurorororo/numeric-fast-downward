@@ -33,7 +33,6 @@ void NumericConstraints::update(const int horizon,
                                 const std::shared_ptr<AbstractTask> task,
                                 std::shared_ptr<GRBModel> model,
                                 std::vector<std::vector<GRBVar>> &x) {
-  cout << "adding constraint from numeric" << endl;
   bool first = current_horizon == 0;
   int t_min = current_horizon;
   int t_max = horizon;
@@ -265,12 +264,13 @@ void NumericConstraints::goal_state_constraint(
        ++id_goal) {
     list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
     if (numeric_goals.empty()) continue;  // this is not a numeric goal
-    std::string name = "numeric_goal_" + std::to_string(id_goal);
-    if (!first) {
-      GRBConstr constraint = model->getConstrByName(name);
-      model->remove(constraint);
-    }
     for (int id_n_con : numeric_goals) {
+      std::string name = "numeric_goal_" + std::to_string(id_goal) + "_" +
+                         std::to_string(id_n_con);
+      if (!first) {
+        GRBConstr constraint = model->getConstrByName(name);
+        model->remove(constraint);
+      }
       LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
       GRBLinExpr lhs(lnc.constant);
       for (size_t var = 0; var < numeric_task.get_n_numeric_variables();
@@ -279,7 +279,7 @@ void NumericConstraints::goal_state_constraint(
         if (fabs(coefficient) > 0)
           lhs.addTerms(&coefficient, &y[t_max - 1][var], 1);
       }
-      model->addConstr(lhs >= numeric_task.get_epsilon(id_n_con));
+      model->addConstr(lhs >= numeric_task.get_epsilon(id_n_con), name);
     }
   }
 }
