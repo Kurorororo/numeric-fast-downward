@@ -96,7 +96,10 @@ void GurobiIPCompilation::add_mutex_constraints(const int t_min,
   OperatorsProxy ops = task_proxy.get_operators();
   for (size_t op_id1 = 0; op_id1 < ops.size() - 1; ++op_id1) {
     for (size_t op_id2 = op_id1 + 1; op_id2 < ops.size(); ++op_id2) {
-      if (action_mutex[op_id1][op_id2]) {
+      if (action_mutex[op_id1][op_id2] ||
+          ((add_lazy_constraints || add_user_cuts) &&
+           graph->is_connected(op_id1, op_id2) &&
+           graph->is_connected(op_id2, op_id1))) {
         for (int t = t_min; t < t_max; ++t) {
           model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
         }
@@ -190,14 +193,17 @@ ap_float GurobiIPCompilation::get_min_action_cost() { return min_action_cost; }
 void GurobiIPCompilation::print_statistics() const {
   int num_vars = model->get(GRB_IntAttr_NumVars);
   int num_constraints = model->get(GRB_IntAttr_NumConstrs);
-  int num_cuts = 0;
+  int num_additional_constraints = 0;
 
   if (add_lazy_constraints || add_user_cuts) {
-    num_cuts = callback->get_num_cuts();
-    std::cout << "Cuts: " << num_cuts << std::endl;
+    num_additional_constraints = callback->get_num_constraints();
+    std::cout << "Added constraints: " << num_additional_constraints
+              << std::endl;
+    std::cout << "Cuts: " << callback->get_num_cuts() << std::endl;
   }
 
   std::cout << "Vars: " << num_vars << std::endl;
-  std::cout << "Constraints: " << num_constraints - num_cuts << std::endl;
+  std::cout << "Constraints: " << num_constraints - num_additional_constraints
+            << std::endl;
   std::cout << "Nodes: " << node_count << std::endl;
 }
