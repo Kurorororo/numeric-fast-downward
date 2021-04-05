@@ -10,7 +10,7 @@ using namespace numeric_helper;
 
 void RelevanceConstraints::push_propositional(const TaskProxy &task,
                                               FactProxy f,
-                                              std::stack<size_t> &open) {
+                                              std::queue<size_t> &open) {
   OperatorsProxy ops = task.get_operators();
   for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
     if (action_relevant[op_id]) continue;
@@ -25,7 +25,7 @@ void RelevanceConstraints::push_propositional(const TaskProxy &task,
 }
 
 void RelevanceConstraints::push_numeric(NumericTaskProxy &numeric_task, int c,
-                                        std::stack<size_t> &open) {
+                                        std::queue<size_t> &open) {
   size_t n_actions = numeric_task.get_n_actions();
   for (size_t op_id = 0; op_id < n_actions; ++op_id) {
     if (action_relevant[op_id]) continue;
@@ -50,7 +50,7 @@ void RelevanceConstraints::analyze_relevance(
   NumericTaskProxy numeric_task = NumericTaskProxy(task_proxy);
   action_relevant = std::vector<bool>(ops.size(), false);
 
-  std::stack<size_t> open;
+  std::queue<size_t> open;
 
   for (FactProxy g : task_proxy.get_goals())
     push_propositional(task_proxy, g, open);
@@ -63,7 +63,7 @@ void RelevanceConstraints::analyze_relevance(
   }
 
   while (!open.empty()) {
-    size_t op_id = open.top();
+    size_t op_id = open.front();
     open.pop();
     for (FactProxy pre : ops[op_id].get_preconditions())
       push_propositional(task_proxy, pre, open);

@@ -11,13 +11,45 @@ using namespace std;
 using namespace gurobi_ip_compilation;
 using namespace numeric_helper;
 
-GurobiSASStateChangeModel::GurobiSASStateChangeModel() : current_horizon(0) {}
+GurobiSASStateChangeModel::GurobiSASStateChangeModel(
+    const options::Options &opts)
+    : use_landmark(opts.get<bool>("landmark")),
+      current_horizon(0),
+      factory(nullptr) {}
 
 void GurobiSASStateChangeModel::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
     std::vector<std::vector<bool>> &action_mutex) {
   cout << "initializing SAS SC" << endl;
+  create_sets(task);
+  if (use_landmark) initialize_landmark(task);
+  initialize_mutex(task, action_mutex);
+  update(horizon, task, model, x);
+  initial_state_constraint(task, model);
+}
+
+void GurobiSASStateChangeModel::update(const int horizon,
+                                       const std::shared_ptr<AbstractTask> task,
+                                       std::shared_ptr<GRBModel> model,
+                                       std::vector<std::vector<GRBVar>> &x) {
+  cout << "adding constraint from SAS SC" << endl;
+  bool first = current_horizon == 0;
+  int t_min = current_horizon;
+  int t_max = horizon;
+  add_variables(task, model, t_min, t_max);
+  goal_state_constraint(task, model, t_max, first);
+  update_state_change_constraint(task, model, t_min, t_max);
+  precondition_constraint(task, model, x, t_min, t_max);
+  effect_constraint(task, model, x, t_min, t_max);
+  mutex_proposition_constraint(task, model, t_min, t_max);
+  if (use_landmark) landmark_constraint(task, model, x, t_min, t_max, first);
+
+  current_horizon = horizon;
+}
+
+void GurobiSASStateChangeModel::create_sets(
+    const std::shared_ptr<AbstractTask> task) {
   TaskProxy task_proxy(*task);
   numeric_task = NumericTaskProxy(task_proxy);
   OperatorsProxy ops = task_proxy.get_operators();
@@ -69,26 +101,16 @@ void GurobiSASStateChangeModel::initialize(
       }
     }
   }
-  initialize_mutex(task, action_mutex);
-  update(horizon, task, model, x);
-  initial_state_constraint(task, model);
 }
 
-void GurobiSASStateChangeModel::update(const int horizon,
-                                       const std::shared_ptr<AbstractTask> task,
-                                       std::shared_ptr<GRBModel> model,
-                                       std::vector<std::vector<GRBVar>> &x) {
-  cout << "adding constraint from SAS SC" << endl;
-  bool first = current_horizon == 0;
-  int t_min = current_horizon;
-  int t_max = horizon;
-  add_variables(task, model, t_min, t_max);
-  goal_state_constraint(task, model, t_max, first);
-  update_state_change_constraint(task, model, t_min, t_max);
-  precondition_constraint(task, model, x, t_min, t_max);
-  effect_constraint(task, model, x, t_min, t_max);
-  mutex_proposition_constraint(task, model, t_min, t_max);
-  current_horizon = horizon;
+void GurobiSASStateChangeModel::initialize_landmark(
+    const std::shared_ptr<AbstractTask> task) {
+  factory = std::unique_ptr<landmarks::LandmarkFactoryScala>(
+      new landmarks::LandmarkFactoryScala(task));
+  TaskProxy task_proxy(*task);
+  State initial_state = task_proxy.get_initial_state();
+  fact_landmarks = factory->compute_landmarks(initial_state);
+  action_landmarks = factory->compute_action_landmarks(fact_landmarks);
 }
 
 void GurobiSASStateChangeModel::add_variables(
@@ -299,6 +321,45 @@ void GurobiSASStateChangeModel::mutex_proposition_constraint(
   }
 }
 
+void GurobiSASStateChangeModel::landmark_constraint(
+    const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
+    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max, bool first) {
+  TaskProxy task_proxy(*task);
+  VariablesProxy vars = task_proxy.get_variables();
+  for (int op_id : action_landmarks) {
+    std::string name = "action_landmark_" + std::to_string(op_id);
+    if (!first) {
+      GRBConstr constraint = model->getConstrByName(name);
+      model->remove(constraint);
+    }
+    GRBLinExpr lhs;
+    double coefficient = 1;
+    for (int t = 0; t < t_max; ++t) lhs.addTerms(&coefficient, &x[t][op_id], 1);
+    model->addConstr(lhs >= 1, name);
+  }
+
+  for (int fact : fact_landmarks) {
+    if (fact < numeric_task.get_n_propositions()) {
+      std::string name = "fact_landmark_" + std::to_string(fact);
+      if (!first) {
+        GRBConstr constraint = model->getConstrByName(name);
+        model->remove(constraint);
+      }
+      std::pair<int, int> var_val = numeric_task.get_var_val(fact);
+      int var = var_val.first;
+      int val1 = var_val.second;
+      GRBLinExpr lhs;
+      double coefficient = 1;
+      for (int t = 0; t < t_max; ++t) {
+        for (int val2 = 0; val2 < vars[var].get_domain_size(); ++val2) {
+          lhs.addTerms(&coefficient, &y[t][var][val2][val1], 1);
+        }
+      }
+      model->addConstr(lhs >= 1, name);
+    }
+  }
+}
+
 static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
   parser.document_synopsis(
       "SAS state change model",
@@ -311,9 +372,11 @@ static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
               "Proceedings of the Fifteen International Conference on"
               " Automated Planning and Scheduling (ICAPS 2005)",
               "310-319", "2005"));
+  parser.add_option<bool>("landmark", "use landmark constraints", "false");
+  options::Options opts = parser.parse();
 
   if (parser.dry_run()) return nullptr;
-  return make_shared<GurobiSASStateChangeModel>();
+  return make_shared<GurobiSASStateChangeModel>(opts);
 }
 
 static PluginShared<GurobiIPConstraintGenerator> _plugin("sas", _parse);

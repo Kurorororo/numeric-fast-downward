@@ -2,7 +2,7 @@
 #define GUROBI_RELEVANCE_CONSTRAINTS_H
 
 #include <memory>
-#include <stack>
+#include <queue>
 #include <vector>
 
 #include "../numeric_operator_counting/numeric_helper.h"
@@ -15,9 +15,9 @@ namespace gurobi_ip_compilation {
 class RelevanceConstraints : public GurobiIPConstraintGenerator {
  private:
   void push_propositional(const TaskProxy &task, FactProxy f,
-                          std::stack<size_t> &open);
+                          std::queue<size_t> &open);
   void push_numeric(numeric_helper::NumericTaskProxy &numeric_task, int c,
-                    std::stack<size_t> &open);
+                    std::queue<size_t> &open);
   void analyze_relevance(const std::shared_ptr<AbstractTask> task);
 
   int current_horizon;

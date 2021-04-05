@@ -11,8 +11,9 @@ using namespace std;
 using namespace gurobi_ip_compilation;
 using namespace numeric_helper;
 
-GurobiSASStateChangeModelWithCuts::GurobiSASStateChangeModelWithCuts()
-    : GurobiSASStateChangeModel() {}
+GurobiSASStateChangeModelWithCuts::GurobiSASStateChangeModelWithCuts(
+    const options::Options &opts)
+    : GurobiSASStateChangeModel(opts) {}
 
 void GurobiSASStateChangeModelWithCuts::initialize_mutex(
     const std::shared_ptr<AbstractTask> task,
@@ -131,9 +132,11 @@ static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
               "Proceedings of the Fifteen International Conference on"
               " Automated Planning and Scheduling (ICAPS 2005)",
               "310-319", "2005"));
+  parser.add_option<bool>("landmark", "use landmark constraints", "false");
+  options::Options opts = parser.parse();
 
   if (parser.dry_run()) return nullptr;
-  return make_shared<GurobiSASStateChangeModelWithCuts>();
+  return make_shared<GurobiSASStateChangeModelWithCuts>(opts);
 }
 
 static PluginShared<GurobiIPConstraintGenerator> _plugin("sas_cut", _parse);

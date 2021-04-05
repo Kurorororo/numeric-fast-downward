@@ -23,7 +23,7 @@ class GurobiSASStateChangeModelWithCuts : public GurobiSASStateChangeModel {
                                        int t_min, int t_max) override;
 
  public:
-  GurobiSASStateChangeModelWithCuts();
+  GurobiSASStateChangeModelWithCuts(const options::Options &opts);
 
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
