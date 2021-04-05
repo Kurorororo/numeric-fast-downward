@@ -542,7 +542,6 @@ fast_downward_plugin(
         gurobi_compilation/ip_constraint_generator.cc
         gurobi_compilation/sas_compilation.cc
         gurobi_compilation/numeric_constraints.cc
-        gurobi_compilation/landmark_constraints.cc
         gurobi_compilation/action_precedence_graph.cc
         gurobi_compilation/action_cycle_elimination_callback.cc
         gurobi_compilation/sas_cut_compilation.cc
