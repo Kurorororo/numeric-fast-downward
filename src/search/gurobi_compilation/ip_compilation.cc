@@ -109,6 +109,7 @@ void GurobiIPCompilation::add_mutex_constraints(const int t_min,
 }
 
 void GurobiIPCompilation::add_sequence_constraint() {
+  std::cout << "adding sequence constraints" << std::endl;
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
   std::vector<double> coeff(ops.size(), 1);
@@ -118,9 +119,9 @@ void GurobiIPCompilation::add_sequence_constraint() {
     sum_t.addTerms(coeff.data(), x[t].data(), ops.size());
     model->addConstr(sum_t <= 1);
 
-    if (t > 0) {
+    if (t < horizon - 1) {
       GRBLinExpr sum_t_1;
-      sum_t_1.addTerms(coeff.data(), x[t - 1].data(), ops.size());
+      sum_t_1.addTerms(coeff.data(), x[t + 1].data(), ops.size());
       model->addConstr(sum_t_1 <= sum_t);
     }
   }

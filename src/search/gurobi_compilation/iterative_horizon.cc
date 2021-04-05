@@ -19,6 +19,7 @@ GurobiIterativeHorizon::GurobiIterativeHorizon(const Options &opts)
     : SearchEngine(opts),
       initial_h(-1),
       current_t(1),
+      iterations(0),
       last_iteration(false),
       model(new GurobiIPCompilation(opts, get_task_from_options(opts))),
       h_evaluator(opts.get<ScalarEvaluator *>("eval")) {
@@ -49,6 +50,7 @@ SearchStatus GurobiIterativeHorizon::step() {
   if (last_iteration) model->add_sequence_constraint();
 
   std::cout << "horizon = " << current_t << std::endl;
+  ++iterations;
   double plan_cost = model->compute_plan();
 
   if (plan_cost >= 0) {
@@ -58,6 +60,7 @@ SearchStatus GurobiIterativeHorizon::step() {
         last_iteration) {
       set_plan(model->extract_plan());
       model->print_statistics();
+      std::cout << "Iterations: " << iterations << std::endl;
       return SOLVED;
     }
     current_t = std::ceil(plan_cost / min_action_cost);
