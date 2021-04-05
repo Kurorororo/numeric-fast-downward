@@ -40,14 +40,19 @@ void NumericConstraintsWithCuts::initialize_action_precedence() {
       for (int pre : numeric_task.get_action_num_list(op_id1)) {
         for (int i : numeric_task.get_numeric_conditions_id(pre)) {
           auto key = std::make_pair(i, op_id2);
-          if (net_values.find(key) != net_values.end()) continue;
-          if (net_positive_actions.find(i) == net_positive_actions.end())
-            net_positive_actions[i] = std::vector<int>();
-          LinearNumericCondition &lnc = numeric_task.get_condition(i);
+          auto result = net_values.find(key);
           ap_float net = 0;
-          for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
-            net += lnc.coefficients[nv_id] *
-                   numeric_task.get_action_eff_list(op_id2)[nv_id];
+          if (result == net_values.end()) {
+            if (net_positive_actions.find(i) == net_positive_actions.end())
+              net_positive_actions[i] = std::vector<int>();
+            LinearNumericCondition &lnc = numeric_task.get_condition(i);
+            for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+              net += lnc.coefficients[nv_id] *
+                     numeric_task.get_action_eff_list(op_id2)[nv_id];
+            }
+            net_values[key] = net;
+          } else {
+            net = result->second;
           }
           if (net > 0.0) {
             net_positive_actions[i].push_back(op_id2);
@@ -56,7 +61,6 @@ void NumericConstraintsWithCuts::initialize_action_precedence() {
           if (net < 0.0) {
             action_precedence[op_id1][op_id2] = true;
           }
-          net_values[key] = net;
         }
       }
     }
