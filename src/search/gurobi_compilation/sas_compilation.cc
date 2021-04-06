@@ -117,14 +117,12 @@ void GurobiSASStateChangeModel::add_variables(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     int t_min, int t_max) {
   TaskProxy task_proxy(*task);
-  numeric_task = NumericTaskProxy(task_proxy);
   VariablesProxy vars = task_proxy.get_variables();
   y.resize(t_max, std::vector<std::vector<std::vector<GRBVar>>>(vars.size()));
 
   for (int t = t_min; t < t_max; ++t) {
     for (VariableProxy var : vars) {
       int n_vals = var.get_domain_size();
-      std::vector<char> types(n_vals, GRB_BINARY);
       y[t][var.get_id()].resize(n_vals, std::vector<GRBVar>(n_vals));
       std::string base_name =
           "y^" + std::to_string(var.get_id()) + "_" + std::to_string(t);
@@ -353,6 +351,8 @@ void GurobiSASStateChangeModel::landmark_constraint(
       for (int t = 0; t < t_max; ++t) {
         for (int val2 = 0; val2 < vars[var].get_domain_size(); ++val2) {
           lhs.addTerms(&coefficient, &y[t][var][val2][val1], 1);
+          if (val1 != val2)
+            lhs.addTerms(&coefficient, &y[t][var][val1][val2], 1);
         }
       }
       model->addConstr(lhs >= 1, name);

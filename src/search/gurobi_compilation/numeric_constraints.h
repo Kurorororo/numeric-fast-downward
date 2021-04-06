@@ -14,6 +14,7 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
  protected:
   int current_horizon;
   int num_repetition;
+  bool restrict_mutex;
   std::vector<std::vector<GRBVar>> y;
   std::vector<std::vector<double>> large_m;
   std::vector<std::vector<double>> small_m;

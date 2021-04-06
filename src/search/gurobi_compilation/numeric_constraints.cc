@@ -12,7 +12,9 @@ using namespace gurobi_ip_compilation;
 using namespace numeric_helper;
 
 NumericConstraints::NumericConstraints(const Options &opts)
-    : current_horizon(0), num_repetition(opts.get<int>("num_repetition")) {}
+    : current_horizon(0),
+      num_repetition(opts.get<int>("num_repetition")),
+      restrict_mutex(opts.get<bool>("restrict_mutex")) {}
 
 void NumericConstraints::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
@@ -64,7 +66,10 @@ void NumericConstraints::initialize_numeric_mutex(
                    numeric_task.get_action_eff_list(op_id2)[nv_id];
           }
 
-          if (net < 0.0) {
+          if (restrict_mutex && (net < 0.0 || net > 0.0)) {
+            action_mutex[op_id1][op_id2] = true;
+            action_mutex[op_id2][op_id1] = true;
+          } else if (net < 0.0) {
             action_mutex[op_id1][op_id2] = true;
             action_mutex[op_id2][op_id1] = true;
             break;
@@ -300,6 +305,8 @@ static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
   parser.add_option<int>(
       "num_repetition",
       "Maximum number of the same actions at the same time step", "1");
+  parser.add_option<bool>("restrict_mutex",
+                          "Whether to further restrict mutex actions", "false");
   Options opts = parser.parse();
 
   if (parser.dry_run()) return nullptr;
