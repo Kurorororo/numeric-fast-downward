@@ -339,8 +339,9 @@ def translate_strips_operator_aux(operator, dictionary, ranges, numeric_dictiona
                                                          mutex_ranges, comp_axioms)
         if eff_condition_list is None:  # Impossible condition for this effect.
             continue
-        assert(assignment.expression in numeric_dictionary), "%s not in numeric dictionary" % assignment.expression
-        ass_effects_by_variable[numeric_dictionary[assignment.fluent]][(assignment.symbol, numeric_dictionary[assignment.expression])].extend(eff_condition_list)
+        #assert(assignment.expression in numeric_dictionary), "%s not in numeric dictionary" % assignment.expression
+        if assignment.expression in numeric_dictionary:
+            ass_effects_by_variable[numeric_dictionary[assignment.fluent]][(assignment.symbol, numeric_dictionary[assignment.expression])].extend(eff_condition_list)
     # add effect var=none_of_those for all del effects with the additional
     # condition that the deleted value has been true and no add effect triggers
     for var in del_effects_by_variable:
