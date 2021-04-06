@@ -17,6 +17,8 @@ class NumericConstraintsWithCuts : public NumericConstraints {
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
                                        int t_min, int t_max) override;
+
+  bool disable_precondition_relaxation;
   std::vector<std::vector<bool>> action_precedence;
   std::unordered_map<int, std::vector<int>> net_positive_actions;
   std::unordered_map<std::pair<int, int>, double> net_values;

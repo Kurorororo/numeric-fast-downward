@@ -12,7 +12,9 @@ using namespace gurobi_ip_compilation;
 using namespace numeric_helper;
 
 NumericConstraintsWithCuts::NumericConstraintsWithCuts(const Options &opts)
-    : NumericConstraints(opts) {}
+    : NumericConstraints(opts),
+      disable_precondition_relaxation(
+          opts.get<bool>("disable_precondition_relaxation")) {}
 
 void NumericConstraintsWithCuts::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
@@ -51,11 +53,11 @@ void NumericConstraintsWithCuts::initialize_action_precedence() {
                      numeric_task.get_action_eff_list(op_id2)[nv_id];
             }
             net_values[key] = net;
+            if (net > 0.0) net_positive_actions[i].push_back(op_id2);
           } else {
             net = result->second;
           }
-          if (net > 0.0) {
-            net_positive_actions[i].push_back(op_id2);
+          if (!disable_precondition_relaxation && net > 0.0) {
             action_precedence[op_id2][op_id1] = true;
           }
           if (net < 0.0) {
@@ -83,45 +85,49 @@ void NumericConstraintsWithCuts::add_action_precedence(
 void NumericConstraintsWithCuts::precondition_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
-  int n_numeric_variables = numeric_task.get_n_numeric_variables();
-  int n_actions = numeric_task.get_n_actions();
-  for (int op_id = 0; op_id < n_actions; ++op_id) {
-    for (int pre : numeric_task.get_action_num_list(op_id)) {
-      for (int i : numeric_task.get_numeric_conditions_id(pre)) {
-        auto positive_actions = net_positive_actions.find(i);
+  if (disable_precondition_relaxation) {
+    NumericConstraints::precondition_constraint(task, model, x, t_min, t_max);
+  } else {
+    int n_numeric_variables = numeric_task.get_n_numeric_variables();
+    int n_actions = numeric_task.get_n_actions();
+    for (int op_id = 0; op_id < n_actions; ++op_id) {
+      for (int pre : numeric_task.get_action_num_list(op_id)) {
+        for (int i : numeric_task.get_numeric_conditions_id(pre)) {
+          auto positive_actions = net_positive_actions.find(i);
 
-        for (int t = t_min; t < t_max; ++t) {
-          LinearNumericCondition &lnc = numeric_task.get_condition(i);
-          double big_m = lnc.constant - numeric_task.get_epsilon(i);
+          for (int t = t_min; t < t_max; ++t) {
+            LinearNumericCondition &lnc = numeric_task.get_condition(i);
+            double big_m = lnc.constant - numeric_task.get_epsilon(i);
 
-          for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
-            double w = lnc.coefficients[nv_id];
-            if (w < 0.0) {
-              big_m += w * large_m[t][nv_id];
-            } else {
-              big_m += w * small_m[t][nv_id];
+            for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+              double w = lnc.coefficients[nv_id];
+              if (w < 0.0) {
+                big_m += w * large_m[t][nv_id];
+              } else {
+                big_m += w * small_m[t][nv_id];
+              }
             }
-          }
 
-          GRBLinExpr rhs(big_m * (1 - x[t][op_id]));
-          GRBLinExpr lhs(lnc.constant);
+            GRBLinExpr rhs(big_m * (1 - x[t][op_id]));
+            GRBLinExpr lhs(lnc.constant);
 
-          for (size_t var = 0; var < numeric_task.get_n_numeric_variables();
-               ++var) {
-            double coefficient = lnc.coefficients[var];
-            if (fabs(coefficient) > 0)
-              lhs.addTerms(&coefficient, &y[t][var], 1);
-          }
-
-          if (positive_actions != net_positive_actions.end()) {
-            for (auto op_id2 : positive_actions->second) {
-              if (op_id2 == op_id) continue;
-              lhs.addTerms(&net_values[std::make_pair(i, op_id2)],
-                           &x[t][op_id2], 1);
+            for (size_t var = 0; var < numeric_task.get_n_numeric_variables();
+                 ++var) {
+              double coefficient = lnc.coefficients[var];
+              if (fabs(coefficient) > 0)
+                lhs.addTerms(&coefficient, &y[t][var], 1);
             }
-          }
 
-          model->addConstr(lhs >= rhs + numeric_task.get_epsilon(i));
+            if (positive_actions != net_positive_actions.end()) {
+              for (auto op_id2 : positive_actions->second) {
+                if (op_id2 == op_id) continue;
+                lhs.addTerms(&net_values[std::make_pair(i, op_id2)],
+                             &x[t][op_id2], 1);
+              }
+            }
+
+            model->addConstr(lhs >= rhs + numeric_task.get_epsilon(i));
+          }
         }
       }
     }
@@ -144,6 +150,10 @@ static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
   parser.add_option<int>(
       "num_repetition",
       "Maximum number of the same actions at the same time step", "1");
+  parser.add_option<bool>("restrict_mutex",
+                          "Whether to further restrict mutex actions", "false");
+  parser.add_option<bool>("disable_precondition_relaxation",
+                          "Disable relaxed precondition constraints", "false");
   Options opts = parser.parse();
 
   if (parser.dry_run()) return nullptr;
