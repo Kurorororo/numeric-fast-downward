@@ -88,6 +88,9 @@ static SearchEngine *_parse(OptionParser &parser) {
   parser.add_option<bool>("user_cuts", "Whether to add user cuts", "false");
   parser.add_option<int>("max_num_cuts", "Maximum number of cuts at each node",
                          "1");
+  parser.add_option<bool>("linear_effects",
+                          "Wheter to use domains with linear effects", "false");
+  SearchEngine::add_options_to_parser(parser);
   SearchEngine::add_options_to_parser(parser);
   Options opts = parser.parse();
 

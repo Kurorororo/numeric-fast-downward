@@ -19,10 +19,10 @@ NumericConstraintsWithCuts::NumericConstraintsWithCuts(const Options &opts)
 void NumericConstraintsWithCuts::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-    std::vector<std::vector<bool>> &action_mutex) {
+    std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing numeric with cuts" << endl;
   TaskProxy task_proxy(*task);
-  numeric_task = NumericTaskProxy(task_proxy);
+  numeric_task = NumericTaskProxy(task_proxy, true, use_linear_effects);
   initialize_numeric_mutex(action_mutex);
   initialize_action_precedence();
 

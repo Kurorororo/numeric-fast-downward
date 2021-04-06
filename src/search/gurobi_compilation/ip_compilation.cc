@@ -14,6 +14,7 @@ GurobiIPCompilation::GurobiIPCompilation(
     : add_lazy_constraints(opts.get<bool>("lazy_constraints")),
       add_user_cuts(opts.get<bool>("user_cuts")),
       max_num_cuts(opts.get<int>("max_num_cuts")),
+      use_linear_effects(opts.get<bool>("linear_effects")),
       node_count(0),
       min_action_cost(std::numeric_limits<ap_float>::max()),
       constraint_generators(
@@ -53,7 +54,8 @@ void GurobiIPCompilation::initialize(const int horizon) {
   add_variables(0, horizon);
 
   for (auto generator : constraint_generators) {
-    generator->initialize(horizon, task, model, x, action_mutex);
+    generator->initialize(horizon, task, model, x, action_mutex,
+                          use_linear_effects);
     if (add_lazy_constraints || add_user_cuts)
       generator->add_action_precedence(task, graph);
   }

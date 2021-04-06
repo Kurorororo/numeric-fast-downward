@@ -18,17 +18,20 @@ class RelevanceConstraints : public GurobiIPConstraintGenerator {
                           std::queue<size_t> &open);
   void push_numeric(numeric_helper::NumericTaskProxy &numeric_task, int c,
                     std::queue<size_t> &open);
-  void analyze_relevance(const std::shared_ptr<AbstractTask> task);
+  void analyze_relevance(const std::shared_ptr<AbstractTask> task,
+                         bool use_linear_effects);
 
   int current_horizon;
   std::vector<bool> action_relevant;
 
  public:
   RelevanceConstraints() : current_horizon(0) {}
-  virtual void initialize(
-      const int horizon, const std::shared_ptr<AbstractTask> task,
-      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-      std::vector<std::vector<bool>> &action_mutex) override;
+  virtual void initialize(const int horizon,
+                          const std::shared_ptr<AbstractTask> task,
+                          std::shared_ptr<GRBModel> model,
+                          std::vector<std::vector<GRBVar>> &x,
+                          std::vector<std::vector<bool>> &action_mutex,
+                          bool use_linear_effects) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

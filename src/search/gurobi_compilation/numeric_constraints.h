@@ -15,11 +15,10 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
   int current_horizon;
   int num_repetition;
   bool restrict_mutex;
+  bool has_linear_effects;
   std::vector<std::vector<GRBVar>> y;
   std::vector<std::vector<double>> large_m;
   std::vector<std::vector<double>> small_m;
-  std::vector<std::vector<double>> k_over;
-  std::vector<std::vector<double>> k_under;
   std::vector<std::vector<bool>> numeric_mutex;
   std::vector<bool> repetable;
 
@@ -42,24 +41,25 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
                                 std::shared_ptr<GRBModel> model,
                                 std::vector<std::vector<GRBVar>> &x, int t_min,
                                 int t_max);
-  void linear_effect_constraint(const std::shared_ptr<AbstractTask> task,
-                                std::shared_ptr<GRBModel> model,
-                                std::vector<std::vector<GRBVar>> &x, int t_min,
-                                int t_max);
   virtual void initialize_numeric_mutex(
       std::vector<std::vector<bool>> &action_mutex);
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
                                        int t_min, int t_max);
+  virtual void linear_effect_constraint(
+      const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
+      std::vector<std::vector<GRBVar>> &x, int t_min, int t_max);
 
  public:
   NumericConstraints(const Options &opts);
 
-  virtual void initialize(
-      const int horizon, const std::shared_ptr<AbstractTask> task,
-      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-      std::vector<std::vector<bool>> &action_mutex) override;
+  virtual void initialize(const int horizon,
+                          const std::shared_ptr<AbstractTask> task,
+                          std::shared_ptr<GRBModel> model,
+                          std::vector<std::vector<GRBVar>> &x,
+                          std::vector<std::vector<bool>> &action_mutex,
+                          bool use_linear_effects) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

@@ -27,7 +27,8 @@ class GurobiStateChangeModel : public GurobiIPConstraintGenerator {
   set<int> fact_landmarks;
   set<int> action_landmarks;
 
-  void create_sets(const std::shared_ptr<AbstractTask> task);
+  void create_sets(const std::shared_ptr<AbstractTask> task,
+                   bool use_linear_effects);
 
   void initialize_landmark(const std::shared_ptr<AbstractTask> task);
 
@@ -57,10 +58,12 @@ class GurobiStateChangeModel : public GurobiIPConstraintGenerator {
  public:
   GurobiStateChangeModel(const options::Options &opts);
 
-  virtual void initialize(
-      const int horizon, const std::shared_ptr<AbstractTask> task,
-      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-      std::vector<std::vector<bool>> &action_mutex) override;
+  virtual void initialize(const int horizon,
+                          const std::shared_ptr<AbstractTask> task,
+                          std::shared_ptr<GRBModel> model,
+                          std::vector<std::vector<GRBVar>> &x,
+                          std::vector<std::vector<bool>> &action_mutex,
+                          bool use_linear_effects) override;
   virtual void update(const int horizon,
                       const std::shared_ptr<AbstractTask> task,
                       std::shared_ptr<GRBModel> model,

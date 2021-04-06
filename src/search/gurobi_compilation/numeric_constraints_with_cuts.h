@@ -26,10 +26,12 @@ class NumericConstraintsWithCuts : public NumericConstraints {
  public:
   NumericConstraintsWithCuts(const Options &opts);
 
-  virtual void initialize(
-      const int horizon, const std::shared_ptr<AbstractTask> task,
-      std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-      std::vector<std::vector<bool>> &action_mutex) override;
+  virtual void initialize(const int horizon,
+                          const std::shared_ptr<AbstractTask> task,
+                          std::shared_ptr<GRBModel> model,
+                          std::vector<std::vector<GRBVar>> &x,
+                          std::vector<std::vector<bool>> &action_mutex,
+                          bool use_linear_effects) override;
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
       std::shared_ptr<ActionPrecedenceGraph> graph) override;

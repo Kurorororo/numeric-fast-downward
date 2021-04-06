@@ -39,15 +39,24 @@ void RelevanceConstraints::push_numeric(NumericTaskProxy &numeric_task, int c,
     if (net > 0.0) {
       action_relevant[op_id] = true;
       open.push(op_id);
+    } else {
+      for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id); ++i) {
+        int lhs = numeric_task.get_action_linear_lhs(op_id)[i];
+        if (fabs(lnc.coefficients[lhs]) > 0) {
+          action_relevant[op_id] = true;
+          open.push(op_id);
+          break;
+        }
+      }
     }
   }
 }
 
 void RelevanceConstraints::analyze_relevance(
-    const std::shared_ptr<AbstractTask> task) {
+    const std::shared_ptr<AbstractTask> task, bool use_linear_effects) {
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
-  NumericTaskProxy numeric_task = NumericTaskProxy(task_proxy);
+  NumericTaskProxy numeric_task(task_proxy, true, use_linear_effects);
   action_relevant = std::vector<bool>(ops.size(), false);
 
   std::queue<size_t> open;
@@ -76,9 +85,9 @@ void RelevanceConstraints::analyze_relevance(
 void RelevanceConstraints::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-    std::vector<std::vector<bool>> &action_mutex) {
+    std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   std::cout << "initialize relevance" << std::endl;
-  analyze_relevance(task);
+  analyze_relevance(task, use_linear_effects);
   update(horizon, task, model, x);
 }
 

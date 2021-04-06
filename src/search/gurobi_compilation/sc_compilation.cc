@@ -19,9 +19,9 @@ GurobiStateChangeModel::GurobiStateChangeModel(const options::Options &opts)
 void GurobiStateChangeModel::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
-    std::vector<std::vector<bool>> &action_mutex) {
+    std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing SC" << endl;
-  create_sets(task);
+  create_sets(task, use_linear_effects);
   if (use_landmark) initialize_landmark(task);
   initialize_mutex(task, action_mutex);
   update(horizon, task, model, x);
@@ -46,9 +46,9 @@ void GurobiStateChangeModel::update(const int horizon,
 }
 
 void GurobiStateChangeModel::create_sets(
-    const std::shared_ptr<AbstractTask> task) {
+    const std::shared_ptr<AbstractTask> task, bool use_linear_effects) {
   TaskProxy task_proxy(*task);
-  numeric_task = NumericTaskProxy(task_proxy);
+  numeric_task = NumericTaskProxy(task_proxy, true, use_linear_effects);
   OperatorsProxy ops = task_proxy.get_operators();
   int n_prop = numeric_task.get_n_propositions();
   VariablesProxy vars = task_proxy.get_variables();
