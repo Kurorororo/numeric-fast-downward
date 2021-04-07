@@ -155,6 +155,7 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
   int t_max = x.size();
 
   for (int t = 0; t < t_max; ++t) {
+    // std::cout << "t=" <<st << std::endl;
     if (add_lazy_constraints || add_user_cuts) {
       std::vector<int> nodes;
       std::unordered_map<int, int> ns;
@@ -169,13 +170,15 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
         auto subplan = graph->topological_sort(nodes);
 
         if (subplan.size() != nodes.size()) {
-          std::cout << "plan contains a cycle" << std::endl;
+          // std::cout << "plan contains a cycle" << std::endl;
           return SearchEngine::Plan();
         }
 
         for (auto op_id : subplan) {
-          for (int i = 0; i < ns[op_id]; ++i)
+          for (int i = 0; i < ns[op_id]; ++i) {
             plan.push_back(ops[op_id].get_global_operator());
+            // std::cout << ops[op_id].get_name() << std::endl;
+          }
         }
       }
     } else {
