@@ -425,7 +425,7 @@ void NumericTaskProxy::build_actions(const TaskProxy &task,
         assert(false);
       }
       LinearNumericCondition &av = artificial_variables[rhs];
-      bool is_simple_effect = true;
+      bool is_simple_effect = oper == increase || oper == decrease;
       if (use_linear_effects) {
         for (int var = 0; var < n_numeric_variables; ++var) {
           if (fabs(av.coefficients[var]) >= 0.0001) {
@@ -451,6 +451,7 @@ void NumericTaskProxy::build_actions(const TaskProxy &task,
           }
         }
       } else {
+        ++actions[op_id].num_linear_eff;
         actions[op_id].linear_eff_lhs.push_back(id_num);
         std::vector<ap_float> coefficients(n_numeric_variables, 0.0);
         switch (oper) {

@@ -16,6 +16,17 @@ NumericConstraints::NumericConstraints(const Options &opts)
       num_repetition(opts.get<int>("num_repetition")),
       restrict_mutex(opts.get<bool>("restrict_mutex")) {}
 
+void NumericConstraints::dump() {
+  int n_vars = numeric_task.get_n_numeric_variables();
+  for (int t = 0; t < current_horizon; ++t) {
+    std::cout << "t=" << t << std::endl;
+    for (int var = 0; var < n_vars; ++var) {
+      std::cout << y[t][var].get(GRB_DoubleAttr_X) << " ";
+    }
+    std::cout << std::endl;
+  }
+}
+
 void NumericConstraints::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
@@ -73,66 +84,64 @@ void NumericConstraints::initialize_numeric_mutex(
             break;
           }
 
-          // if (has_linear_effects) {
-          //  for (int j = 0; j <
-          //  numeric_task.get_action_num_linear_eff(op_id2);
-          //       ++j) {
-          //    int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
-          //    if (fabs(lnc.coefficients[lhs]) > 0.0) {
-          //      action_mutex[op_id1][op_id2] = true;
-          //      action_mutex[op_id2][op_id1] = true;
-          //      break;
-          //    }
-          //  }
-          //}
-          // if (action_mutex[op_id1][op_id2]) break;
+          if (has_linear_effects) {
+            for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
+                 ++j) {
+              int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
+              if (fabs(lnc.coefficients[lhs]) > 0.0) {
+                action_mutex[op_id1][op_id2] = true;
+                action_mutex[op_id2][op_id1] = true;
+                break;
+              }
+            }
+          }
+          if (action_mutex[op_id1][op_id2]) break;
         }
         if (action_mutex[op_id1][op_id2]) break;
       }
 
-      // if (!action_mutex[op_id1][op_id2] && has_linear_effects) {
-      //  // simple lhs vs. linear rhs
-      //  for (int lhs = 0; lhs < n_numeric_variables; ++lhs) {
-      //    if (fabs(numeric_task.get_action_eff_list(op_id1)[lhs]) > 0.0) {
-      //      for (int i = 0; i <
-      //      numeric_task.get_action_num_linear_eff(op_id2);
-      //           ++i) {
-      //        ap_float coefficient =
-      //            numeric_task.get_action_linear_coefficients(op_id2)[i][lhs];
-      //        if (fabs(coefficient) > 0.0) {
-      //          action_mutex[op_id1][op_id2] = true;
-      //          action_mutex[op_id2][op_id1] = true;
-      //          break;
-      //        }
-      //      }
-      //    }
-      //    if (action_mutex[op_id1][op_id2]) break;
-      //  }
-      //  if (action_mutex[op_id1][op_id2]) continue;
-      //  // linear lhs vs. rhs
-      //  for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id1);
-      //       ++i) {
-      //    int lhs = numeric_task.get_action_linear_lhs(op_id1)[i];
-      //    // linear lhs vs. simple rhs
-      //    if (fabs(numeric_task.get_action_eff_list(op_id2)[lhs]) > 0.0) {
-      //      action_mutex[op_id1][op_id2] = true;
-      //      action_mutex[op_id2][op_id1] = true;
-      //      break;
-      //    }
-      //    // linear lhs vs. linear rhs
-      //    for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
-      //         ++j) {
-      //      ap_float coefficient =
-      //          numeric_task.get_action_linear_coefficients(op_id2)[j][lhs];
-      //      if (fabs(coefficient) > 0.0) {
-      //        action_mutex[op_id1][op_id2] = true;
-      //        action_mutex[op_id2][op_id1] = true;
-      //        break;
-      //      }
-      //    }
-      //    if (action_mutex[op_id1][op_id2]) break;
-      //  }
-      //}
+      if (!action_mutex[op_id1][op_id2] && has_linear_effects) {
+        // simple lhs vs. linear rhs
+        for (int lhs = 0; lhs < n_numeric_variables; ++lhs) {
+          if (fabs(numeric_task.get_action_eff_list(op_id1)[lhs]) > 0.0) {
+            for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id2);
+                 ++i) {
+              ap_float coefficient =
+                  numeric_task.get_action_linear_coefficients(op_id2)[i][lhs];
+              if (fabs(coefficient) > 0.0) {
+                action_mutex[op_id1][op_id2] = true;
+                action_mutex[op_id2][op_id1] = true;
+                break;
+              }
+            }
+          }
+          if (action_mutex[op_id1][op_id2]) break;
+        }
+        if (action_mutex[op_id1][op_id2]) continue;
+        // linear lhs vs. rhs
+        for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id1);
+             ++i) {
+          int lhs = numeric_task.get_action_linear_lhs(op_id1)[i];
+          // linear lhs vs. simple rhs
+          if (fabs(numeric_task.get_action_eff_list(op_id2)[lhs]) > 0.0) {
+            action_mutex[op_id1][op_id2] = true;
+            action_mutex[op_id2][op_id1] = true;
+            break;
+          }
+          // linear lhs vs. linear rhs
+          for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
+               ++j) {
+            ap_float coefficient =
+                numeric_task.get_action_linear_coefficients(op_id2)[j][lhs];
+            if (fabs(coefficient) > 0.0) {
+              action_mutex[op_id1][op_id2] = true;
+              action_mutex[op_id2][op_id1] = true;
+              break;
+            }
+          }
+          if (action_mutex[op_id1][op_id2]) break;
+        }
+      }
     }
   }
 }
@@ -197,45 +206,44 @@ void NumericConstraints::compute_big_m_values(
           if (num_repetition > 1 && repetable[op_id])
             ub += num_repetition * k;
           else
-            lb += k;
+            ub += k;
         } else {
           if (num_repetition > 1 && repetable[op_id])
-            ub += num_repetition * k;
+            lb += num_repetition * k;
           else
             lb += k;
         }
       }
 
-      // if (has_linear_effects) {
-      //  for (size_t op_id = 0; op_id < n_actions; ++op_id) {
-      //    double a_over = ub;
-      //    double a_under = lb;
-      //    for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
-      //         ++i) {
-      //      if (nv_id == numeric_task.get_action_linear_lhs(op_id)[i]) {
-      //        a_over = numeric_task.get_action_linear_constants(op_id)[i];
-      //        a_under = numeric_task.get_action_linear_constants(op_id)[i];
-      //        for (int nv_id2 = 0; nv_id2 < n_numeric_variables; ++nv_id2) {
-      //          double coefficient =
-      //              numeric_task.get_action_linear_coefficients(
-      //                  op_id)[i][nv_id2];
-      //          if (coefficient > 0) {
-      //            a_over += coefficient * large_m[t - 1][nv_id2];
-      //            a_under += coefficient * small_m[t - 1][nv_id2];
-      //          }
-      //          if (coefficient < 0) {
-      //            a_over += coefficient * small_m[t - 1][nv_id2];
-      //            a_under += coefficient * large_m[t - 1][nv_id2];
-      //          }
-      //        }
-      //        break;
-      //      }
-      //    }
-      //    ub = std::max(ub, a_over);
-      //    lb = std::min(lb, a_under);
-      //  }
-      //}
-
+      if (has_linear_effects) {
+        for (size_t op_id = 0; op_id < n_actions; ++op_id) {
+          double a_over = ub;
+          double a_under = lb;
+          for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
+               ++i) {
+            if (nv_id == numeric_task.get_action_linear_lhs(op_id)[i]) {
+              a_over = numeric_task.get_action_linear_constants(op_id)[i];
+              a_under = numeric_task.get_action_linear_constants(op_id)[i];
+              for (int nv_id2 = 0; nv_id2 < n_numeric_variables; ++nv_id2) {
+                double coefficient =
+                    numeric_task.get_action_linear_coefficients(
+                        op_id)[i][nv_id2];
+                if (coefficient > 0) {
+                  a_over += coefficient * large_m[t - 1][nv_id2];
+                  a_under += coefficient * small_m[t - 1][nv_id2];
+                }
+                if (coefficient < 0) {
+                  a_over += coefficient * small_m[t - 1][nv_id2];
+                  a_under += coefficient * large_m[t - 1][nv_id2];
+                }
+              }
+              break;
+            }
+          }
+          ub = std::max(ub, a_over);
+          lb = std::min(lb, a_under);
+        }
+      }
       large_m[t][nv_id] = ub;
       small_m[t][nv_id] = lb;
     }
@@ -341,32 +349,31 @@ void NumericConstraints::simple_effect_constraint(
       }
 
       if (has_linear_effects) {
-        // GRBLinExpr les;
-        // double coefficient = 1;
-        // bool use_big_m = false;
-        // for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id)
-        // {
-        //  for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
-        //       ++i) {
-        //    if (var == numeric_task.get_action_linear_lhs(op_id)[i]) {
-        //      les.addTerms(&coefficient, &x[t][op_id], 1);
-        //      use_big_m = true;
-        //      break;
-        //    }
-        //  }
-        //}
-        // if (use_big_m) {
-        //  double large_m_step = large_m[t + 1][var] - small_m[t][var];
-        //  double small_m_step = small_m[t + 1][var] - large_m[t][var];
-        //  model->addConstr(y[t + 1][var] >= rhs + large_m_step * les);
-        //  model->addConstr(y[t + 1][var] <= rhs + small_m_step * les);
-        //} else {
-        //  model->addConstr(y[t + 1][var] >= rhs);
-        //  model->addConstr(y[t + 1][var] <= rhs);
-        //}
+        GRBLinExpr les;
+        double coefficient = 1;
+        bool use_big_m = false;
+        for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
+          for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
+               ++i) {
+            if (var == numeric_task.get_action_linear_lhs(op_id)[i]) {
+              les.addTerms(&coefficient, &x[t][op_id], 1);
+              use_big_m = true;
+              break;
+            }
+          }
+        }
+        if (use_big_m) {
+          double large_m_step = large_m[t + 1][var] - small_m[t][var];
+          double small_m_step = small_m[t + 1][var] - large_m[t][var];
+          model->addConstr(y[t + 1][var] <= rhs + large_m_step * les);
+          model->addConstr(y[t + 1][var] >= rhs + small_m_step * les);
+        } else {
+          model->addConstr(y[t + 1][var] <= rhs);
+          model->addConstr(y[t + 1][var] >= rhs);
+        }
       } else {
-        model->addConstr(y[t + 1][var] >= rhs);
         model->addConstr(y[t + 1][var] <= rhs);
+        model->addConstr(y[t + 1][var] >= rhs);
       }
     }
   }
@@ -391,11 +398,11 @@ void NumericConstraints::linear_effect_constraint(
           if (fabs(coefficient) > 0.0) {
             rhs.addTerms(&coefficient, &y[t][rhs_var], 1);
             if (coefficient > 0.0) {
-              large_m_a += coefficient * small_m[rhs_var][t];
-              small_m_a -= coefficient * large_m[rhs_var][t];
+              large_m_a -= coefficient * small_m[t][rhs_var];
+              small_m_a -= coefficient * large_m[t][rhs_var];
             } else {
-              large_m_a -= coefficient * large_m[rhs_var][t];
-              small_m_a += coefficient * small_m[rhs_var][t];
+              large_m_a -= coefficient * large_m[t][rhs_var];
+              small_m_a -= coefficient * small_m[t][rhs_var];
             }
           }
         }

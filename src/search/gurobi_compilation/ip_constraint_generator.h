@@ -25,6 +25,7 @@ class GurobiIPConstraintGenerator {
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
       std::shared_ptr<ActionPrecedenceGraph> graph) {}
+  virtual void dump() {}
 };
 }  // namespace gurobi_ip_compilation
 

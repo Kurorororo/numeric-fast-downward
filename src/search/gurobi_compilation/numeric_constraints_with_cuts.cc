@@ -14,7 +14,8 @@ using namespace numeric_helper;
 NumericConstraintsWithCuts::NumericConstraintsWithCuts(const Options &opts)
     : NumericConstraints(opts),
       disable_precondition_relaxation(
-          opts.get<bool>("disable_precondition_relaxation")) {}
+          opts.get<bool>("disable_precondition_relaxation")),
+      sequence_linear_effects(opts.get<bool>("sequence_linear_effects")) {}
 
 void NumericConstraintsWithCuts::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
@@ -22,7 +23,8 @@ void NumericConstraintsWithCuts::initialize(
     std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing numeric with cuts" << endl;
   TaskProxy task_proxy(*task);
-  numeric_task = NumericTaskProxy(task_proxy, true, use_linear_effects);
+  has_linear_effects = use_linear_effects;
+  numeric_task = NumericTaskProxy(task_proxy, true, has_linear_effects);
   initialize_numeric_mutex(action_mutex);
   initialize_action_precedence();
 
@@ -63,9 +65,172 @@ void NumericConstraintsWithCuts::initialize_action_precedence() {
           if (net < 0.0) {
             action_precedence[op_id1][op_id2] = true;
           }
+
+          if (has_linear_effects && !action_precedence[op_id1][op_id2]) {
+            LinearNumericCondition &lnc = numeric_task.get_condition(i);
+            for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
+                 ++j) {
+              int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
+              if (fabs(lnc.coefficients[lhs]) > 0) {
+                action_precedence[op_id1][op_id2] = true;
+                break;
+              }
+
+              if (sequence_linear_effects) {
+                for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+                  if (fabs(numeric_task.get_action_linear_coefficients(
+                          op_id2)[j][nv_id]) > 0 &&
+                      fabs(numeric_task.get_action_eff_list(op_id1)[nv_id] >
+                           0)) {
+                    action_precedence[op_id1][op_id2] = true;
+                    break;
+                  }
+                }
+                if (action_precedence[op_id1][op_id2]) break;
+              }
+            }
+          }
         }
       }
     }
+  }
+}
+
+void NumericConstraintsWithCuts::initialize_numeric_mutex(
+    std::vector<std::vector<bool>> &action_mutex) {
+  if (has_linear_effects) {
+    size_t n_actions = numeric_task.get_n_actions();
+    numeric_mutex.resize(n_actions, std::vector<bool>(n_actions, false));
+    int n_numeric_variables = numeric_task.get_n_numeric_variables();
+    for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
+      for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
+        if (op_id1 == op_id2 || action_mutex[op_id1][op_id2]) continue;
+        if (!action_mutex[op_id1][op_id2]) {
+          // simple lhs vs. linear rhs
+          if (!sequence_linear_effects) {
+            for (int lhs = 0; lhs < n_numeric_variables; ++lhs) {
+              if (fabs(numeric_task.get_action_eff_list(op_id1)[lhs]) > 0.0) {
+                for (int i = 0;
+                     i < numeric_task.get_action_num_linear_eff(op_id2); ++i) {
+                  ap_float coefficient =
+                      numeric_task.get_action_linear_coefficients(
+                          op_id2)[i][lhs];
+                  if (fabs(coefficient) > 0.0) {
+                    action_mutex[op_id1][op_id2] = true;
+                    action_mutex[op_id2][op_id1] = true;
+                    break;
+                  }
+                }
+              }
+              if (action_mutex[op_id1][op_id2]) break;
+            }
+          }
+          if (action_mutex[op_id1][op_id2]) continue;
+          // linear lhs vs. rhs
+          for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id1);
+               ++i) {
+            int lhs = numeric_task.get_action_linear_lhs(op_id1)[i];
+            // linear lhs vs. simple rhs
+            if (!sequence_linear_effects) {
+              if (fabs(numeric_task.get_action_eff_list(op_id2)[lhs]) > 0.0) {
+                action_mutex[op_id1][op_id2] = true;
+                action_mutex[op_id2][op_id1] = true;
+                break;
+              }
+            }
+            // linear lhs vs. linear rhs
+            for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
+                 ++j) {
+              ap_float coefficient =
+                  numeric_task.get_action_linear_coefficients(op_id2)[j][lhs];
+              if (fabs(coefficient) > 0.0) {
+                action_mutex[op_id1][op_id2] = true;
+                action_mutex[op_id2][op_id1] = true;
+                break;
+              }
+            }
+            if (action_mutex[op_id1][op_id2]) break;
+          }
+        }
+      }
+    }
+  }
+}
+
+void NumericConstraintsWithCuts::compute_big_m_values(
+    const std::shared_ptr<AbstractTask> task, int t_min, int t_max) {
+  if (has_linear_effects && sequence_linear_effects) {
+    int n_numeric_variables = numeric_task.get_n_numeric_variables();
+    large_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+    small_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+    k_over.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+    k_under.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+
+    size_t n_actions = numeric_task.get_n_actions();
+    TaskProxy task_proxy(*task);
+    State initial_state = task_proxy.get_initial_state();
+    for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+      int id_num = numeric_task.get_numeric_variable(nv_id).id_abstract_task;
+      double initial_value = initial_state.nval(id_num);
+      large_m[0][nv_id] = initial_value;
+      small_m[0][nv_id] = initial_value;
+    }
+
+    for (int t = std::max(t_min, 1); t < t_max; ++t) {
+      for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+        double ub = large_m[t - 1][nv_id];
+        double lb = small_m[t - 1][nv_id];
+        for (size_t op_id = 0; op_id < n_actions; ++op_id) {
+          double k = numeric_task.get_action_eff_list(op_id)[nv_id];
+          if (k > 0.0) {
+            if (num_repetition > 1 && repetable[op_id])
+              ub += num_repetition * k;
+            else
+              ub += k;
+          } else {
+            if (num_repetition > 1 && repetable[op_id])
+              lb += num_repetition * k;
+            else
+              lb += k;
+          }
+        }
+
+        k_over[t][nv_id] = ub;
+        k_under[t][nv_id] = lb;
+
+        for (size_t op_id = 0; op_id < n_actions; ++op_id) {
+          double a_over = ub;
+          double a_under = lb;
+          for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
+               ++i) {
+            if (nv_id == numeric_task.get_action_linear_lhs(op_id)[i]) {
+              a_over = numeric_task.get_action_linear_constants(op_id)[i];
+              a_under = numeric_task.get_action_linear_constants(op_id)[i];
+              for (int nv_id2 = 0; nv_id2 < n_numeric_variables; ++nv_id2) {
+                double coefficient =
+                    numeric_task.get_action_linear_coefficients(
+                        op_id)[i][nv_id2];
+                if (coefficient > 0) {
+                  a_over += coefficient * k_over[t][nv_id2];
+                  a_under += coefficient * k_under[t][nv_id2];
+                }
+                if (coefficient < 0) {
+                  a_over += coefficient * k_under[t][nv_id2];
+                  a_under += coefficient * k_over[t][nv_id2];
+                }
+              }
+              break;
+            }
+          }
+          ub = std::max(ub, a_over);
+          lb = std::min(lb, a_under);
+        }
+        large_m[t][nv_id] = ub;
+        small_m[t][nv_id] = lb;
+      }
+    }
+  } else {
+    NumericConstraints::compute_big_m_values(task, t_min, t_max);
   }
 }
 
@@ -134,6 +299,57 @@ void NumericConstraintsWithCuts::precondition_constraint(
   }
 }
 
+void NumericConstraintsWithCuts::linear_effect_constraint(
+    const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
+    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
+  if (has_linear_effects && sequence_linear_effects) {
+    int num_numeric_variables = numeric_task.get_n_numeric_variables();
+    for (int t = std::max(0, t_min - 1); t < t_max - 1; ++t) {
+      for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
+        for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
+             ++i) {
+          int var = numeric_task.get_action_linear_lhs(op_id)[i];
+          double constant = numeric_task.get_action_linear_constants(op_id)[i];
+          GRBLinExpr rhs(constant);
+          double large_m_a = large_m[t + 1][var] - constant;
+          double small_m_a = small_m[t + 1][var] - constant;
+          for (int rhs_var = 0; rhs_var < num_numeric_variables; ++rhs_var) {
+            double coefficient =
+                numeric_task.get_action_linear_coefficients(op_id)[i][rhs_var];
+            if (fabs(coefficient) > 0.0) {
+              rhs.addTerms(&coefficient, &y[t][rhs_var], 1);
+
+              for (size_t op_id2 = 0; op_id2 < numeric_task.get_n_actions();
+                   ++op_id2) {
+                if (op_id == op_id2) continue;
+                double k = numeric_task.get_action_eff_list(op_id2)[var];
+                if (fabs(k) > 0) {
+                  double coefficient2 = coefficient * k;
+                  rhs.addTerms(&coefficient2, &x[t][op_id2], 1);
+                }
+              }
+
+              if (coefficient > 0.0) {
+                large_m_a -= coefficient * k_under[t + 1][rhs_var];
+                small_m_a -= coefficient * k_over[t + 1][rhs_var];
+              } else {
+                large_m_a -= coefficient * k_over[t + 1][rhs_var];
+                small_m_a -= coefficient * k_under[t + 1][rhs_var];
+              }
+            }
+          }
+          model->addConstr(y[t + 1][var] <=
+                           rhs + large_m_a * (1 - x[t][op_id]));
+          model->addConstr(y[t + 1][var] >=
+                           rhs + small_m_a * (1 - x[t][op_id]));
+        }
+      }
+    }
+  } else {
+    NumericConstraints::linear_effect_constraint(task, model, x, t_min, t_max);
+  }
+}
+
 static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
   parser.document_synopsis(
       "Numeric constraints with cuts.",
@@ -154,6 +370,10 @@ static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
                           "Whether to further restrict mutex actions", "false");
   parser.add_option<bool>("disable_precondition_relaxation",
                           "Disable relaxed precondition constraints", "false");
+  parser.add_option<bool>("sequence_linear_effects",
+                          "Enforce that actions with linear effects are "
+                          "executed after actions with simple effects",
+                          "false");
   Options opts = parser.parse();
 
   if (parser.dry_run()) return nullptr;

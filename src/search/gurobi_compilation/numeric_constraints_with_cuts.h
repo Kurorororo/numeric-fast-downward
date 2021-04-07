@@ -12,16 +12,25 @@ class NumericConstraintsWithCuts : public NumericConstraints {
  protected:
   virtual void initialize_action_precedence();
   virtual void initialize_numeric_mutex(
-      std::vector<std::vector<bool>> &action_mutex) override {}
+      std::vector<std::vector<bool>> &action_mutex) override;
+  virtual void compute_big_m_values(const std::shared_ptr<AbstractTask> task,
+                                    int t_min, int t_max) override;
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
                                        int t_min, int t_max) override;
+  virtual void linear_effect_constraint(
+      const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
+      std::vector<std::vector<GRBVar>> &x, int t_min, int t_max);
 
   bool disable_precondition_relaxation;
+  bool sequence_linear_effects;
   std::vector<std::vector<bool>> action_precedence;
   std::unordered_map<int, std::vector<int>> net_positive_actions;
   std::unordered_map<std::pair<int, int>, double> net_values;
+
+  std::vector<std::vector<double>> k_over;
+  std::vector<std::vector<double>> k_under;
 
  public:
   NumericConstraintsWithCuts(const Options &opts);

@@ -63,7 +63,7 @@ SearchStatus GurobiIterativeHorizon::step() {
       std::cout << "Iterations: " << iterations << std::endl;
       return SOLVED;
     }
-    current_t = std::ceil(plan_cost / min_action_cost);
+    current_t = std::ceil(plan_cost / min_action_cost) + 1;
     last_iteration = true;
   } else {
     ++current_t;

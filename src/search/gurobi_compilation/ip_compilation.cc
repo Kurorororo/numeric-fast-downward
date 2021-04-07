@@ -181,12 +181,13 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
     } else {
       for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
         int n = std::round(x[t][op_id].get(GRB_DoubleAttr_X));
-
         for (int i = 0; i < n; ++i)
           plan.push_back(ops[op_id].get_global_operator());
       }
     }
   }
+
+  // for (auto generator : constraint_generators) generator->dump();
 
   return plan;
 }
