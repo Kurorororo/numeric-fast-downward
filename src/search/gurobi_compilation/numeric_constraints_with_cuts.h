@@ -14,7 +14,7 @@ class NumericConstraintsWithCuts : public NumericConstraints {
   virtual void initialize_numeric_mutex(
       std::vector<std::vector<bool>> &action_mutex) override;
   virtual void compute_big_m_values(const std::shared_ptr<AbstractTask> task,
-                                    int t_min, int t_max) override;
+                                    int t_min, int t_max, bool first) override;
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,

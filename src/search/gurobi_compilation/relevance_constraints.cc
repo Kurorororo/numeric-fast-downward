@@ -86,7 +86,7 @@ void RelevanceConstraints::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
     std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
     std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
-  std::cout << "initialize relevance" << std::endl;
+  std::cout << "initializing relevance" << std::endl;
   analyze_relevance(task, use_linear_effects);
   update(horizon, task, model, x);
 }

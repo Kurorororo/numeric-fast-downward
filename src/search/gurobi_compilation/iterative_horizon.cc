@@ -38,7 +38,7 @@ void GurobiIterativeHorizon::initialize() {
     cout << "Initial state is a dead end." << endl;
   } else {
     initial_h = result.get_h_value();
-    current_t = std::ceil(initial_h) + 1;
+    current_t = std::ceil(initial_h);
     cout << "initial time horizon " << current_t << endl;
   }
   model->initialize(current_t);
@@ -63,7 +63,7 @@ SearchStatus GurobiIterativeHorizon::step() {
       std::cout << "Iterations: " << iterations << std::endl;
       return SOLVED;
     }
-    current_t = std::ceil(plan_cost / min_action_cost) + 1;
+    current_t = std::ceil(plan_cost / min_action_cost);
     last_iteration = true;
   } else {
     ++current_t;

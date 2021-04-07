@@ -36,7 +36,7 @@ void GurobiStateChangeModel::update(const int horizon,
   bool first = current_horizon == 0;
   int t_min = current_horizon;
   int t_max = horizon;
-  add_variables(task, model, t_min, t_max);
+  add_variables(task, model, t_min, t_max, first);
   goal_state_constraint(task, model, t_max, first);
   update_state_change_constraint(task, model, t_min, t_max);
   precondition_effect_constraint(task, model, x, t_min, t_max);
@@ -109,16 +109,31 @@ void GurobiStateChangeModel::initialize_landmark(
 
 void GurobiStateChangeModel::add_variables(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
-    int t_min, int t_max) {
+    int t_min, int t_max, bool first) {
   TaskProxy task_proxy(*task);
   VariablesProxy vars = task_proxy.get_variables();
   int n_propositions = numeric_task.get_n_propositions();
-  y_a.resize(t_max, std::vector<GRBVar>(n_propositions));
-  y_pa.resize(t_max, std::vector<GRBVar>(n_propositions));
-  y_pd.resize(t_max, std::vector<GRBVar>(n_propositions));
-  y_m.resize(t_max, std::vector<GRBVar>(n_propositions));
+  y_a.resize(t_max + 1, std::vector<GRBVar>(n_propositions));
+  y_pa.resize(t_max + 1, std::vector<GRBVar>(n_propositions));
+  y_pd.resize(t_max + 1, std::vector<GRBVar>(n_propositions));
+  y_m.resize(t_max + 1, std::vector<GRBVar>(n_propositions));
 
-  for (int t = t_min; t < t_max; ++t) {
+  if (first) {
+    for (VariableProxy var : vars) {
+      int n_vals = var.get_domain_size();
+      for (int val = 0; val < n_vals; ++val) {
+        int p = numeric_task.get_proposition(var.get_id(), val);
+        y_a[0][p] = model->addVar(0, 1, 0, GRB_BINARY);
+        y_pa[0][p] = model->addVar(0, 1, 0, GRB_BINARY);
+        y_pd[0][p] = model->addVar(0, 1, 0, GRB_BINARY);
+        y_m[0][p] = model->addVar(0, 1, 0, GRB_BINARY);
+        model->addConstr(y_a[0][p] + y_m[0][p] + y_pd[0][p] <= 1);
+        model->addConstr(y_pa[0][p] + y_m[0][p] + y_pd[0][p] <= 1);
+      }
+    }
+  }
+
+  for (int t = t_min + 1; t < t_max + 1; ++t) {
     for (VariableProxy var : vars) {
       int n_vals = var.get_domain_size();
       for (int val = 0; val < n_vals; ++val) {
@@ -179,8 +194,7 @@ void GurobiStateChangeModel::goal_state_constraint(
     int var = goal.get_variable().get_id();
     int g_val = goal.get_value();
     int p = numeric_task.get_proposition(var, g_val);
-    model->addConstr(
-        y_a[t_max - 1][p] + y_pa[t_max - 1][p] + y_m[t_max - 1][p] >= 1, name);
+    model->addConstr(y_a[t_max][p] + y_pa[t_max][p] + y_m[t_max][p] >= 1, name);
   }
 }
 
@@ -188,7 +202,7 @@ void GurobiStateChangeModel::update_state_change_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     int t_min, int t_max) {
   TaskProxy task_proxy(*task);
-  for (int t = std::max(t_min - 1, 0); t < t_max - 1; ++t) {
+  for (int t = t_min; t < t_max; ++t) {
     VariablesProxy vars = task_proxy.get_variables();
     for (VariableProxy var : vars) {
       int n_vals = var.get_domain_size();
@@ -214,7 +228,7 @@ void GurobiStateChangeModel::precondition_effect_constraint(
     int i_var = var.get_id();
     for (int val = 0; val < n_vals; val++) {
       int p = numeric_task.get_proposition(i_var, val);
-      for (int t = std::max(t_min - 1, 0); t < t_max - 1; ++t) {
+      for (int t = t_min; t < t_max; ++t) {
         double coeff = 1;
         // pnd
         {
@@ -283,7 +297,7 @@ void GurobiStateChangeModel::landmark_constraint(
       }
       GRBLinExpr lhs;
       double coefficient = 1;
-      for (int t = 0; t < t_max; ++t) {
+      for (int t = 0; t < t_max + 1; ++t) {
         lhs.addTerms(&coefficient, &y_a[t][fact], 1);
         lhs.addTerms(&coefficient, &y_pa[t][fact], 1);
         lhs.addTerms(&coefficient, &y_m[t][fact], 1);

@@ -18,7 +18,7 @@ NumericConstraints::NumericConstraints(const Options &opts)
 
 void NumericConstraints::dump() {
   int n_vars = numeric_task.get_n_numeric_variables();
-  for (int t = 0; t < current_horizon; ++t) {
+  for (int t = 0; t < current_horizon + 1; ++t) {
     std::cout << "t=" << t << std::endl;
     for (int var = 0; var < n_vars; ++var) {
       std::cout << y[t][var].get(GRB_DoubleAttr_X) << " ";
@@ -51,8 +51,8 @@ void NumericConstraints::update(const int horizon,
   bool first = current_horizon == 0;
   int t_min = current_horizon;
   int t_max = horizon;
-  compute_big_m_values(task, t_min, t_max);
-  add_variables(task, model, t_min, t_max);
+  compute_big_m_values(task, t_min, t_max, first);
+  add_variables(task, model, t_min, t_max, first);
   modify_x(task, model, x, t_min, t_max);
   goal_state_constraint(task, model, t_max, first);
   precondition_constraint(task, model, x, t_min, t_max);
@@ -181,22 +181,26 @@ void NumericConstraints::initialize_repetable_actions(
 }
 
 void NumericConstraints::compute_big_m_values(
-    const std::shared_ptr<AbstractTask> task, int t_min, int t_max) {
+    const std::shared_ptr<AbstractTask> task, int t_min, int t_max,
+    bool first) {
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
-  large_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
-  small_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+  large_m.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
+  small_m.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
 
   size_t n_actions = numeric_task.get_n_actions();
   TaskProxy task_proxy(*task);
   State initial_state = task_proxy.get_initial_state();
-  for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
-    int id_num = numeric_task.get_numeric_variable(nv_id).id_abstract_task;
-    double initial_value = initial_state.nval(id_num);
-    large_m[0][nv_id] = initial_value;
-    small_m[0][nv_id] = initial_value;
+
+  if (first) {
+    for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+      int id_num = numeric_task.get_numeric_variable(nv_id).id_abstract_task;
+      double initial_value = initial_state.nval(id_num);
+      large_m[0][nv_id] = initial_value;
+      small_m[0][nv_id] = initial_value;
+    }
   }
 
-  for (int t = std::max(t_min, 1); t < t_max; ++t) {
+  for (int t = t_min + 1; t < t_max + 1; ++t) {
     for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
       double ub = large_m[t - 1][nv_id];
       double lb = small_m[t - 1][nv_id];
@@ -252,14 +256,22 @@ void NumericConstraints::compute_big_m_values(
 
 void NumericConstraints::add_variables(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
-                                       int t_min, int t_max) {
+                                       int t_min, int t_max, bool first) {
   TaskProxy task_proxy(*task);
   int n_numeric_vars = numeric_task.get_n_numeric_variables();
   std::vector<char> types(n_numeric_vars, GRB_CONTINUOUS);
-  y.resize(t_max, std::vector<GRBVar>(n_numeric_vars));
+  y.resize(t_max + 1, std::vector<GRBVar>(n_numeric_vars));
+
+  if (first) {
+    for (int var = 0; var < n_numeric_vars; ++var) {
+      std::string name = "y^" + std::to_string(var) + "_0";
+      y[0][var] = model->addVar(small_m[0][var], large_m[0][var], 0,
+                                GRB_CONTINUOUS, name);
+    }
+  }
 
   // add decision variables
-  for (int t = t_min; t < t_max; ++t) {
+  for (int t = t_min + 1; t < t_max + 1; ++t) {
     // numeric variables
     for (int var = 0; var < n_numeric_vars; ++var) {
       std::string name = "y^" + std::to_string(var) + "_" + std::to_string(t);
@@ -341,7 +353,7 @@ void NumericConstraints::simple_effect_constraint(
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   int num_numeric_variables = numeric_task.get_n_numeric_variables();
   for (int var = 0; var < num_numeric_variables; ++var) {
-    for (int t = std::max(0, t_min - 1); t < t_max - 1; ++t) {
+    for (int t = t_min; t < t_max; ++t) {
       GRBLinExpr rhs(y[t][var]);
       for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
         double coefficient = numeric_task.get_action_eff_list(op_id)[var];
@@ -384,7 +396,7 @@ void NumericConstraints::linear_effect_constraint(
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   if (!has_linear_effects) return;
   int num_numeric_variables = numeric_task.get_n_numeric_variables();
-  for (int t = std::max(0, t_min - 1); t < t_max - 1; ++t) {
+  for (int t = t_min; t < t_max; ++t) {
     for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
       for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id); ++i) {
         int var = numeric_task.get_action_linear_lhs(op_id)[i];
@@ -434,7 +446,7 @@ void NumericConstraints::goal_state_constraint(
            ++var) {
         double coefficient = lnc.coefficients[var];
         if (fabs(coefficient) > 0)
-          lhs.addTerms(&coefficient, &y[t_max - 1][var], 1);
+          lhs.addTerms(&coefficient, &y[t_max][var], 1);
       }
       model->addConstr(lhs >= numeric_task.get_epsilon(id_n_con), name);
     }

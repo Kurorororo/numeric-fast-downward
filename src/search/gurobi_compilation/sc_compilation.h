@@ -33,7 +33,8 @@ class GurobiStateChangeModel : public GurobiIPConstraintGenerator {
   void initialize_landmark(const std::shared_ptr<AbstractTask> task);
 
   void add_variables(const std::shared_ptr<AbstractTask> task,
-                     std::shared_ptr<GRBModel> model, int t_min, int t_max);
+                     std::shared_ptr<GRBModel> model, int t_min, int t_max,
+                     bool first);
 
   // constraints
   void initial_state_constraint(const std::shared_ptr<AbstractTask> task,

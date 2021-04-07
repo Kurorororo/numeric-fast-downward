@@ -26,7 +26,8 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
 
   void initialize_repetable_actions(std::vector<std::vector<GRBVar>> &x);
   void add_variables(const std::shared_ptr<AbstractTask> task,
-                     std::shared_ptr<GRBModel> model, int t_min, int t_max);
+                     std::shared_ptr<GRBModel> model, int t_min, int t_max,
+                     bool first);
   void modify_x(const std::shared_ptr<AbstractTask> task,
                 std::shared_ptr<GRBModel> model,
                 std::vector<std::vector<GRBVar>> &x, int t_min, int t_max);
@@ -42,7 +43,7 @@ class NumericConstraints : public GurobiIPConstraintGenerator {
   virtual void initialize_numeric_mutex(
       std::vector<std::vector<bool>> &action_mutex);
   virtual void compute_big_m_values(const std::shared_ptr<AbstractTask> task,
-                                    int t_min, int t_max);
+                                    int t_min, int t_max, bool first);
   virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,

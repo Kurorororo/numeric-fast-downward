@@ -158,25 +158,31 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
 }
 
 void NumericConstraintsWithCuts::compute_big_m_values(
-    const std::shared_ptr<AbstractTask> task, int t_min, int t_max) {
+    const std::shared_ptr<AbstractTask> task, int t_min, int t_max,
+    bool first) {
   if (has_linear_effects && sequence_linear_effects) {
     int n_numeric_variables = numeric_task.get_n_numeric_variables();
-    large_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
-    small_m.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
-    k_over.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
-    k_under.resize(t_max, std::vector<double>(n_numeric_variables, 0.0));
+    large_m.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
+    small_m.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
+    k_over.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
+    k_under.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
 
     size_t n_actions = numeric_task.get_n_actions();
     TaskProxy task_proxy(*task);
     State initial_state = task_proxy.get_initial_state();
-    for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
-      int id_num = numeric_task.get_numeric_variable(nv_id).id_abstract_task;
-      double initial_value = initial_state.nval(id_num);
-      large_m[0][nv_id] = initial_value;
-      small_m[0][nv_id] = initial_value;
+
+    if (first) {
+      for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
+        int id_num = numeric_task.get_numeric_variable(nv_id).id_abstract_task;
+        double initial_value = initial_state.nval(id_num);
+        large_m[0][nv_id] = initial_value;
+        small_m[0][nv_id] = initial_value;
+        k_over[0][nv_id] = initial_value;
+        k_under[0][nv_id] = initial_value;
+      }
     }
 
-    for (int t = std::max(t_min, 1); t < t_max; ++t) {
+    for (int t = t_min + 1; t < t_max + 1; ++t) {
       for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
         double ub = large_m[t - 1][nv_id];
         double lb = small_m[t - 1][nv_id];
@@ -230,7 +236,7 @@ void NumericConstraintsWithCuts::compute_big_m_values(
       }
     }
   } else {
-    NumericConstraints::compute_big_m_values(task, t_min, t_max);
+    NumericConstraints::compute_big_m_values(task, t_min, t_max, first);
   }
 }
 
@@ -304,7 +310,7 @@ void NumericConstraintsWithCuts::linear_effect_constraint(
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   if (has_linear_effects && sequence_linear_effects) {
     int num_numeric_variables = numeric_task.get_n_numeric_variables();
-    for (int t = std::max(0, t_min - 1); t < t_max - 1; ++t) {
+    for (int t = t_min; t < t_max; ++t) {
       for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
         for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
              ++i) {
