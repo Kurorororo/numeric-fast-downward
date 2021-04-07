@@ -18,6 +18,8 @@ class RelevanceConstraints : public GurobiIPConstraintGenerator {
                           std::queue<size_t> &open);
   void push_numeric(numeric_helper::NumericTaskProxy &numeric_task, int c,
                     std::queue<size_t> &open);
+  void push_linear(numeric_helper::NumericTaskProxy &numeric_task, int op_id,
+                   std::queue<size_t> &open);
   void analyze_relevance(const std::shared_ptr<AbstractTask> task,
                          bool use_linear_effects);
 

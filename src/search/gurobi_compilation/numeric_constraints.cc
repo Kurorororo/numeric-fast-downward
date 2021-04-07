@@ -85,7 +85,7 @@ void NumericConstraints::initialize_numeric_mutex(
           }
 
           if (has_linear_effects) {
-            for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
+            for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2);
                  ++j) {
               int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
               if (fabs(lnc.coefficients[lhs]) > 0.0) {
@@ -104,7 +104,7 @@ void NumericConstraints::initialize_numeric_mutex(
         // simple lhs vs. linear rhs
         for (int lhs = 0; lhs < n_numeric_variables; ++lhs) {
           if (fabs(numeric_task.get_action_eff_list(op_id1)[lhs]) > 0.0) {
-            for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id2);
+            for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id2);
                  ++i) {
               ap_float coefficient =
                   numeric_task.get_action_linear_coefficients(op_id2)[i][lhs];
@@ -119,8 +119,7 @@ void NumericConstraints::initialize_numeric_mutex(
         }
         if (action_mutex[op_id1][op_id2]) continue;
         // linear lhs vs. rhs
-        for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id1);
-             ++i) {
+        for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id1); ++i) {
           int lhs = numeric_task.get_action_linear_lhs(op_id1)[i];
           // linear lhs vs. simple rhs
           if (fabs(numeric_task.get_action_eff_list(op_id2)[lhs]) > 0.0) {
@@ -129,7 +128,7 @@ void NumericConstraints::initialize_numeric_mutex(
             break;
           }
           // linear lhs vs. linear rhs
-          for (int j = 0; j < numeric_task.get_action_num_linear_eff(op_id2);
+          for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2);
                ++j) {
             ap_float coefficient =
                 numeric_task.get_action_linear_coefficients(op_id2)[j][lhs];
@@ -154,7 +153,7 @@ void NumericConstraints::initialize_repetable_actions(
 
   for (size_t op_id = 0; op_id < n_actions; ++op_id) {
     if (numeric_task.get_action_pre_del_list(op_id).size() > 0 ||
-        numeric_task.get_action_num_linear_eff(op_id) > 0)
+        numeric_task.get_action_n_linear_eff(op_id) > 0)
       continue;
     bool is_repetable = true;
     for (int pre : numeric_task.get_action_num_list(op_id)) {
@@ -223,7 +222,7 @@ void NumericConstraints::compute_big_m_values(
         for (size_t op_id = 0; op_id < n_actions; ++op_id) {
           double a_over = ub;
           double a_under = lb;
-          for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
+          for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id);
                ++i) {
             if (nv_id == numeric_task.get_action_linear_lhs(op_id)[i]) {
               a_over = numeric_task.get_action_linear_constants(op_id)[i];
@@ -365,7 +364,7 @@ void NumericConstraints::simple_effect_constraint(
         double coefficient = 1;
         bool use_big_m = false;
         for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
-          for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id);
+          for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id);
                ++i) {
             if (var == numeric_task.get_action_linear_lhs(op_id)[i]) {
               les.addTerms(&coefficient, &x[t][op_id], 1);
@@ -398,7 +397,7 @@ void NumericConstraints::linear_effect_constraint(
   int num_numeric_variables = numeric_task.get_n_numeric_variables();
   for (int t = t_min; t < t_max; ++t) {
     for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
-      for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id); ++i) {
+      for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
         int var = numeric_task.get_action_linear_lhs(op_id)[i];
         double constant = numeric_task.get_action_linear_constants(op_id)[i];
         GRBLinExpr rhs(constant);

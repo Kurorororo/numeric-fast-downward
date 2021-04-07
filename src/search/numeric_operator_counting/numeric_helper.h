@@ -26,7 +26,7 @@ struct Action {
   std::set<int> del_list;
   std::set<int> pre_del_list;
   std::vector<double> eff_list;  // simple numeric effects
-  int num_linear_eff = 0;
+  int n_linear_eff = 0;
   std::vector<int> linear_eff_lhs;  // affected variabels of linear effects;
   std::vector<std::vector<ap_float>>
       linear_eff_coefficeints;  // coefficients of linear effects;
@@ -139,9 +139,7 @@ class NumericTaskProxy {
   std::vector<double> &get_action_eff_list(int op_id) {
     return actions[op_id].eff_list;
   }
-  int get_action_num_linear_eff(int op_id) {
-    return actions[op_id].num_linear_eff;
-  }
+  int get_action_n_linear_eff(int op_id) { return actions[op_id].n_linear_eff; }
   std::vector<int> &get_action_linear_lhs(int op_id) {
     return actions[op_id].linear_eff_lhs;
   }

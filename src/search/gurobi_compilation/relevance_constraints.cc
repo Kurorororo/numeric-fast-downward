@@ -40,12 +40,41 @@ void RelevanceConstraints::push_numeric(NumericTaskProxy &numeric_task, int c,
       action_relevant[op_id] = true;
       open.push(op_id);
     } else {
-      for (int i = 0; i < numeric_task.get_action_num_linear_eff(op_id); ++i) {
+      for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
         int lhs = numeric_task.get_action_linear_lhs(op_id)[i];
         if (fabs(lnc.coefficients[lhs]) > 0) {
           action_relevant[op_id] = true;
           open.push(op_id);
           break;
+        }
+      }
+    }
+  }
+}
+
+void RelevanceConstraints::push_linear(NumericTaskProxy &numeric_task,
+                                       int op_id, std::queue<size_t> &open) {
+  int n_actions = numeric_task.get_n_actions();
+  int n_variables = numeric_task.get_n_numeric_variables();
+  for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
+    for (int op_id2 = 0; op_id2 < n_actions; ++op_id2) {
+      if (op_id2 == op_id || action_relevant[op_id2]) continue;
+      auto coefficients = numeric_task.get_action_linear_coefficients(op_id)[i];
+      for (int var = 0; var < n_variables; ++var) {
+        if (fabs(coefficients[var]) > 0) {
+          if (fabs(numeric_task.get_action_eff_list(op_id2)[var]) > 0) {
+            action_relevant[op_id2] = true;
+            break;
+          }
+        }
+      }
+      if (!action_relevant[op_id2]) {
+        for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2); ++j) {
+          int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
+          if (fabs(coefficients[lhs]) > 0) {
+            action_relevant[op_id2] = true;
+            break;
+          }
         }
       }
     }
@@ -79,6 +108,7 @@ void RelevanceConstraints::analyze_relevance(
     for (int pre : numeric_task.get_action_num_list(op_id))
       for (int i : numeric_task.get_numeric_conditions_id(pre))
         push_numeric(numeric_task, i, open);
+    push_linear(numeric_task, op_id, open);
   }
 }
 

@@ -451,7 +451,7 @@ void NumericTaskProxy::build_actions(const TaskProxy &task,
           }
         }
       } else {
-        ++actions[op_id].num_linear_eff;
+        ++actions[op_id].n_linear_eff;
         actions[op_id].linear_eff_lhs.push_back(id_num);
         std::vector<ap_float> coefficients(n_numeric_variables, 0.0);
         switch (oper) {
@@ -721,7 +721,7 @@ void NumericTaskProxy::calculates_small_m_and_epsilons() {
       }
       if (fabs(local_epsilon) < min_epsilon && fabs(local_epsilon) > 0)
         min_epsilon = fabs(local_epsilon);
-      for (int j = 0; j < get_action_num_linear_eff(op_id); ++j) {
+      for (int j = 0; j < get_action_n_linear_eff(op_id); ++j) {
         int lhs = get_action_linear_lhs(op_id)[j];
         if (fabs(lnc.coefficients[lhs]) > 0.0001) {
           min_epsilon = default_epsilon;
