@@ -38,7 +38,8 @@ void GurobiIterativeHorizon::initialize() {
     cout << "Initial state is a dead end." << endl;
   } else {
     initial_h = result.get_h_value();
-    current_t = std::ceil(initial_h);
+    current_t = std::ceil<int>(initial_h);
+    current_t = std::max(current_t, 1);
     cout << "initial time horizon " << current_t << endl;
   }
   model->initialize(current_t);
