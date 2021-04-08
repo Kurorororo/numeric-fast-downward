@@ -545,6 +545,7 @@ fast_downward_plugin(
         gurobi_compilation/numeric_constraints.cc
         gurobi_compilation/action_precedence_graph.cc
         gurobi_compilation/action_cycle_elimination_callback.cc
+        gurobi_compilation/sc_cut_compilation.cc
         gurobi_compilation/sas_cut_compilation.cc
         gurobi_compilation/numeric_constraints_with_cuts.cc
         gurobi_compilation/relevance_constraints.cc

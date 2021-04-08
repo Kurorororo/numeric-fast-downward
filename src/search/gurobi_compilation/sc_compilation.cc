@@ -39,7 +39,8 @@ void GurobiStateChangeModel::update(const int horizon,
   add_variables(task, model, t_min, t_max, first);
   goal_state_constraint(task, model, t_max, first);
   update_state_change_constraint(task, model, t_min, t_max);
-  precondition_effect_constraint(task, model, x, t_min, t_max);
+  precondition_constraint(task, model, x, t_min, t_max);
+  effect_constraint(task, model, x, t_min, t_max);
   if (use_landmark) landmark_constraint(task, model, x, t_min, t_max, first);
 
   current_horizon = horizon;
@@ -217,7 +218,30 @@ void GurobiStateChangeModel::update_state_change_constraint(
   }
 }
 
-void GurobiStateChangeModel::precondition_effect_constraint(
+void GurobiStateChangeModel::precondition_constraint(
+    const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
+    std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
+  TaskProxy task_proxy(*task);
+  VariablesProxy vars = task_proxy.get_variables();
+  OperatorsProxy ops = task_proxy.get_operators();
+  for (VariableProxy var : vars) {
+    int n_vals = var.get_domain_size();
+    int i_var = var.get_id();
+    for (int val = 0; val < n_vals; val++) {
+      int p = numeric_task.get_proposition(i_var, val);
+      for (int t = t_min; t < t_max; ++t) {
+        double coeff = 1;
+        GRBLinExpr lhs;
+        for (int op_id : pnd[p]) {
+          model->addConstr(x[t][op_id] <= y_pa[t + 1][p]);
+          lhs.addTerms(&coeff, &x[t][op_id], 1);
+        }
+      }
+    }
+  }
+}
+
+void GurobiStateChangeModel::effect_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
   TaskProxy task_proxy(*task);
@@ -234,7 +258,6 @@ void GurobiStateChangeModel::precondition_effect_constraint(
         {
           GRBLinExpr lhs;
           for (int op_id : pnd[p]) {
-            model->addConstr(x[t][op_id] <= y_pa[t + 1][p]);
             lhs.addTerms(&coeff, &x[t][op_id], 1);
           }
           model->addConstr(lhs >= y_pa[t + 1][p]);

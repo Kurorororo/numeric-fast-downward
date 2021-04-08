@@ -45,16 +45,20 @@ class GurobiStateChangeModel : public GurobiIPConstraintGenerator {
   void update_state_change_constraint(const std::shared_ptr<AbstractTask> task,
                                       std::shared_ptr<GRBModel> model,
                                       int t_min, int t_max);
-  void precondition_effect_constraint(const std::shared_ptr<AbstractTask> task,
-                                      std::shared_ptr<GRBModel> model,
-                                      std::vector<std::vector<GRBVar>> &x,
-                                      int t_min, int t_max);
+  void effect_constraint(const std::shared_ptr<AbstractTask> task,
+                         std::shared_ptr<GRBModel> model,
+                         std::vector<std::vector<GRBVar>> &x, int t_min,
+                         int t_max);
   void landmark_constraint(const std::shared_ptr<AbstractTask> task,
                            std::shared_ptr<GRBModel> model,
                            std::vector<std::vector<GRBVar>> &x, int t_min,
                            int t_max, bool first);
   virtual void initialize_mutex(const std::shared_ptr<AbstractTask> task,
                                 std::vector<std::vector<bool>> &action_mutex);
+  virtual void precondition_constraint(const std::shared_ptr<AbstractTask> task,
+                                       std::shared_ptr<GRBModel> model,
+                                       std::vector<std::vector<GRBVar>> &x,
+                                       int t_min, int t_max);
 
  public:
   GurobiStateChangeModel(const options::Options &opts);
