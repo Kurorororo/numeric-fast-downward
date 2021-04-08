@@ -18,7 +18,9 @@ namespace lm_cut_numeric_heuristic {
         std::unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks> landmark_generator;
         //std::unique_ptr<lm_cut_repetition_heuristic::LandmarkCutLandmarks> landmark_generator;
         //std::unique_ptr<LandmarkCutNumericLandmarks> landmark_generator;
+        bool ceiling_less_than_one;
         bool ignore_numeric;
+        bool use_random_pcf;
         virtual void initialize() override;
         virtual ap_float compute_heuristic(const GlobalState &global_state) override;
         ap_float compute_heuristic(const State &state);

@@ -16,9 +16,12 @@ double precision = 0.001;
 
 namespace numeric_lm_cut_heuristic {
     // construction and destruction
-    LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ignore_numeric) {
-        numeric_task = NumericTaskProxy(task_proxy,false);
-        ignore_numeric_conditions = ignore_numeric;
+    LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one, bool ignore_numeric,
+                                               bool use_random_pcf)
+        : numeric_task(NumericTaskProxy(task_proxy, false)),
+          ceiling_less_than_one(ceiling_less_than_one),
+          ignore_numeric_conditions(ignore_numeric),
+          use_random_pcf(use_random_pcf) {
         //verify_no_axioms(task_proxy);
         verify_no_conditional_effects(task_proxy);
         // Build propositions.
@@ -261,8 +264,12 @@ namespace numeric_lm_cut_heuristic {
                 --relaxed_op->unsatisfied_preconditions;
                 assert(relaxed_op->unsatisfied_preconditions >= 0);
                 if (relaxed_op->unsatisfied_preconditions == 0) {
-                    relaxed_op->h_max_supporter = prop;
-                    relaxed_op->h_max_supporter_cost = prop_cost;
+                    if (use_random_pcf) {
+                        relaxed_op->select_random_supporter();
+                    } else {
+                        relaxed_op->h_max_supporter = prop;
+                        relaxed_op->h_max_supporter_cost = prop_cost;
+                    }
                     for (RelaxedProposition *effect : relaxed_op->effects)
                         update_queue(prop, effect, relaxed_op);
                 }
@@ -298,7 +305,10 @@ namespace numeric_lm_cut_heuristic {
                 if (relaxed_op->h_max_supporter == prop) {
                     int old_supp_cost = relaxed_op->h_max_supporter_cost;
                     if (old_supp_cost > prop_cost) {
-                        relaxed_op->update_h_max_supporter();
+                        if (use_random_pcf)
+                            relaxed_op->select_random_supporter();
+                        else
+                            relaxed_op->update_h_max_supporter();
                         int new_supp_cost = relaxed_op->h_max_supporter_cost;
                         if (new_supp_cost != old_supp_cost) {
                             // This operator has become cheaper.
@@ -541,6 +551,10 @@ namespace numeric_lm_cut_heuristic {
             int id_effect = effect->id_numeric_condition;
             //ap_float m = floor(numeric_initial_state[id_effect]/relaxed_op->numeric_effects[id_effect]);
             ap_float m = numeric_initial_state[id_effect]/relaxed_op->numeric_effects[id_effect];
+
+            if (ceiling_less_than_one)
+                return std::max(m, 1.0);
+
             return m;
         }
         return 1;

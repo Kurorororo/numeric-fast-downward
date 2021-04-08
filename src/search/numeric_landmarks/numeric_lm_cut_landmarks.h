@@ -1,9 +1,11 @@
 #ifndef HEURISTICS_NUMERIC_LM_CUT_LANDMARKS_H
 #define HEURISTICS_NUMERIC_LM_CUT_LANDMARKS_H
 
+#include "../globals.h"
 #include "../priority_queue.h"
 #include "../task_tools.h"
 #include "../numeric_operator_counting/numeric_helper.h"
+#include "../utils/rng.h"
 
 #include <cassert>
 #include <functional>
@@ -44,6 +46,7 @@ namespace numeric_lm_cut_heuristic {
         }
         
         inline void update_h_max_supporter();
+        inline void select_random_supporter();
     };
     
     struct RelaxedProposition {
@@ -66,7 +69,9 @@ namespace numeric_lm_cut_heuristic {
         RelaxedProposition artificial_goal;
         int num_propositions;
         int n_var;
+        bool ceiling_less_than_one;
         bool ignore_numeric_conditions;
+        bool use_random_pcf;
         std::vector<ap_float> numeric_initial_state;
         
         AdaptiveQueue<RelaxedProposition *> priority_queue;
@@ -109,7 +114,8 @@ namespace numeric_lm_cut_heuristic {
         using CostCallback = std::function<void (ap_float)>;
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
-        LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ignore_numeric = false);
+        LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one = false, bool ignore_numeric = false,
+                             bool use_random_pcf = false);
         virtual ~LandmarkCutLandmarks();
         
         /*
@@ -134,6 +140,31 @@ namespace numeric_lm_cut_heuristic {
         for (size_t i = 0; i < preconditions.size(); ++i)
             if (preconditions[i]->h_max_cost > h_max_supporter->h_max_cost)
                 h_max_supporter = preconditions[i];
+        h_max_supporter_cost = h_max_supporter->h_max_cost;
+    }
+
+    inline void RelaxedOperator::select_random_supporter() {
+        assert(!unsatisfied_preconditions);
+        size_t n_zero = 0;
+        for (size_t i = 0; i < preconditions.size(); ++i)
+            if (preconditions[i]->h_max_cost <= 0) ++n_zero;
+        if (n_zero == preconditions.size()) {
+            int index = (*g_rng())(preconditions.size());
+            h_max_supporter = preconditions[index];
+        } else {
+            int index = (*g_rng())(preconditions.size() - n_zero);
+            int counter = 0;
+            for (size_t i = 0; i < preconditions.size(); ++i) {
+                if (preconditions[i]->h_max_cost > 0) {
+                    if (counter == index) {
+                        h_max_supporter = preconditions[i];
+                        break;
+                    }
+                    ++counter;
+                }
+            }
+
+        }
         h_max_supporter_cost = h_max_supporter->h_max_cost;
     }
 }
