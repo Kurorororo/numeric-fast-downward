@@ -32,6 +32,7 @@ namespace rmax_heuristic {
                                 "restric achievers to actions whose preconditions are cheaper than"
                                 "the numeric effect to achieve (Scala et al. JAIR 2020)",
                                 "false");
+        parser.add_option<bool>("ceiling_less_than_one", "use 1 instead of m_a when m_a < 1", "false");
         
         Heuristic::add_options_to_parser(parser);
         Options opts = parser.parse();
@@ -310,6 +311,7 @@ namespace rmax_heuristic {
         if (net_effects[gr][n_condition] == 0) return -2;
         double rep = lower_bound/net_effects[gr][n_condition];
         if (rep < 0) return 0; // already satisfied
+        if (ceiling_less_than_one && rep < 1) return 1;
         return rep;
     }
     
@@ -369,6 +371,7 @@ namespace rmax_heuristic {
     : IntervalRelaxationHeuristic(options)
     {
         restrict_achievers = options.get<bool>("restrict_achievers");
+        ceiling_less_than_one = options.get<bool>("ceiling_less_than_one");
         numeric_task = NumericTaskProxy(task_proxy);
         max_float = 999999;
         generate_possible_achievers();
