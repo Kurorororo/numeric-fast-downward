@@ -19,19 +19,10 @@ NumericConstraintsWithCuts::NumericConstraintsWithCuts(const Options &opts)
 
 void NumericConstraintsWithCuts::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
     std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing numeric with cuts" << endl;
-  TaskProxy task_proxy(*task);
-  has_linear_effects = use_linear_effects;
-  numeric_task = NumericTaskProxy(task_proxy, true, has_linear_effects);
-  initialize_numeric_mutex(action_mutex);
+  NumericConstraints::initialize(horizon, task, action_mutex, use_linear_effects);
   initialize_action_precedence();
-
-  if (num_repetition > 1) NumericConstraints::initialize_repetable_actions(x);
-
-  NumericConstraints::update(horizon, task, model, x);
-  NumericConstraints::initial_state_constraint(task, model);
 }
 
 void NumericConstraintsWithCuts::initialize_action_precedence() {
@@ -242,11 +233,13 @@ void NumericConstraintsWithCuts::compute_big_m_values(
 
 void NumericConstraintsWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<ActionPrecedenceGraph> graph) {
+    const std::vector<std::vector<bool>> &action_mutex,
+    std::shared_ptr<ActionPrecedenceGraph> graph
+    ) {
   size_t n_actions = numeric_task.get_n_actions();
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 != op_id2 && action_precedence[op_id1][op_id2]) {
+      if (op_id1 != op_id2 && action_precedence[op_id1][op_id2] && !action_mutex[op_id1][op_id2]) {
         graph->add_edge(op_id1, op_id2);
       }
     }

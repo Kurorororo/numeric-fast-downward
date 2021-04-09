@@ -22,6 +22,7 @@ class GurobiStateChangeModelWithCuts : public GurobiStateChangeModel {
 
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
+      const std::vector<std::vector<bool>> &action_mutex,
       std::shared_ptr<ActionPrecedenceGraph> graph) override;
 };
 }  // namespace gurobi_ip_compilation

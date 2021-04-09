@@ -37,12 +37,10 @@ class NumericConstraintsWithCuts : public NumericConstraints {
 
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x,
                           std::vector<std::vector<bool>> &action_mutex,
                           bool use_linear_effects) override;
   virtual void add_action_precedence(
-      const std::shared_ptr<AbstractTask> task,
+      const std::shared_ptr<AbstractTask> task, const std::vector<std::vector<bool>> &action_mutex,
       std::shared_ptr<ActionPrecedenceGraph> graph) override;
 };
 }  // namespace gurobi_ip_compilation

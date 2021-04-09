@@ -73,6 +73,7 @@ void GurobiSASStateChangeModelWithCuts::precondition_constraint(
 
 void GurobiSASStateChangeModelWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
+    const std::vector<std::vector<bool>> &action_mutex,
     std::shared_ptr<ActionPrecedenceGraph> graph) {
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
@@ -92,7 +93,7 @@ void GurobiSASStateChangeModelWithCuts::add_action_precedence(
       postcondition[var] = effect.get_value();
     }
     for (size_t op_id2 = 0; op_id2 < ops.size(); ++op_id2) {
-      if (op_id1 == op_id2) continue;
+      if (op_id1 == op_id2 || action_mutex[op_id1][op_id2]) continue;
       for (FactProxy condition : ops[op_id2].get_preconditions()) {
         int pre_var_id = condition.get_variable().get_id();
         precondition2[pre_var_id] = condition.get_value();

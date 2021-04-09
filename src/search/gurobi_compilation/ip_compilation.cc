@@ -25,14 +25,9 @@ GurobiIPCompilation::GurobiIPCompilation(
       graph(nullptr),
       callback(nullptr) {
   env->set(GRB_IntParam_Threads, opts.get<int>("threads"));
-
-  if (add_user_cuts) add_lazy_constraints = true;
-  if (add_lazy_constraints) env->set(GRB_IntParam_LazyConstraints, 1);
-  if (add_user_cuts) env->set(GRB_IntParam_PreCrush, 1);
-
   env->set(GRB_IntParam_OutputFlag, 0);
 
-  model = std::make_shared<GRBModel>(*env);
+  if (add_user_cuts) add_lazy_constraints = true;
 
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
@@ -52,31 +47,51 @@ GurobiIPCompilation::GurobiIPCompilation(
       if (diff > 0) min_cost_diff = std::min(diff, min_cost_diff);
     }
   }
-
-  action_mutex.resize(ops.size(), std::vector<bool>(ops.size(), false));
-
-  if (add_lazy_constraints || add_user_cuts)
-    graph = std::make_shared<ActionPrecedenceGraph>(ops.size());
 }
 
 GurobiIPCompilation::~GurobiIPCompilation() { delete env; }
 
 void GurobiIPCompilation::initialize(const int horizon) {
+  TaskProxy task_proxy(*task);
+  OperatorsProxy ops = task_proxy.get_operators();
+  action_mutex.resize(ops.size(), std::vector<bool>(ops.size(), false));
+  use_callback = add_lazy_constraints || add_user_cuts;
+
+  if (use_callback)
+      graph = std::make_shared<ActionPrecedenceGraph>(ops.size());
+
+  for (auto generator : constraint_generators)
+    generator->initialize(horizon, task, action_mutex, use_linear_effects);
+
+  if (use_callback) {
+    for (auto generator : constraint_generators)
+      generator->add_action_precedence(task, action_mutex, graph);
+  }
+
+  if (use_callback) {
+    int n_edges = graph->get_n_edges();
+    std::cout << "action precedence graph has " << n_edges << " edges" << std::endl;
+    if (n_edges > 2) {
+      if (add_lazy_constraints) env->set(GRB_IntParam_LazyConstraints, 1);
+      if (add_user_cuts) env->set(GRB_IntParam_PreCrush, 1);
+    } else {
+      use_callback = false;
+      std::cout << "callback is not used" << std::endl;
+    }
+  }
+
+  model = std::make_shared<GRBModel>(*env);
   add_variables(0, horizon);
 
-  for (auto generator : constraint_generators) {
-    generator->initialize(horizon, task, model, x, action_mutex,
-                          use_linear_effects);
-    if (add_lazy_constraints || add_user_cuts)
-      generator->add_action_precedence(task, graph);
-  }
+  for (auto generator : constraint_generators)
+    generator->update(horizon, task, model, x);
 
   add_mutex_constraints(0, horizon);
 
-  if (add_lazy_constraints || add_user_cuts) {
-    callback = std::make_shared<ActionCycleEliminationCallback>(
-        max_num_cuts, add_user_cuts, x, graph);
-    model->setCallback(callback.get());
+  if (use_callback) {
+      callback = std::make_shared<ActionCycleEliminationCallback>(
+          max_num_cuts, add_user_cuts, x, graph);
+      model->setCallback(callback.get());
   }
 }
 
@@ -107,18 +122,21 @@ void GurobiIPCompilation::add_mutex_constraints(const int t_min,
                                                 const int t_max) {
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
+  int n_mutex = 0;
   for (size_t op_id1 = 0; op_id1 < ops.size() - 1; ++op_id1) {
     for (size_t op_id2 = op_id1 + 1; op_id2 < ops.size(); ++op_id2) {
       if (action_mutex[op_id1][op_id2] ||
-          ((add_lazy_constraints || add_user_cuts) &&
-           graph->is_connected(op_id1, op_id2) &&
-           graph->is_connected(op_id2, op_id1))) {
+          (graph != nullptr && graph->is_connected(op_id1, op_id2)
+           && graph->is_connected(op_id2, op_id1))) {
+        ++n_mutex;
         for (int t = t_min; t < t_max; ++t) {
           model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
         }
       }
     }
   }
+
+  if (t_min == 0) std::cout << "mutex action pairs: " << n_mutex << std::endl;
 }
 
 void GurobiIPCompilation::add_sequence_constraint() {
@@ -138,6 +156,7 @@ void GurobiIPCompilation::add_sequence_constraint() {
       model->addConstr(sum_t_1 <= sum_t);
     }
   }
+  model->setCallback(nullptr);
 }
 
 ap_float GurobiIPCompilation::compute_plan() {
@@ -166,8 +185,8 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
   int t_max = x.size();
 
   for (int t = 0; t < t_max; ++t) {
-    // std::cout << "t=" <<st << std::endl;
-    if (add_lazy_constraints || add_user_cuts) {
+    // std::cout << "t=" << t << std::endl;
+    if (use_callback) {
       std::vector<int> nodes;
       std::unordered_map<int, int> ns;
       for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
@@ -215,7 +234,7 @@ void GurobiIPCompilation::print_statistics() const {
   int num_constraints = model->get(GRB_IntAttr_NumConstrs);
   int num_additional_constraints = 0;
 
-  if (add_lazy_constraints || add_user_cuts) {
+  if (use_callback) {
     num_additional_constraints = callback->get_num_constraints();
     std::cout << "Added constraints: " << num_additional_constraints
               << std::endl;

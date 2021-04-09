@@ -18,14 +18,11 @@ GurobiStateChangeModel::GurobiStateChangeModel(const options::Options &opts)
 
 void GurobiStateChangeModel::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
     std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing SC" << endl;
   create_sets(task, use_linear_effects);
   if (use_landmark) initialize_landmark(task);
   initialize_mutex(task, action_mutex);
-  update(horizon, task, model, x);
-  initial_state_constraint(task, model);
 }
 
 void GurobiStateChangeModel::update(const int horizon,
@@ -42,7 +39,7 @@ void GurobiStateChangeModel::update(const int horizon,
   precondition_constraint(task, model, x, t_min, t_max);
   effect_constraint(task, model, x, t_min, t_max);
   if (use_landmark) landmark_constraint(task, model, x, t_min, t_max, first);
-
+  if (first) initial_state_constraint(task, model);
   current_horizon = horizon;
 }
 

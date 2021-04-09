@@ -51,6 +51,7 @@ void GurobiStateChangeModelWithCuts::initialize_mutex(
 
 void GurobiStateChangeModelWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
+    const std::vector<std::vector<bool>> &action_mutex,
     std::shared_ptr<ActionPrecedenceGraph> graph) {
   TaskProxy task_proxy(*task);
   VariablesProxy vars = task_proxy.get_variables();
@@ -60,8 +61,10 @@ void GurobiStateChangeModelWithCuts::add_action_precedence(
     for (int val = 0; val < n_vals; ++val) {
       int p = numeric_task.get_proposition(var.get_id(), val);
       for (int op_id1 : pnd[p]) {
-        for (int op_id2 : anp[p]) graph->add_edge(op_id2, op_id1);
-        for (int op_id2 : pd[p]) graph->add_edge(op_id1, op_id2);
+        for (int op_id2 : anp[p])
+          if (!action_mutex[op_id1][op_id2]) graph->add_edge(op_id2, op_id1);
+        for (int op_id2 : pd[p])
+          if (!action_mutex[op_id1][op_id2]) graph->add_edge(op_id1, op_id2);
       }
     }
   }

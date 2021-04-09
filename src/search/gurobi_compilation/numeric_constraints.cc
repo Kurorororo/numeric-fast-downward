@@ -29,7 +29,6 @@ void NumericConstraints::dump() {
 
 void NumericConstraints::initialize(
     const int horizon, const std::shared_ptr<AbstractTask> task,
-    std::shared_ptr<GRBModel> model, std::vector<std::vector<GRBVar>> &x,
     std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing numeric" << endl;
   TaskProxy task_proxy(*task);
@@ -37,10 +36,7 @@ void NumericConstraints::initialize(
   numeric_task = NumericTaskProxy(task_proxy, true, has_linear_effects);
   initialize_numeric_mutex(action_mutex);
 
-  if (num_repetition > 1) initialize_repetable_actions(x);
-
-  update(horizon, task, model, x);
-  initial_state_constraint(task, model);
+  if (num_repetition > 1) initialize_repetable_actions();
 }
 
 void NumericConstraints::update(const int horizon,
@@ -58,6 +54,7 @@ void NumericConstraints::update(const int horizon,
   precondition_constraint(task, model, x, t_min, t_max);
   simple_effect_constraint(task, model, x, t_min, t_max);
   linear_effect_constraint(task, model, x, t_min, t_max);
+  if (first) initial_state_constraint(task, model);
   current_horizon = horizon;
 }
 
@@ -145,8 +142,7 @@ void NumericConstraints::initialize_numeric_mutex(
   }
 }
 
-void NumericConstraints::initialize_repetable_actions(
-    std::vector<std::vector<GRBVar>> &x) {
+void NumericConstraints::initialize_repetable_actions() {
   size_t n_actions = numeric_task.get_n_actions();
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
   repetable.resize(n_actions, false);

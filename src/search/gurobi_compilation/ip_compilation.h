@@ -29,6 +29,7 @@ class GurobiIPCompilation {
   int node_count;
   ap_float min_action_cost;
   ap_float min_cost_diff;
+  bool use_callback;
 
   const std::shared_ptr<AbstractTask> task;
   GRBEnv *env;

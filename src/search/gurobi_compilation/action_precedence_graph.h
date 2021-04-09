@@ -8,6 +8,7 @@ namespace gurobi_ip_compilation {
 class ActionPrecedenceGraph {
  private:
   int max_num_cuts;
+  int n_edges;
   std::vector<std::vector<bool>> edges;
   std::vector<std::vector<double>> d;
   std::vector<std::vector<int>> next;
@@ -20,13 +21,16 @@ class ActionPrecedenceGraph {
  public:
   ActionPrecedenceGraph(size_t num_nodes)
       : max_num_cuts(1),
+        n_edges(0),
         edges(num_nodes, std::vector<bool>(num_nodes, false)),
         d(num_nodes, std::vector<double>(num_nodes)),
         next(num_nodes, std::vector<int>(num_nodes, -1)) {}
   void add_edge(int a, int b);
   bool is_connected(int a, int b) const { return edges[a][b]; }
+  bool has_no_cycle();
   void find_cycle(const std::vector<double> &x_values,
                   std::vector<std::vector<int>> &cycles);
+  int get_n_edges() const;
   std::vector<int> topological_sort(const std::vector<int> &input_nodes);
 };
 

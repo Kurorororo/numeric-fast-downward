@@ -66,8 +66,6 @@ class GurobiSASStateChangeModel : public GurobiIPConstraintGenerator {
 
   virtual void initialize(const int horizon,
                           const std::shared_ptr<AbstractTask> task,
-                          std::shared_ptr<GRBModel> model,
-                          std::vector<std::vector<GRBVar>> &x,
                           std::vector<std::vector<bool>> &action_mutex,
                           bool use_linear_effects) override;
   virtual void update(const int horizon,

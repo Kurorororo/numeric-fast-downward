@@ -8,7 +8,23 @@
 
 using namespace gurobi_ip_compilation;
 
-void ActionPrecedenceGraph::add_edge(int a, int b) { edges[a][b] = true; }
+void ActionPrecedenceGraph::add_edge(int a, int b) {
+  if (!edges[a][b]) {
+    edges[a][b] = true;
+    ++n_edges;
+  }
+}
+
+int ActionPrecedenceGraph::get_n_edges() const {
+  return n_edges;
+}
+
+bool ActionPrecedenceGraph::has_no_cycle() {
+  std::vector<double> all_x(edges.size(), 1);
+  std::vector<std::vector<int>> cycles;
+  find_cycle(all_x, cycles);
+  return cycles.empty();
+}
 
 void ActionPrecedenceGraph::find_cycle(const std::vector<double> &x_values,
                                        std::vector<std::vector<int>> &cycles) {
