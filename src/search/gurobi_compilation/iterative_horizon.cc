@@ -52,13 +52,15 @@ SearchStatus GurobiIterativeHorizon::step() {
 
   std::cout << "horizon = " << current_t << std::endl;
   ++iterations;
-  double plan_cost = model->compute_plan();
+  ap_float plan_cost = model->compute_plan();
 
   if (plan_cost >= 0) {
-    double min_action_cost = model->get_min_action_cost();
-    double optimal_cost_bound = current_t * min_action_cost;
-    if (plan_cost == initial_h || plan_cost <= optimal_cost_bound ||
-        last_iteration) {
+    ap_float min_action_cost = model->get_min_action_cost();
+    ap_float optimal_cost_bound = current_t * min_action_cost;
+    ap_float min_plan_cost_diff = model->get_min_plan_cost_diff();
+    if (plan_cost - initial_h < min_plan_cost_diff
+        || plan_cost - optimal_cost_bound < min_plan_cost_diff
+        || last_iteration) {
       set_plan(model->extract_plan());
       model->print_statistics();
       std::cout << "Iterations: " << iterations << std::endl;

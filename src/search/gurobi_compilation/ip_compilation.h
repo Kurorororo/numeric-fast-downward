@@ -28,6 +28,7 @@ class GurobiIPCompilation {
   bool use_linear_effects;
   int node_count;
   ap_float min_action_cost;
+  ap_float min_cost_diff;
 
   const std::shared_ptr<AbstractTask> task;
   GRBEnv *env;
@@ -47,6 +48,7 @@ class GurobiIPCompilation {
   void print_statistics() const;
 
   ap_float get_min_action_cost();
+  ap_float get_min_plan_cost_diff();
   ap_float compute_plan();
   SearchEngine::Plan extract_plan();
 };

@@ -42,6 +42,17 @@ GurobiIPCompilation::GurobiIPCompilation(
     if (cost < min_action_cost) min_action_cost = cost;
   }
 
+  min_cost_diff = min_action_cost;
+
+  for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
+    const OperatorProxy &op = ops[op_id];
+    ap_float cost = op.get_cost();
+    for (size_t op_id2 = op_id + 1; op_id2 < ops.size(); ++op_id2) {
+      ap_float diff = fabs(cost - ops[op_id2].get_cost());
+      if (diff > 0) min_cost_diff = std::min(diff, min_cost_diff);
+    }
+  }
+
   action_mutex.resize(ops.size(), std::vector<bool>(ops.size(), false));
 
   if (add_lazy_constraints || add_user_cuts)
@@ -196,6 +207,8 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
 }
 
 ap_float GurobiIPCompilation::get_min_action_cost() { return min_action_cost; }
+
+ap_float GurobiIPCompilation::get_min_plan_cost_diff() { return min_cost_diff; }
 
 void GurobiIPCompilation::print_statistics() const {
   int num_vars = model->get(GRB_IntAttr_NumVars);
