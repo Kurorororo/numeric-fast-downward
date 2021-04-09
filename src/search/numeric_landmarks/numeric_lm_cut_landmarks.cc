@@ -17,11 +17,12 @@ double precision = 0.001;
 namespace numeric_lm_cut_heuristic {
     // construction and destruction
     LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one, bool ignore_numeric,
-                                               bool use_random_pcf)
+                                               bool use_random_pcf, bool use_irmax)
         : numeric_task(NumericTaskProxy(task_proxy, false)),
           ceiling_less_than_one(ceiling_less_than_one),
           ignore_numeric_conditions(ignore_numeric),
-          use_random_pcf(use_random_pcf) {
+          use_random_pcf(use_random_pcf),
+          use_irmax(use_irmax) {
         //verify_no_axioms(task_proxy);
         verify_no_conditional_effects(task_proxy);
         // Build propositions.
@@ -547,7 +548,7 @@ namespace numeric_lm_cut_heuristic {
     }
     
     ap_float LandmarkCutLandmarks::calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op){
-        if (effect->is_numeric_condition){
+        if (!use_irmax && effect->is_numeric_condition){
             int id_effect = effect->id_numeric_condition;
             //ap_float m = floor(numeric_initial_state[id_effect]/relaxed_op->numeric_effects[id_effect]);
             ap_float m = numeric_initial_state[id_effect]/relaxed_op->numeric_effects[id_effect];

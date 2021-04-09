@@ -72,6 +72,7 @@ namespace numeric_lm_cut_heuristic {
         bool ceiling_less_than_one;
         bool ignore_numeric_conditions;
         bool use_random_pcf;
+        bool use_irmax;
         std::vector<ap_float> numeric_initial_state;
         
         AdaptiveQueue<RelaxedProposition *> priority_queue;
@@ -115,7 +116,7 @@ namespace numeric_lm_cut_heuristic {
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
         LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one = false, bool ignore_numeric = false,
-                             bool use_random_pcf = false);
+                             bool use_random_pcf = false, bool use_irmax = false);
         virtual ~LandmarkCutLandmarks();
         
         /*
