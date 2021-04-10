@@ -16,14 +16,14 @@ class GurobiStateChangeModelWithCuts : public GurobiStateChangeModel {
                                        std::shared_ptr<GRBModel> model,
                                        std::vector<std::vector<GRBVar>> &x,
                                        int t_min, int t_max) override;
+  std::vector<std::vector<bool>> action_precedence_inner;
 
  public:
   GurobiStateChangeModelWithCuts(const options::Options &opts);
 
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
-      const std::vector<std::vector<bool>> &action_mutex,
-      std::shared_ptr<ActionPrecedenceGraph> graph) override;
+      std::vector<std::vector<bool>> &action_precedence) override;
 };
 }  // namespace gurobi_ip_compilation
 #endif

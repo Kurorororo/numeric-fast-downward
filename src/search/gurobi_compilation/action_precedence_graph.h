@@ -25,6 +25,16 @@ class ActionPrecedenceGraph {
         edges(num_nodes, std::vector<bool>(num_nodes, false)),
         d(num_nodes, std::vector<double>(num_nodes)),
         next(num_nodes, std::vector<int>(num_nodes, -1)) {}
+  ActionPrecedenceGraph(const std::vector<std::vector<bool>> &edges)
+      : max_num_cuts(1),
+        n_edges(0),
+        edges(edges),
+        d(edges.size(), std::vector<double>(edges.size(), false)),
+        next(edges.size(), std::vector<int>(edges.size(), -1)) {
+    for (auto e : edges)
+      for (auto v : e)
+        if (v) ++n_edges;
+  }
   void add_edge(int a, int b);
   bool is_connected(int a, int b) const { return edges[a][b]; }
   bool has_no_cycle();

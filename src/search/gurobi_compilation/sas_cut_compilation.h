@@ -10,9 +10,6 @@
 
 namespace gurobi_ip_compilation {
 class GurobiSASStateChangeModelWithCuts : public GurobiSASStateChangeModel {
- private:
-  std::vector<std::vector<bool>> action_mutex;
-
  protected:
   virtual void initialize_mutex(
       const std::shared_ptr<AbstractTask> task,
@@ -22,13 +19,14 @@ class GurobiSASStateChangeModelWithCuts : public GurobiSASStateChangeModel {
                                        std::vector<std::vector<GRBVar>> &x,
                                        int t_min, int t_max) override;
 
+  std::vector<std::vector<bool>> action_precedence_inner;
+
  public:
   GurobiSASStateChangeModelWithCuts(const options::Options &opts);
 
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
-      const std::vector<std::vector<bool>> &action_mutex,
-      std::shared_ptr<ActionPrecedenceGraph> graph) override;
+      std::vector<std::vector<bool>> &action_precedence) override;
 };
 }  // namespace gurobi_ip_compilation
 #endif

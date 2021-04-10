@@ -56,19 +56,21 @@ void GurobiIPCompilation::initialize(const int horizon) {
   OperatorsProxy ops = task_proxy.get_operators();
   action_mutex.resize(ops.size(), std::vector<bool>(ops.size(), false));
   use_callback = add_lazy_constraints || add_user_cuts;
+  std::vector<std::vector<bool>> action_precedence;
 
   if (use_callback)
-      graph = std::make_shared<ActionPrecedenceGraph>(ops.size());
+    action_precedence.resize(ops.size(), std::vector<bool>(ops.size(), false));
 
   for (auto generator : constraint_generators)
     generator->initialize(horizon, task, action_mutex, use_linear_effects);
 
   if (use_callback) {
     for (auto generator : constraint_generators)
-      generator->add_action_precedence(task, action_mutex, graph);
+      generator->add_action_precedence(task, action_precedence);
   }
 
   if (use_callback) {
+    graph = std::make_shared<ActionPrecedenceGraph>(action_precedence);
     int n_edges = graph->get_n_edges();
     std::cout << "action precedence graph has " << n_edges << " edges" << std::endl;
     if (n_edges > 2) {

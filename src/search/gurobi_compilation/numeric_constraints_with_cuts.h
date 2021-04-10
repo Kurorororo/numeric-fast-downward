@@ -10,7 +10,6 @@
 namespace gurobi_ip_compilation {
 class NumericConstraintsWithCuts : public NumericConstraints {
  protected:
-  virtual void initialize_action_precedence();
   virtual void initialize_numeric_mutex(
       std::vector<std::vector<bool>> &action_mutex) override;
   virtual void compute_big_m_values(const std::shared_ptr<AbstractTask> task,
@@ -25,7 +24,9 @@ class NumericConstraintsWithCuts : public NumericConstraints {
 
   bool disable_precondition_relaxation;
   bool sequence_linear_effects;
-  std::vector<std::vector<bool>> action_precedence;
+  std::vector<std::vector<bool>> precondition_to_negative;
+  std::vector<std::vector<bool>> positive_to_precondition;
+  std::vector<std::vector<bool>> simple_to_linear;
   std::unordered_map<int, std::vector<int>> net_positive_actions;
   std::unordered_map<std::pair<int, int>, double> net_values;
 
@@ -40,8 +41,8 @@ class NumericConstraintsWithCuts : public NumericConstraints {
                           std::vector<std::vector<bool>> &action_mutex,
                           bool use_linear_effects) override;
   virtual void add_action_precedence(
-      const std::shared_ptr<AbstractTask> task, const std::vector<std::vector<bool>> &action_mutex,
-      std::shared_ptr<ActionPrecedenceGraph> graph) override;
+      const std::shared_ptr<AbstractTask> task,
+      std::vector<std::vector<bool>> &action_precedence) override;
 };
 }  // namespace gurobi_ip_compilation
 #endif

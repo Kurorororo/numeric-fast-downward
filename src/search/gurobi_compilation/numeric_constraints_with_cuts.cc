@@ -22,19 +22,26 @@ void NumericConstraintsWithCuts::initialize(
     std::vector<std::vector<bool>> &action_mutex, bool use_linear_effects) {
   cout << "initializing numeric with cuts" << endl;
   NumericConstraints::initialize(horizon, task, action_mutex, use_linear_effects);
-  initialize_action_precedence();
 }
 
-void NumericConstraintsWithCuts::initialize_action_precedence() {
+void NumericConstraintsWithCuts::initialize_numeric_mutex(
+    std::vector<std::vector<bool>> &action_mutex) {
   size_t n_actions = numeric_task.get_n_actions();
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
-  action_precedence.resize(n_actions, std::vector<bool>(n_actions, false));
+  precondition_to_negative.resize(n_actions, std::vector<bool>(n_actions, false));
+  if (!disable_precondition_relaxation)
+    positive_to_precondition.resize(n_actions, std::vector<bool>(n_actions, false));
+  if (has_linear_effects && sequence_linear_effects)
+    simple_to_linear.resize(n_actions, std::vector<bool>(n_actions, false));
+
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 == op_id2) continue;
+      if (op_id1 == op_id2 || action_mutex[op_id1][op_id2]) continue;
+      // pre(op_id1) vs. num(op_id2)
       for (int pre : numeric_task.get_action_num_list(op_id1)) {
         for (int i : numeric_task.get_numeric_conditions_id(pre)) {
           auto key = std::make_pair(i, op_id2);
+          // pre(op_id1) vs. simple(op_id2)
           auto result = net_values.find(key);
           ap_float net = 0;
           if (result == net_values.end()) {
@@ -51,97 +58,127 @@ void NumericConstraintsWithCuts::initialize_action_precedence() {
             net = result->second;
           }
           if (!disable_precondition_relaxation && net > 0.0) {
-            action_precedence[op_id2][op_id1] = true;
+            positive_to_precondition[op_id2][op_id1] = true;
           }
           if (net < 0.0) {
-            action_precedence[op_id1][op_id2] = true;
+            precondition_to_negative[op_id1][op_id2] = true;
           }
 
-          if (has_linear_effects && !action_precedence[op_id1][op_id2]) {
+          // pre(op_id1) vs. linear(op_id2)
+          if (has_linear_effects) {
             LinearNumericCondition &lnc = numeric_task.get_condition(i);
             for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2);
                  ++j) {
-              int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
-              if (fabs(lnc.coefficients[lhs]) > 0) {
-                action_precedence[op_id1][op_id2] = true;
-                break;
-              }
-
-              if (sequence_linear_effects) {
-                for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
-                  if (fabs(numeric_task.get_action_linear_coefficients(
-                          op_id2)[j][nv_id]) > 0 &&
-                      fabs(numeric_task.get_action_eff_list(op_id1)[nv_id] >
-                           0)) {
-                    action_precedence[op_id1][op_id2] = true;
-                    break;
-                  }
+              if (!precondition_to_negative[op_id1][op_id1]) {
+                int lhs = numeric_task.get_action_linear_lhs(op_id2)[j];
+                if (fabs(lnc.coefficients[lhs]) > 0) {
+                  precondition_to_negative[op_id1][op_id2] = true;
+                  break;
                 }
-                if (action_precedence[op_id1][op_id2]) break;
               }
             }
           }
         }
       }
-    }
-  }
-}
-
-void NumericConstraintsWithCuts::initialize_numeric_mutex(
-    std::vector<std::vector<bool>> &action_mutex) {
-  if (has_linear_effects) {
-    size_t n_actions = numeric_task.get_n_actions();
-    numeric_mutex.resize(n_actions, std::vector<bool>(n_actions, false));
-    int n_numeric_variables = numeric_task.get_n_numeric_variables();
-    for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
-      for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-        if (op_id1 == op_id2 || action_mutex[op_id1][op_id2]) continue;
-        if (!action_mutex[op_id1][op_id2]) {
-          // simple lhs vs. linear rhs
-          if (!sequence_linear_effects) {
-            for (int lhs = 0; lhs < n_numeric_variables; ++lhs) {
-              if (fabs(numeric_task.get_action_eff_list(op_id1)[lhs]) > 0.0) {
-                for (int i = 0;
-                     i < numeric_task.get_action_n_linear_eff(op_id2); ++i) {
-                  ap_float coefficient =
-                      numeric_task.get_action_linear_coefficients(
-                          op_id2)[i][lhs];
-                  if (fabs(coefficient) > 0.0) {
-                    action_mutex[op_id1][op_id2] = true;
-                    action_mutex[op_id2][op_id1] = true;
-                    break;
-                  }
+      // rhs(op_id1) vs. lhs(op_id2)
+      if (has_linear_effects) {
+        if (action_mutex[op_id1][op_id2]) continue;
+        // linear rhs vs. lhs
+        for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id1); ++i) {
+          for (int rhs = 0; rhs < n_numeric_variables; ++rhs) {
+            if (fabs(numeric_task.get_action_linear_coefficients(op_id1)[i][rhs]) > 0) {
+              // linear rhs vs. linear lhs
+              for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2); ++j) {
+                if (fabs(numeric_task.get_action_linear_coefficients(op_id2)[j][rhs] > 0)) {
+                  action_mutex[op_id1][op_id2] = true;
+                  action_mutex[op_id2][op_id1] = true;
+                  break;
                 }
               }
               if (action_mutex[op_id1][op_id2]) break;
+              // linear rhs vs. simple lhs
+              if (fabs(numeric_task.get_action_eff_list(op_id2)[rhs]) > 0) {
+                if (sequence_linear_effects) {
+                  simple_to_linear[op_id2][op_id1] = true;
+                  break;
+                } else {
+                  action_mutex[op_id1][op_id2] = true;
+                  action_mutex[op_id2][op_id1] = true;
+                  break;
+                }
+              }
             }
           }
-          if (action_mutex[op_id1][op_id2]) continue;
-          // linear lhs vs. rhs
-          for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id1);
-               ++i) {
-            int lhs = numeric_task.get_action_linear_lhs(op_id1)[i];
-            // linear lhs vs. simple rhs
-            if (!sequence_linear_effects) {
-              if (fabs(numeric_task.get_action_eff_list(op_id2)[lhs]) > 0.0) {
+          if (action_mutex[op_id1][op_id2]) break;
+        }
+        if (action_mutex[op_id1][op_id2]) continue;
+        // simple rhs vs. linear lhs
+        for (int rhs = 0; rhs < n_numeric_variables; ++rhs) {
+          for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id2); ++i) {
+            int lhs = numeric_task.get_action_linear_lhs(op_id2)[i];
+            if (fabs(numeric_task.get_action_eff_list(op_id1)[lhs]) > 0) {
+              if (sequence_linear_effects) {
+                simple_to_linear[op_id1][op_id2] = true;
+                break;
+              } else {
                 action_mutex[op_id1][op_id2] = true;
                 action_mutex[op_id2][op_id1] = true;
                 break;
               }
             }
-            // linear lhs vs. linear rhs
-            for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2);
-                 ++j) {
-              ap_float coefficient =
-                  numeric_task.get_action_linear_coefficients(op_id2)[j][lhs];
-              if (fabs(coefficient) > 0.0) {
-                action_mutex[op_id1][op_id2] = true;
-                action_mutex[op_id2][op_id1] = true;
-                break;
-              }
-            }
-            if (action_mutex[op_id1][op_id2]) break;
           }
+          if (action_mutex[op_id1][op_id2] || (sequence_linear_effects && simple_to_linear[op_id1][op_id2]))
+            break;
+        }
+      }
+    }
+  }
+
+  for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
+    for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
+      if (op_id1 == op_id2) continue;
+      if (precondition_to_negative[op_id1][op_id2]) {
+        if (precondition_to_negative[op_id2][op_id1]) {
+          action_mutex[op_id1][op_id2] = true;
+          action_mutex[op_id2][op_id1] = true;
+          precondition_to_negative[op_id1][op_id2] = false;
+          precondition_to_negative[op_id2][op_id1] = false;
+          if (has_linear_effects && sequence_linear_effects) {
+            simple_to_linear[op_id1][op_id1] = false;
+            simple_to_linear[op_id1][op_id2] = false;
+          }
+          if (!disable_precondition_relaxation) {
+            positive_to_precondition[op_id1][op_id2] = false;
+            positive_to_precondition[op_id2][op_id1] = false;
+          }
+          continue;
+        }
+        if (has_linear_effects && sequence_linear_effects)
+          simple_to_linear[op_id2][op_id1] = false;
+        if (!disable_precondition_relaxation)
+          positive_to_precondition[op_id2][op_id1] = false;
+      }
+      if (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id1][op_id2]) {
+        if (simple_to_linear[op_id2][op_id1]) {
+          action_mutex[op_id1][op_id2] = true;
+          action_mutex[op_id2][op_id1] = true;
+          precondition_to_negative[op_id1][op_id2] = false;
+          precondition_to_negative[op_id2][op_id1] = false;
+          simple_to_linear[op_id1][op_id2] = false;
+          simple_to_linear[op_id2][op_id1] = false;
+          if (!disable_precondition_relaxation) {
+            positive_to_precondition[op_id1][op_id2] = false;
+            positive_to_precondition[op_id2][op_id1] = false;
+          }
+          continue;
+        }
+        if (!disable_precondition_relaxation)
+          positive_to_precondition[op_id2][op_id1] = false;
+      }
+      if (!disable_precondition_relaxation && positive_to_precondition[op_id1][op_id2]) {
+        if (positive_to_precondition[op_id2][op_id1]) {
+          positive_to_precondition[op_id1][op_id2] = false;
+          positive_to_precondition[op_id2][op_id1] = false;
         }
       }
     }
@@ -233,14 +270,15 @@ void NumericConstraintsWithCuts::compute_big_m_values(
 
 void NumericConstraintsWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
-    const std::vector<std::vector<bool>> &action_mutex,
-    std::shared_ptr<ActionPrecedenceGraph> graph
-    ) {
+    std::vector<std::vector<bool>> &action_precedence) {
   size_t n_actions = numeric_task.get_n_actions();
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 != op_id2 && action_precedence[op_id1][op_id2] && !action_mutex[op_id1][op_id2]) {
-        graph->add_edge(op_id1, op_id2);
+      if (op_id1 != op_id2
+          && (precondition_to_negative[op_id1][op_id2])
+          || (!disable_precondition_relaxation && positive_to_precondition[op_id1][op_id2])
+          || (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id1][op_id2])) {
+        action_precedence[op_id1][op_id2] = true;
       }
     }
   }
@@ -284,9 +322,9 @@ void NumericConstraintsWithCuts::precondition_constraint(
 
             if (positive_actions != net_positive_actions.end()) {
               for (auto op_id2 : positive_actions->second) {
-                if (op_id2 == op_id) continue;
-                lhs.addTerms(&net_values[std::make_pair(i, op_id2)],
-                             &x[t][op_id2], 1);
+                if (op_id2 != op_id && positive_to_precondition[op_id2][op_id])
+                  lhs.addTerms(&net_values[std::make_pair(i, op_id2)],
+                               &x[t][op_id2], 1);
               }
             }
 
@@ -319,11 +357,12 @@ void NumericConstraintsWithCuts::linear_effect_constraint(
 
               for (size_t op_id2 = 0; op_id2 < numeric_task.get_n_actions();
                    ++op_id2) {
-                if (op_id == op_id2) continue;
-                double k = numeric_task.get_action_eff_list(op_id2)[var];
-                if (fabs(k) > 0) {
-                  double coefficient2 = coefficient * k;
-                  rhs.addTerms(&coefficient2, &x[t][op_id2], 1);
+                if (op_id != op_id2 && simple_to_linear[op_id2][op_id]) {
+                  double k = numeric_task.get_action_eff_list(op_id2)[var];
+                  if (fabs(k) > 0) {
+                    double coefficient2 = coefficient * k;
+                    rhs.addTerms(&coefficient2, &x[t][op_id2], 1);
+                  }
                 }
               }
 

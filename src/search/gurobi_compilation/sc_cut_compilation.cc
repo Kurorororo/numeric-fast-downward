@@ -42,30 +42,53 @@ void GurobiStateChangeModelWithCuts::precondition_constraint(
 void GurobiStateChangeModelWithCuts::initialize_mutex(
     const std::shared_ptr<AbstractTask> task,
     std::vector<std::vector<bool>> &action_mutex) {
-  for (size_t op_id1 = 0; op_id1 < numeric_task.get_n_actions(); ++op_id1) {
+  TaskProxy task_proxy(*task);
+  OperatorsProxy ops = task_proxy.get_operators();
+  for (size_t op_id1 = 0; op_id1 < ops.size(); ++op_id1) {
     for (int p : numeric_task.get_action_del_list(op_id1)) {
       for (int op_id2 : anp[p]) action_mutex[op_id1][op_id2] = true;
     }
   }
-}
 
-void GurobiStateChangeModelWithCuts::add_action_precedence(
-    const std::shared_ptr<AbstractTask> task,
-    const std::vector<std::vector<bool>> &action_mutex,
-    std::shared_ptr<ActionPrecedenceGraph> graph) {
-  TaskProxy task_proxy(*task);
+  action_precedence_inner.resize(ops.size(), std::vector<bool>(ops.size(), false));
+
   VariablesProxy vars = task_proxy.get_variables();
-
   for (VariableProxy var : vars) {
     int n_vals = var.get_domain_size();
     for (int val = 0; val < n_vals; ++val) {
       int p = numeric_task.get_proposition(var.get_id(), val);
       for (int op_id1 : pnd[p]) {
         for (int op_id2 : anp[p])
-          if (!action_mutex[op_id1][op_id2]) graph->add_edge(op_id2, op_id1);
+          if (!action_mutex[op_id1][op_id2]) action_precedence_inner[op_id2][op_id1] = true;
         for (int op_id2 : pd[p])
-          if (!action_mutex[op_id1][op_id2]) graph->add_edge(op_id1, op_id2);
+          if (!action_mutex[op_id1][op_id2]) action_precedence_inner[op_id1][op_id2] = true;
       }
+    }
+  }
+
+  for (size_t op_id1 = 0; op_id1 < ops.size(); ++op_id1) {
+    for (size_t op_id2 = 0; op_id2 < ops.size(); ++op_id2) {
+      if (op_id1 != op_id2) continue;
+      if (action_precedence_inner[op_id1][op_id2] && action_precedence_inner[op_id2][op_id1]) {
+        action_mutex[op_id1][op_id2] = true;
+        action_mutex[op_id2][op_id1] = true;
+        action_precedence_inner[op_id1][op_id2] = false;
+        action_precedence_inner[op_id2][op_id1] = false;
+      }
+    }
+  }
+}
+
+void GurobiStateChangeModelWithCuts::add_action_precedence(
+    const std::shared_ptr<AbstractTask> task,
+    std::vector<std::vector<bool>> &action_precedence) {
+  TaskProxy task_proxy(*task);
+  VariablesProxy vars = task_proxy.get_variables();
+
+  for (size_t op_id1 = 0; op_id1 < numeric_task.get_n_actions(); ++op_id1) {
+    for (size_t op_id2 = 0; op_id2 < numeric_task.get_n_actions(); ++op_id2) {
+      if (op_id1 != op_id2 && action_precedence_inner[op_id1][op_id2])
+        action_precedence[op_id1][op_id2] = true;
     }
   }
 }
