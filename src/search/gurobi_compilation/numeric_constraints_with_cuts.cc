@@ -13,8 +13,8 @@ using namespace numeric_helper;
 
 NumericConstraintsWithCuts::NumericConstraintsWithCuts(const Options &opts)
     : NumericConstraints(opts),
-      disable_precondition_relaxation(
-          opts.get<bool>("disable_precondition_relaxation")),
+      precondition_relaxation(
+          opts.get<bool>("precondition_relaxation")),
       sequence_linear_effects(opts.get<bool>("sequence_linear_effects")) {}
 
 void NumericConstraintsWithCuts::initialize(
@@ -29,7 +29,7 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
   size_t n_actions = numeric_task.get_n_actions();
   int n_numeric_variables = numeric_task.get_n_numeric_variables();
   precondition_to_negative.resize(n_actions, std::vector<bool>(n_actions, false));
-  if (!disable_precondition_relaxation)
+  if (precondition_relaxation)
     positive_to_precondition.resize(n_actions, std::vector<bool>(n_actions, false));
   if (has_linear_effects && sequence_linear_effects)
     simple_to_linear.resize(n_actions, std::vector<bool>(n_actions, false));
@@ -57,7 +57,7 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
           } else {
             net = result->second;
           }
-          if (!disable_precondition_relaxation && net > 0.0) {
+          if (precondition_relaxation && net > 0.0) {
             positive_to_precondition[op_id2][op_id1] = true;
           }
           if (net < 0.0) {
@@ -147,7 +147,7 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
             simple_to_linear[op_id1][op_id1] = false;
             simple_to_linear[op_id1][op_id2] = false;
           }
-          if (!disable_precondition_relaxation) {
+          if (precondition_relaxation) {
             positive_to_precondition[op_id1][op_id2] = false;
             positive_to_precondition[op_id2][op_id1] = false;
           }
@@ -155,7 +155,7 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
         }
         if (has_linear_effects && sequence_linear_effects)
           simple_to_linear[op_id2][op_id1] = false;
-        if (!disable_precondition_relaxation)
+        if (precondition_relaxation)
           positive_to_precondition[op_id2][op_id1] = false;
       }
       if (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id1][op_id2]) {
@@ -166,16 +166,16 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
           precondition_to_negative[op_id2][op_id1] = false;
           simple_to_linear[op_id1][op_id2] = false;
           simple_to_linear[op_id2][op_id1] = false;
-          if (!disable_precondition_relaxation) {
+          if (precondition_relaxation) {
             positive_to_precondition[op_id1][op_id2] = false;
             positive_to_precondition[op_id2][op_id1] = false;
           }
           continue;
         }
-        if (!disable_precondition_relaxation)
+        if (precondition_relaxation)
           positive_to_precondition[op_id2][op_id1] = false;
       }
-      if (!disable_precondition_relaxation && positive_to_precondition[op_id1][op_id2]) {
+      if (precondition_relaxation && positive_to_precondition[op_id1][op_id2]) {
         if (positive_to_precondition[op_id2][op_id1]) {
           positive_to_precondition[op_id1][op_id2] = false;
           positive_to_precondition[op_id2][op_id1] = false;
@@ -276,7 +276,7 @@ void NumericConstraintsWithCuts::add_action_precedence(
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
       if (op_id1 != op_id2
           && (precondition_to_negative[op_id1][op_id2])
-          || (!disable_precondition_relaxation && positive_to_precondition[op_id1][op_id2])
+          || (precondition_relaxation && positive_to_precondition[op_id1][op_id2])
           || (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id1][op_id2])) {
         action_precedence[op_id1][op_id2] = true;
       }
@@ -287,9 +287,7 @@ void NumericConstraintsWithCuts::add_action_precedence(
 void NumericConstraintsWithCuts::precondition_constraint(
     const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
     std::vector<std::vector<GRBVar>> &x, int t_min, int t_max) {
-  if (disable_precondition_relaxation) {
-    NumericConstraints::precondition_constraint(task, model, x, t_min, t_max);
-  } else {
+  if (precondition_relaxation) {
     int n_numeric_variables = numeric_task.get_n_numeric_variables();
     int n_actions = numeric_task.get_n_actions();
     for (int op_id = 0; op_id < n_actions; ++op_id) {
@@ -333,6 +331,8 @@ void NumericConstraintsWithCuts::precondition_constraint(
         }
       }
     }
+  } else {
+    NumericConstraints::precondition_constraint(task, model, x, t_min, t_max);
   }
 }
 
@@ -405,8 +405,8 @@ static shared_ptr<GurobiIPConstraintGenerator> _parse(OptionParser &parser) {
       "Maximum number of the same actions at the same time step", "1");
   parser.add_option<bool>("restrict_mutex",
                           "Whether to further restrict mutex actions", "false");
-  parser.add_option<bool>("disable_precondition_relaxation",
-                          "Disable relaxed precondition constraints", "false");
+  parser.add_option<bool>("precondition_relaxation",
+                          "Enable relaxed precondition constraints", "false");
   parser.add_option<bool>("sequence_linear_effects",
                           "Enforce that actions with linear effects are "
                           "executed after actions with simple effects",

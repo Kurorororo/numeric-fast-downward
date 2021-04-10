@@ -22,7 +22,7 @@ class NumericConstraintsWithCuts : public NumericConstraints {
       const std::shared_ptr<AbstractTask> task, std::shared_ptr<GRBModel> model,
       std::vector<std::vector<GRBVar>> &x, int t_min, int t_max);
 
-  bool disable_precondition_relaxation;
+  bool precondition_relaxation;
   bool sequence_linear_effects;
   std::vector<std::vector<bool>> precondition_to_negative;
   std::vector<std::vector<bool>> positive_to_precondition;
