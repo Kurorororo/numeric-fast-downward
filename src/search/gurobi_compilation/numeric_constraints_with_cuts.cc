@@ -133,56 +133,6 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
       }
     }
   }
-
-  for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
-    for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 == op_id2) continue;
-      if (precondition_to_negative[op_id1][op_id2]) {
-        if (precondition_to_negative[op_id2][op_id1]) {
-          action_mutex[op_id1][op_id2] = true;
-          action_mutex[op_id2][op_id1] = true;
-          precondition_to_negative[op_id1][op_id2] = false;
-          precondition_to_negative[op_id2][op_id1] = false;
-          if (has_linear_effects && sequence_linear_effects) {
-            simple_to_linear[op_id1][op_id1] = false;
-            simple_to_linear[op_id1][op_id2] = false;
-          }
-          if (precondition_relaxation) {
-            positive_to_precondition[op_id1][op_id2] = false;
-            positive_to_precondition[op_id2][op_id1] = false;
-          }
-          continue;
-        }
-        if (has_linear_effects && sequence_linear_effects)
-          simple_to_linear[op_id2][op_id1] = false;
-        if (precondition_relaxation)
-          positive_to_precondition[op_id2][op_id1] = false;
-      }
-      if (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id1][op_id2]) {
-        if (simple_to_linear[op_id2][op_id1]) {
-          action_mutex[op_id1][op_id2] = true;
-          action_mutex[op_id2][op_id1] = true;
-          precondition_to_negative[op_id1][op_id2] = false;
-          precondition_to_negative[op_id2][op_id1] = false;
-          simple_to_linear[op_id1][op_id2] = false;
-          simple_to_linear[op_id2][op_id1] = false;
-          if (precondition_relaxation) {
-            positive_to_precondition[op_id1][op_id2] = false;
-            positive_to_precondition[op_id2][op_id1] = false;
-          }
-          continue;
-        }
-        if (precondition_relaxation)
-          positive_to_precondition[op_id2][op_id1] = false;
-      }
-      if (precondition_relaxation && positive_to_precondition[op_id1][op_id2]) {
-        if (positive_to_precondition[op_id2][op_id1]) {
-          positive_to_precondition[op_id1][op_id2] = false;
-          positive_to_precondition[op_id2][op_id1] = false;
-        }
-      }
-    }
-  }
 }
 
 void NumericConstraintsWithCuts::compute_big_m_values(
@@ -270,15 +220,64 @@ void NumericConstraintsWithCuts::compute_big_m_values(
 
 void NumericConstraintsWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
-    std::vector<std::vector<bool>> &action_precedence) {
+    std::vector<std::vector<bool>> &action_precedence,
+    std::vector<std::vector<bool>> &action_mutex) {
+  TaskProxy task_proxy(*task);
+  OperatorsProxy ops = task_proxy.get_operators();
   size_t n_actions = numeric_task.get_n_actions();
   for (size_t op_id1 = 0; op_id1 < n_actions; ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
-      if (op_id1 != op_id2
-          && (precondition_to_negative[op_id1][op_id2])
-          || (precondition_relaxation && positive_to_precondition[op_id1][op_id2])
+      if (op_id1 == op_id2) continue;
+      if (action_mutex[op_id1][op_id2]) {
+        action_precedence[op_id1][op_id2] = false;
+        action_precedence[op_id2][op_id1] = false;
+        precondition_to_negative[op_id1][op_id2] = false;
+        precondition_to_negative[op_id2][op_id1] = false;
+        if (has_linear_effects && sequence_linear_effects) {
+          simple_to_linear[op_id1][op_id2] = false;
+          simple_to_linear[op_id2][op_id1] = false;
+        }
+        if (precondition_relaxation) {
+          positive_to_precondition[op_id1][op_id2] = false;
+          positive_to_precondition[op_id2][op_id1] = false;
+        }
+      }
+      if (precondition_to_negative[op_id1][op_id2]
           || (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id1][op_id2])) {
-        action_precedence[op_id1][op_id2] = true;
+        if (precondition_relaxation && positive_to_precondition[op_id2][op_id1])
+          positive_to_precondition[op_id2][op_id1] = false;
+        if (action_precedence[op_id2][op_id1]
+            || precondition_to_negative[op_id2][op_id1]
+            || (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id2][op_id1])) {
+          action_precedence[op_id1][op_id2] = false;
+          action_precedence[op_id2][op_id1] = false;
+          precondition_to_negative[op_id1][op_id2] = false;
+          precondition_to_negative[op_id2][op_id1] = false;
+          if (has_linear_effects && sequence_linear_effects) {
+            simple_to_linear[op_id1][op_id2] = false;
+            simple_to_linear[op_id2][op_id1] = false;
+          }
+          if (precondition_relaxation) {
+            positive_to_precondition[op_id1][op_id2] = false;
+            positive_to_precondition[op_id2][op_id1] = false;
+          }
+          action_mutex[op_id1][op_id2] = true;
+          action_mutex[op_id2][op_id1] = true;
+        } else {
+          action_precedence[op_id1][op_id2] = true;
+        }
+      }
+      if (precondition_relaxation && positive_to_precondition[op_id1][op_id2]) {
+        if (action_precedence[op_id2][op_id1]
+            || precondition_to_negative[op_id2][op_id1]
+            || (has_linear_effects && sequence_linear_effects && simple_to_linear[op_id2][op_id1])) {
+          positive_to_precondition[op_id1][op_id2] = false;
+        } else if (positive_to_precondition[op_id2][op_id1]) {
+          positive_to_precondition[op_id1][op_id2] = false;
+          positive_to_precondition[op_id2][op_id1] = false;
+        } else {
+          action_precedence[op_id1][op_id2] = true;
+        }
       }
     }
   }

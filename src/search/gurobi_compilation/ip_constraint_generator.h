@@ -21,7 +21,9 @@ class GurobiIPConstraintGenerator {
                       std::shared_ptr<GRBModel> model,
                       std::vector<std::vector<GRBVar>> &x) = 0;
   virtual void add_action_precedence(
-      const std::shared_ptr<AbstractTask> task, std::vector<std::vector<bool>> &action_precedence) {}
+      const std::shared_ptr<AbstractTask> task,
+      std::vector<std::vector<bool>> &action_precedence,
+      std::vector<std::vector<bool>> &action_mutex) {}
   virtual void dump() {}
 };
 }  // namespace gurobi_ip_compilation

@@ -86,17 +86,6 @@ void GurobiSASStateChangeModelWithCuts::initialize_mutex(
       }
     }
   }
-  for (size_t op_id1 = 0; op_id1 < ops.size(); ++op_id1) {
-    for (size_t op_id2 = 0; op_id2 < ops.size(); ++op_id2) {
-      if (op_id1 != op_id2) continue;
-      if (action_precedence_inner[op_id1][op_id2] && action_precedence_inner[op_id2][op_id1]) {
-        action_mutex[op_id1][op_id2] = true;
-        action_mutex[op_id2][op_id1] = true;
-        action_precedence_inner[op_id1][op_id2] = false;
-        action_precedence_inner[op_id2][op_id1] = false;
-      }
-    }
-  }
 }
 
 void GurobiSASStateChangeModelWithCuts::precondition_constraint(
@@ -127,14 +116,32 @@ void GurobiSASStateChangeModelWithCuts::precondition_constraint(
 
 void GurobiSASStateChangeModelWithCuts::add_action_precedence(
     const std::shared_ptr<AbstractTask> task,
-    std::vector<std::vector<bool>> &action_precedence) {
+    std::vector<std::vector<bool>> &action_precedence,
+    std::vector<std::vector<bool>> &action_mutex) {
   TaskProxy task_proxy(*task);
   OperatorsProxy ops = task_proxy.get_operators();
 
   for (size_t op_id1 = 0; op_id1 < ops.size(); ++op_id1) {
     for (size_t op_id2 = 0; op_id2 < ops.size(); ++op_id2) {
-      if (op_id1 != op_id2 || action_precedence_inner[op_id1][op_id2])
-        action_precedence[op_id1][op_id2] = true;
+      if (op_id1 == op_id2) continue;
+      if (action_mutex[op_id1][op_id2]) {
+        action_precedence_inner[op_id1][op_id2] = false;
+        action_precedence_inner[op_id2][op_id1] = false;
+        action_precedence[op_id1][op_id2] = false;
+        action_precedence[op_id2][op_id1] = false;
+      }
+      if (action_precedence_inner[op_id1][op_id2]) {
+        if (action_precedence[op_id2][op_id1] || action_precedence_inner[op_id2][op_id2]) {
+          action_precedence_inner[op_id1][op_id2] = false;
+          action_precedence_inner[op_id2][op_id1] = false;
+          action_precedence[op_id1][op_id2] = false;
+          action_precedence[op_id2][op_id1] = false;
+          action_mutex[op_id1][op_id2] = true;
+          action_mutex[op_id2][op_id1] = true;
+        } else {
+          action_precedence[op_id1][op_id2] = true;
+        }
+      }
     }
   }
 }

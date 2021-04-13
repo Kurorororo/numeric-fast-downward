@@ -66,7 +66,7 @@ void GurobiIPCompilation::initialize(const int horizon) {
 
   if (use_callback) {
     for (auto generator : constraint_generators)
-      generator->add_action_precedence(task, action_precedence);
+      generator->add_action_precedence(task, action_precedence, action_mutex);
   }
 
   if (use_callback) {

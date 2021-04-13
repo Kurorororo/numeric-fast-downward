@@ -42,7 +42,8 @@ class NumericConstraintsWithCuts : public NumericConstraints {
                           bool use_linear_effects) override;
   virtual void add_action_precedence(
       const std::shared_ptr<AbstractTask> task,
-      std::vector<std::vector<bool>> &action_precedence) override;
+      std::vector<std::vector<bool>> &action_precedence,
+      std::vector<std::vector<bool>> &action_mutex) override;
 };
 }  // namespace gurobi_ip_compilation
 #endif
