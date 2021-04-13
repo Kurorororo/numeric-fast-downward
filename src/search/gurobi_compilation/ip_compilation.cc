@@ -127,9 +127,7 @@ void GurobiIPCompilation::add_mutex_constraints(const int t_min,
   int n_mutex = 0;
   for (size_t op_id1 = 0; op_id1 < ops.size() - 1; ++op_id1) {
     for (size_t op_id2 = op_id1 + 1; op_id2 < ops.size(); ++op_id2) {
-      if (action_mutex[op_id1][op_id2] ||
-          (graph != nullptr && graph->is_connected(op_id1, op_id2)
-           && graph->is_connected(op_id2, op_id1))) {
+      if (action_mutex[op_id1][op_id2]) {
         ++n_mutex;
         for (int t = t_min; t < t_max; ++t) {
           model->addConstr(x[t][op_id1] + x[t][op_id2] <= 1);
