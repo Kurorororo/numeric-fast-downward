@@ -158,7 +158,8 @@ void GurobiIPCompilation::add_sequence_constraint() {
       model->addConstr(sum_t_1 <= sum_t);
     }
   }
-  model->setCallback(nullptr);
+
+  if (use_callback) model->setCallback(nullptr);
 }
 
 ap_float GurobiIPCompilation::compute_plan() {
@@ -188,7 +189,7 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
 
   for (int t = 0; t < t_max; ++t) {
     // std::cout << "t=" << t << std::endl;
-    if (use_callback) {
+    if (graph != nullptr && graph->get_n_edges() > 0) {
       std::vector<int> nodes;
       std::unordered_map<int, int> ns;
       for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
