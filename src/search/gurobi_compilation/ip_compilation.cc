@@ -72,6 +72,7 @@ void GurobiIPCompilation::initialize(const int horizon) {
   if (use_callback) {
     graph = std::make_shared<ActionPrecedenceGraph>(action_precedence);
     int n_edges = graph->get_n_edges();
+    std::cout << "action precedence graph has " << ops.size() << " nodes" << std::endl;
     std::cout << "action precedence graph has " << n_edges << " edges" << std::endl;
     if (graph->has_no_cycle()) {
       use_callback = false;
