@@ -73,12 +73,13 @@ void GurobiIPCompilation::initialize(const int horizon) {
     graph = std::make_shared<ActionPrecedenceGraph>(action_precedence);
     int n_edges = graph->get_n_edges();
     std::cout << "action precedence graph has " << n_edges << " edges" << std::endl;
-    if (n_edges > 2) {
+    if (graph->has_no_cycle()) {
+      use_callback = false;
+      std::cout << "action precedence graph has no cycle" << std::endl;
+      std::cout << "callback is not used" << std::endl;
+    } else {
       if (add_lazy_constraints) env->set(GRB_IntParam_LazyConstraints, 1);
       if (add_user_cuts) env->set(GRB_IntParam_PreCrush, 1);
-    } else {
-      use_callback = false;
-      std::cout << "callback is not used" << std::endl;
     }
   }
 
@@ -200,7 +201,7 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
         auto subplan = graph->topological_sort(nodes);
 
         if (subplan.size() != nodes.size()) {
-          // std::cout << "plan contains a cycle" << std::endl;
+          std::cout << "plan contains a cycle" << std::endl;
           return SearchEngine::Plan();
         }
 

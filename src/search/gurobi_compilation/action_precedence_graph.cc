@@ -20,10 +20,26 @@ int ActionPrecedenceGraph::get_n_edges() const {
 }
 
 bool ActionPrecedenceGraph::has_no_cycle() {
-  std::vector<double> all_x(edges.size(), 1);
-  std::vector<std::vector<int>> cycles;
-  find_cycle(all_x, cycles);
-  return cycles.empty();
+  if (n_edges <= 1) return true;
+
+  nodes.clear();
+  int n_nodes = edges.size();
+
+  for (int a = 0; a < n_nodes; ++a) {
+    bool has_edge = false;
+    for (int b = 0; b < n_nodes; ++b) {
+      if (a == b) continue;
+      if (edges[a][b] || edges[b][a]) {
+        has_edge = true;
+        break;
+      }
+    }
+    if (has_edge) nodes.push_back(a);
+  }
+
+  auto sorted = topological_sort(nodes);
+
+  return sorted.size() == nodes.size();
 }
 
 void ActionPrecedenceGraph::find_cycle(const std::vector<double> &x_values,
