@@ -140,8 +140,6 @@ void NumericConstraintsWithCuts::compute_big_m_values(
     int n_numeric_variables = numeric_task.get_n_numeric_variables();
     large_m.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
     small_m.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
-    k_over.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
-    k_under.resize(t_max + 1, std::vector<double>(n_numeric_variables, 0.0));
 
     size_t n_actions = numeric_task.get_n_actions();
     TaskProxy task_proxy(*task);
@@ -153,8 +151,6 @@ void NumericConstraintsWithCuts::compute_big_m_values(
         double initial_value = initial_state.nval(id_num);
         large_m[0][nv_id] = initial_value;
         small_m[0][nv_id] = initial_value;
-        k_over[0][nv_id] = initial_value;
-        k_under[0][nv_id] = initial_value;
       }
     }
 
@@ -177,9 +173,6 @@ void NumericConstraintsWithCuts::compute_big_m_values(
           }
         }
 
-        k_over[t][nv_id] = ub;
-        k_under[t][nv_id] = lb;
-
         for (size_t op_id = 0; op_id < n_actions; ++op_id) {
           double a_over = ub;
           double a_under = lb;
@@ -192,13 +185,27 @@ void NumericConstraintsWithCuts::compute_big_m_values(
                 double coefficient =
                     numeric_task.get_action_linear_coefficients(
                         op_id)[i][nv_id2];
+                double k_over = large_m[t - 1][nv_id2];
+                double k_under = small_m[t - 1][nv_id2];
+                for (size_t op_id2 = 0; op_id2 < n_actions; ++op_id2) {
+                  if (op_id != op_id2 && action_precedence_inner[op_id2][op_id]) {
+                    double k = numeric_task.get_action_eff_list(op_id2)[nv_id2];
+                    if (fabs(k) > 0) {
+                      if (k > 0.0) {
+                        k_over += k;
+                      } else {
+                        k_under += k;
+                      }
+                    }
+                  }
+                }
                 if (coefficient > 0) {
-                  a_over += coefficient * k_over[t][nv_id2];
-                  a_under += coefficient * k_under[t][nv_id2];
+                  a_over += coefficient * k_over;
+                  a_under += coefficient * k_under;
                 }
                 if (coefficient < 0) {
-                  a_over += coefficient * k_under[t][nv_id2];
-                  a_under += coefficient * k_over[t][nv_id2];
+                  a_over += coefficient * k_under;
+                  a_under += coefficient * k_over;
                 }
               }
               break;

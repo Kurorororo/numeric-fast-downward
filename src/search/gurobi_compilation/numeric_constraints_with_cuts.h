@@ -31,9 +31,6 @@ class NumericConstraintsWithCuts : public NumericConstraints {
   std::unordered_map<int, std::vector<int>> net_effect_actions;
   std::unordered_map<std::pair<int, int>, double> net_values;
 
-  std::vector<std::vector<double>> k_over;
-  std::vector<std::vector<double>> k_under;
-
  public:
   NumericConstraintsWithCuts(const Options &opts);
 
