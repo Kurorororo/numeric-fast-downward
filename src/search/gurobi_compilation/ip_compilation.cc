@@ -188,7 +188,7 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
   int t_max = x.size();
 
   for (int t = 0; t < t_max; ++t) {
-    // std::cout << "t=" << t << std::endl;
+    //std::cout << "t=" << t << std::endl;
     if (graph != nullptr && graph->get_n_edges() > 0) {
       std::vector<int> nodes;
       std::unordered_map<int, int> ns;
@@ -210,20 +210,22 @@ SearchEngine::Plan GurobiIPCompilation::extract_plan() {
         for (auto op_id : subplan) {
           for (int i = 0; i < ns[op_id]; ++i) {
             plan.push_back(ops[op_id].get_global_operator());
-            // std::cout << ops[op_id].get_name() << std::endl;
+            //std::cout << ops[op_id].get_name() << std::endl;
           }
         }
       }
     } else {
       for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
         int n = std::round(x[t][op_id].get(GRB_DoubleAttr_X));
-        for (int i = 0; i < n; ++i)
+        for (int i = 0; i < n; ++i) {
           plan.push_back(ops[op_id].get_global_operator());
+          //std::cout << ops[op_id].get_name() << std::endl;
+        }
       }
     }
   }
 
-  // for (auto generator : constraint_generators) generator->dump();
+  //for (auto generator : constraint_generators) generator->dump();
 
   return plan;
 }

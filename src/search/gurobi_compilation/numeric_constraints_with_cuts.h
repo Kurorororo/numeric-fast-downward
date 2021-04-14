@@ -24,10 +24,11 @@ class NumericConstraintsWithCuts : public NumericConstraints {
 
   bool precondition_relaxation;
   bool sequence_linear_effects;
+  std::vector<std::vector<bool>> action_precedence_inner;
   std::vector<std::vector<bool>> precondition_to_negative;
-  std::vector<std::vector<bool>> positive_to_precondition;
+  std::vector<std::vector<bool>> precondition_to_linear;
   std::vector<std::vector<bool>> simple_to_linear;
-  std::unordered_map<int, std::vector<int>> net_positive_actions;
+  std::unordered_map<int, std::vector<int>> net_effect_actions;
   std::unordered_map<std::pair<int, int>, double> net_values;
 
   std::vector<std::vector<double>> k_over;
