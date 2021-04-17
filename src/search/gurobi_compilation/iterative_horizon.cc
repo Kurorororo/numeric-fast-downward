@@ -59,7 +59,7 @@ SearchStatus GurobiIterativeHorizon::step() {
     plan_cost = 0;
 
     for (auto action : plan)
-      plan_cost = action->get_cost();
+      plan_cost += action->get_cost();
 
     ap_float min_action_cost = model->get_min_action_cost();
     ap_float optimal_cost_bound = current_t * min_action_cost;
