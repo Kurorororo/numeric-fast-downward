@@ -126,6 +126,20 @@ rm -rf Osi-0.107.9
 rm Osi-0.107.9.tgz
 ```
 
+#### Gurobi IP models
+If you want to use the IP models with Gurobi (implemented in `src/search/gurobi_ip_compilation`), please install Gurobi and export the following environment variables.
+Suppose that Gurobi is installed in `/opt/gurobi911`.
+
+```bash
+export DOWNWARD_GUROBI_ROOT=/opt/gurobi911/linux64
+```
+
+If you use G++ >= 5.2, change the softlink to the Gurobi C++ library.
+
+```bash
+ln -s /opt/gurobi911/linux64/lib/libgurobi_g++5.2.a /opt/gurobi911/linux64/lib/libgurobi_c++.a
+```
+
 #### build
 
 ```bash
