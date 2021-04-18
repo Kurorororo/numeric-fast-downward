@@ -127,7 +127,7 @@ rm Osi-0.107.9.tgz
 ```
 
 #### Gurobi IP models
-If you want to use the IP models with Gurobi (implemented in `src/search/gurobi_ip_compilation`), please install Gurobi and export the following environment variables.
+If you want to use the IP models with Gurobi (implemented in `src/search/gurobi_compilation`), please install Gurobi and export the following environment variables.
 Suppose that Gurobi is installed in `/opt/gurobi911`.
 
 ```bash
