@@ -17,12 +17,13 @@ double precision = 0.001;
 namespace numeric_lm_cut_heuristic {
     // construction and destruction
     LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one, bool ignore_numeric,
-                                               bool use_random_pcf, bool use_irmax)
+                                               bool use_random_pcf, bool use_irmax, bool disable_ma)
         : numeric_task(NumericTaskProxy(task_proxy, false)),
           ceiling_less_than_one(ceiling_less_than_one),
           ignore_numeric_conditions(ignore_numeric),
           use_random_pcf(use_random_pcf),
-          use_irmax(use_irmax) {
+          use_irmax(use_irmax),
+          disable_ma(disable_ma) {
         //verify_no_axioms(task_proxy);
         verify_no_conditional_effects(task_proxy);
         // Build propositions.
@@ -373,7 +374,7 @@ namespace numeric_lm_cut_heuristic {
                         if (debug) cout << "\t" << prop->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << relaxed_op->cost << endl;
                         if (effect->status == GOAL_ZONE) {
                             assert(relaxed_op->cost > 0);
-                            ap_float m = calculate_numeric_times(effect,relaxed_op);
+                            ap_float m = calculate_numeric_times(effect, relaxed_op, !disable_ma);
                             if (m < min_m) {
                                 if (!reached_goal_zone) {
                                     if (debug) cout << "\t\t  adding " << relaxed_op->name << " to the cut " << endl;
@@ -535,7 +536,7 @@ namespace numeric_lm_cut_heuristic {
         if (effect->is_numeric_condition) {
             int id_effect = effect->id_numeric_condition;
             if (relaxed_op->numeric_effects[id_effect] > 0 && numeric_initial_state[id_effect] > 0) {
-                ap_float m = calculate_numeric_times(effect, relaxed_op);
+                ap_float m = calculate_numeric_times(effect, relaxed_op, !use_irmax);
                 ap_float target_cost = prop->h_max_cost + m * relaxed_op->cost;
                 if(debug) cout << "\t  " << relaxed_op->h_max_supporter->name << " -> " << effect->name <<  " : " << relaxed_op->name << " " << target_cost << " " << m << endl;
                 enqueue_if_necessary(effect, target_cost);
@@ -547,8 +548,8 @@ namespace numeric_lm_cut_heuristic {
         }
     }
     
-    ap_float LandmarkCutLandmarks::calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op){
-        if (!use_irmax && effect->is_numeric_condition){
+    ap_float LandmarkCutLandmarks::calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op, bool use_ma){
+        if (use_ma && effect->is_numeric_condition){
             int id_effect = effect->id_numeric_condition;
             //ap_float m = floor(numeric_initial_state[id_effect]/relaxed_op->numeric_effects[id_effect]);
             ap_float m = numeric_initial_state[id_effect]/relaxed_op->numeric_effects[id_effect];

@@ -73,6 +73,7 @@ namespace numeric_lm_cut_heuristic {
         bool ignore_numeric_conditions;
         bool use_random_pcf;
         bool use_irmax;
+        bool disable_ma;
         std::vector<ap_float> numeric_initial_state;
         
         AdaptiveQueue<RelaxedProposition *> priority_queue;
@@ -106,7 +107,7 @@ namespace numeric_lm_cut_heuristic {
         }
         
         void update_queue(RelaxedProposition *prec, RelaxedProposition *eff, RelaxedOperator *op);
-        ap_float calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op);
+        ap_float calculate_numeric_times(RelaxedProposition *effect, RelaxedOperator *relaxed_op, bool use_ma);
         
         void mark_goal_plateau(RelaxedProposition *subgoal);
         void validate_h_max() const;
@@ -116,7 +117,7 @@ namespace numeric_lm_cut_heuristic {
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
         LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one = false, bool ignore_numeric = false,
-                             bool use_random_pcf = false, bool use_irmax = false);
+                             bool use_random_pcf = false, bool use_irmax = false, bool disable_ma = false);
         virtual ~LandmarkCutLandmarks();
         
         /*

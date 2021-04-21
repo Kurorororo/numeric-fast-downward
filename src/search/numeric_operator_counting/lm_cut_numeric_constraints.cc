@@ -17,7 +17,8 @@ LMCutNumericConstraints::LMCutNumericConstraints(const Options &opts) {
     ceiling_less_than_one = opts.get<bool>("ceiling_less_than_one");
     ignore_numeric = opts.get<bool>("ignore_numeric");
     use_random_pcf = opts.get<bool>("random_pcf");
-    use_irmax = opts.get<bool>("irmax");
+    use_irmax = opts.get<bool>("irmax"),
+    disable_ma = opts.get<bool>("disable_ma");
 }
 
 void LMCutNumericConstraints::initialize_constraints(
@@ -25,7 +26,7 @@ void LMCutNumericConstraints::initialize_constraints(
     double /*infinity*/) {
     TaskProxy task_proxy(*task);
     landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(
-        task_proxy, ceiling_less_than_one, ignore_numeric, use_random_pcf, use_irmax);
+        task_proxy, ceiling_less_than_one, ignore_numeric, use_random_pcf, use_irmax, disable_ma);
 
 }
 
@@ -85,7 +86,8 @@ static shared_ptr<ConstraintGenerator> _parse(OptionParser &parser) {
     parser.add_option<bool>("ceiling_less_than_one", "use 1 instead of m_a when m_a < 1", "false");
     parser.add_option<bool>("ignore_numeric", "ignore numeric conditions", "false");
     parser.add_option<bool>("random_pcf", "use randomized precondition choice function", "false");
-    parser.add_option<bool>("irmax", "use repetition relaxation", "false");
+    parser.add_option<bool>("irmax", "use repetition relaxation for pcf", "false");
+    parser.add_option<bool>("disable_ma", "use m_a = 1", "false");
 
     if (parser.dry_run())
         return nullptr;

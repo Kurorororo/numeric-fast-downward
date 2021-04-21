@@ -22,6 +22,7 @@ namespace lm_cut_numeric_heuristic {
         bool ignore_numeric;
         bool use_random_pcf;
         bool use_irmax;
+        bool disable_ma;
         virtual void initialize() override;
         virtual ap_float compute_heuristic(const GlobalState &global_state) override;
         ap_float compute_heuristic(const State &state);
