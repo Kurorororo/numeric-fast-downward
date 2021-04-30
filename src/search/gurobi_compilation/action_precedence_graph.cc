@@ -47,7 +47,7 @@ void ActionPrecedenceGraph::find_cycle(const std::vector<double> &x_values,
   nodes.clear();
   for (int i = 0, n = x_values.size(); i < n; ++i)
     if (x_values[i] > 0.0) nodes.push_back(i);
-  if (nodes.size() <= 2) {
+  if (nodes.size() <= 1) {
     cycles.clear();
     return;
   }

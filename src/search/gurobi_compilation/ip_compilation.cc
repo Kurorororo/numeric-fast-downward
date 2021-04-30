@@ -14,7 +14,9 @@ GurobiIPCompilation::GurobiIPCompilation(
     : add_lazy_constraints(opts.get<bool>("lazy_constraints")),
       add_user_cuts(opts.get<bool>("user_cuts")),
       max_num_cuts(opts.get<int>("max_num_cuts")),
+      add_one_time_step(opts.get<bool>("add_one_time_step")),
       use_linear_effects(opts.get<bool>("linear_effects")),
+      lazy_mutex(opts.get<bool>("lazy_mutex")),
       node_count(0),
       min_action_cost(std::numeric_limits<ap_float>::max()),
       constraint_generators(
@@ -69,6 +71,17 @@ void GurobiIPCompilation::initialize(const int horizon) {
       generator->add_action_precedence(task, action_precedence, action_mutex);
   }
 
+  if (lazy_mutex) {
+    for (size_t op_id1 = 0; op_id1 < ops.size() - 1; ++op_id1) {
+      for (size_t op_id2 = op_id1 + 1; op_id2 < ops.size(); ++op_id2) {
+        if (action_mutex[op_id1][op_id2]) {
+          action_precedence[op_id1][op_id2] = true;
+          action_precedence[op_id2][op_id1] = true;
+        }
+      }
+    }
+  }
+
   if (use_callback) {
     graph = std::make_shared<ActionPrecedenceGraph>(action_precedence);
     int n_edges = graph->get_n_edges();
@@ -90,11 +103,12 @@ void GurobiIPCompilation::initialize(const int horizon) {
   for (auto generator : constraint_generators)
     generator->update(horizon, task, model, x);
 
-  add_mutex_constraints(0, horizon);
+  if (!lazy_mutex)
+    add_mutex_constraints(0, horizon);
 
   if (use_callback) {
       callback = std::make_shared<ActionCycleEliminationCallback>(
-          max_num_cuts, add_user_cuts, x, graph);
+          max_num_cuts, add_user_cuts, add_one_time_step, x, graph);
       model->setCallback(callback.get());
   }
 }
@@ -106,7 +120,8 @@ void GurobiIPCompilation::update(const int horizon) {
   for (auto generator : constraint_generators)
     generator->update(horizon, task, model, x);
 
-  add_mutex_constraints(t_min, horizon);
+  if (!lazy_mutex)
+    add_mutex_constraints(t_min, horizon);
 }
 
 void GurobiIPCompilation::add_variables(const int t_min, const int t_max) {

@@ -12,6 +12,7 @@ class ActionCycleEliminationCallback : public GRBCallback {
  private:
   int max_num_cuts;
   bool add_user_cut;
+  bool add_one_time_step;
   int num_added_cuts;
   int num_added_constraints;
   const std::vector<std::vector<GRBVar>> &x;
@@ -23,11 +24,12 @@ class ActionCycleEliminationCallback : public GRBCallback {
   void callback();
 
  public:
-  ActionCycleEliminationCallback(int max_num_cuts_, bool add_user_cut_,
+  ActionCycleEliminationCallback(int max_num_cuts, bool add_user_cut, bool add_one_time_step,
                                  const std::vector<std::vector<GRBVar>> &x_,
                                  std::shared_ptr<ActionPrecedenceGraph> graph_)
-      : max_num_cuts(max_num_cuts_),
-        add_user_cut(add_user_cut_),
+      : max_num_cuts(max_num_cuts),
+        add_user_cut(add_user_cut),
+        add_one_time_step(add_one_time_step),
         num_added_cuts(0),
         num_added_constraints(0),
         x(x_),

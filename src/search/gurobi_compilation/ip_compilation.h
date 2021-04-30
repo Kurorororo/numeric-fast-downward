@@ -25,7 +25,9 @@ class GurobiIPCompilation {
   bool add_lazy_constraints;
   bool add_user_cuts;
   int max_num_cuts;
+  bool add_one_time_step;
   bool use_linear_effects;
+  bool lazy_mutex;
   int node_count;
   ap_float min_action_cost;
   ap_float min_cost_diff;
