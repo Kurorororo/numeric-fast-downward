@@ -150,18 +150,18 @@ void IntervalRelaxationHeuristic::relaxed_exploration() {
     	if (goal->reached_in_layer == 0) --unsolved_goals; // initially solved goals
     while (unsolved_goals > 0) {
     	NumericState nextState = planning_graph.back().duplicate();
-        cout << "Phase " << planning_graph.size() << ", applying " << applicable_operators.size() << " operators" << endl;
+        //cout << "Phase " << planning_graph.size() << ", applying " << applicable_operators.size() << " operators" << endl;
     	auto it = applicable_operators.begin();
     	while (it != applicable_operators.end()) {
     		auto op = (*it);
-            cout << "applying " << op->str() << endl;
+            //cout << "applying " << op->str() << endl;
     		if (op->is_numeric_operator()) {
     			Interval oldval = planning_graph.back().get_val(op->effect.aff_variable_index);
     			ap_float aff_cost = planning_graph.back().get_cost(op->effect.aff_variable_index);
     			Interval ass_val =  planning_graph.back().get_val(op->effect.val_or_ass_var_index);
     			ap_float ass_cost = planning_graph.back().get_cost(op->effect.val_or_ass_var_index);
     			Interval newval = compute(oldval, op->effect.assign_type, ass_val);
-                cout << oldval << " " << op->effect.assign_type << " " <<  ass_val << " = " << newval << endl;
+                //cout << oldval << " " << op->effect.assign_type << " " <<  ass_val << " = " << newval << endl;
     			ap_float cost = update_cost(aff_cost, ass_cost);
     			cost += op->base_cost; // implicit numeric precondition cost
     			cost = update_cost(cost, op->precondition_cost); // cost of "regular" preconditions
@@ -173,8 +173,8 @@ void IntervalRelaxationHeuristic::relaxed_exploration() {
     			it = applicable_operators.erase(it);
     		}
     	}
-        cout << "Phase " << planning_graph.size() << ", done with ops, " << applicable_operators.size() << " left" << endl;
-        cout << "Phase " << planning_graph.size() << ", applying numeric axioms ("<< numeric_axioms.size() <<")" << endl;
+        //cout << "Phase " << planning_graph.size() << ", done with ops, " << applicable_operators.size() << " left" << endl;
+        //cout << "Phase " << planning_graph.size() << ", applying numeric axioms ("<< numeric_axioms.size() <<")" << endl;
     	for (size_t i = 0; i < numeric_axioms.size(); ++i) {
     		auto ax = &numeric_axioms[i];
     		if (ax->is_assignment_axiom()) {
