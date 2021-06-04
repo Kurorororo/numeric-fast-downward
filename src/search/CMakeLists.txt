@@ -40,9 +40,9 @@ endif()
 # still compile, but using heuristics that depend on an LP solver will
 # cause an error.
 if(PLUGIN_LP_SOLVER_ENABLED)
-    find_package(OSI OPTIONAL_COMPONENTS Cpx Clp)
+    find_package(OSI OPTIONAL_COMPONENTS Cpx Clp, Grb)
     if(OSI_FOUND AND (OSI_Cpx_FOUND OR OSI_Clp_FOUND OR OSI_Grb_FOUND))
-        foreach(SOLVER Cpx Clp IPCpx)
+        foreach(SOLVER Cpx Clp IPCpx, Grb)
             if(OSI_${SOLVER}_FOUND)
                 string(TOUPPER ${SOLVER} TMP_SOLVER_UPPER_CASE)
                 mark_as_advanced(TMP_SOLVER_UPPER_CASE)
@@ -78,5 +78,13 @@ if(PLUGIN_LP_SOLVER_ENABLED)
             ${CPLEX_RUNTIME_LIBRARY}
             $<TARGET_FILE_DIR:downward>
         )
+    endif()
+endif()
+
+if(PLUGIN_GUROBI_IP_COMPILATION_ENABLED)
+    find_package(Gurobi)
+    if (GUROBI_FOUND)
+        include_directories(downward ${GUROBI_INCLUDE_DIRS})
+        target_link_libraries(downward ${GUROBI_LIBRARIES})
     endif()
 endif()

@@ -226,9 +226,12 @@ class FunctionAssignment(object):
             raise ValueError("Cannot instantiate assignment: not normalized")
         fluent = self.fluent.instantiate(var_mapping, fluent_functions, 
                                          init_function_vals, task, new_axioms)
-        expression = self.expression.instantiate(var_mapping, fluent_functions, 
-                                         init_function_vals, task, new_axioms)
-        result.append(self.__class__(fluent,expression))
+        try:
+            expression = self.expression.instantiate(var_mapping, fluent_functions, 
+                                             init_function_vals, task, new_axioms)
+            result.append(self.__class__(fluent,expression))
+        except:
+            return
     def instantiate_cost(self,var_mapping, fluent_functions, init_function_vals, task):
         assert self.is_cost_assignment(), "trying to instantiate cost from non cost function assignment"
         try:
