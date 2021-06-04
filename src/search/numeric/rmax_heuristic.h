@@ -23,6 +23,7 @@ protected:
     
     //
     bool restrict_achievers;
+    bool ceiling_less_than_one;
     vector<set<int>> condition_to_action; // index condition, value set of action with that preconditions
     vector<double> cond_dist;
     vector<double> cond_num_dist;

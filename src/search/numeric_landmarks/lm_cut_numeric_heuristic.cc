@@ -16,7 +16,12 @@ namespace lm_cut_numeric_heuristic {
     // construction and destruction
     LandmarkCutNumericHeuristic::LandmarkCutNumericHeuristic(const Options &opts)
     : Heuristic(opts),
-    landmark_generator(nullptr), ignore_numeric(opts.get<bool>("ignore_numeric")) {
+      landmark_generator(nullptr),
+      ceiling_less_than_one(opts.get<bool>("ceiling_less_than_one")),
+      ignore_numeric(opts.get<bool>("ignore_numeric")),
+      use_random_pcf(opts.get<bool>("random_pcf")),
+      use_irmax(opts.get<bool>("irmax")),
+      disable_ma(opts.get<bool>("disable_ma")) {
     }
     
     LandmarkCutNumericHeuristic::~LandmarkCutNumericHeuristic() {
@@ -26,7 +31,8 @@ namespace lm_cut_numeric_heuristic {
     void LandmarkCutNumericHeuristic::initialize() {
         cout << "Initializing landmark cut heuristic..." << endl;
         // TODO we don't need a pointer if we initialize in the constructor.
-        landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(task_proxy, ignore_numeric);
+        landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(
+            task_proxy, ceiling_less_than_one, ignore_numeric, use_random_pcf, use_irmax, disable_ma);
     }
     
     ap_float LandmarkCutNumericHeuristic::compute_heuristic(const GlobalState &global_state) {
@@ -55,7 +61,11 @@ namespace lm_cut_numeric_heuristic {
         parser.document_property("safe", "yes");
         parser.document_property("preferred operators", "no");
 
+        parser.add_option<bool>("ceiling_less_than_one", "use 1 instead of m_a when m_a < 1", "false");
         parser.add_option<bool>("ignore_numeric", "ignore numeric conditions", "false");
+        parser.add_option<bool>("random_pcf", "use randomized precondition choice function", "false");
+        parser.add_option<bool>("irmax", "use repetition relaxation for pcf", "false");
+        parser.add_option<bool>("disable_ma", "use m_a = 1", "false");
         
         Heuristic::add_options_to_parser(parser);
         Options opts = parser.parse();

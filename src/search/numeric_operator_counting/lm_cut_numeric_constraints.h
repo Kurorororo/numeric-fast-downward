@@ -12,7 +12,11 @@ class LandmarkCutNumericLandmarks;
 
 namespace operator_counting {
 class LMCutNumericConstraints : public ConstraintGenerator {
+    bool ceiling_less_than_one;
     bool ignore_numeric;
+    bool use_random_pcf;
+    bool use_irmax;
+    bool disable_ma;
     std::unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks> landmark_generator;
 public:
     LMCutNumericConstraints(const Options &opts);
