@@ -476,6 +476,16 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME AIBR
+    HELP "Additive Interval-Relaxation Based Heuristic"
+    SOURCES
+        numeric/additive_transformation_helper.cc
+        numeric/additive_interval_based_relaxation.cc
+        numeric/aibr_heuristic.cc
+    DEPENDS NUMERIC_FAST_DOWNWARD
+)
+
+fast_downward_plugin(
     NAME RESOURCE_DETECTION
     HELP "Heuristics for the Numeric variant NFD"
     SOURCES

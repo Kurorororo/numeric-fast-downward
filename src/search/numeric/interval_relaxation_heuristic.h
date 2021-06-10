@@ -85,8 +85,8 @@ class NumericState {
 	std::vector<ap_float> costs;
 public:
 	void new_val_for(size_t index, Interval new_val, UnaryOperator *achiever, ap_float cost);
-	Interval get_val(size_t index) {return vals[index];}
-	ap_float get_cost(size_t index) {return costs[index];}
+	Interval get_val(size_t index) const {return vals[index];}
+	ap_float get_cost(size_t index) const {return costs[index];}
 	std::vector<UnaryOperator *> &get_achievers(size_t index) {return achievers[index];}
 	NumericState(const State &state);
 	NumericState(std::vector<Interval> _vals,
