@@ -119,7 +119,7 @@ namespace numeric_lm_cut_heuristic {
         bool use_linear_effects;
         bool use_second_order_simple;
         std::vector<ap_float> numeric_initial_state;
-        std::vector<vector<int>> original_to_relaxed_operator_index;
+        std::vector<vector<RelaxedOperator *>> original_to_relaxed_operators;
         
         HeapQueue<RelaxedProposition *> priority_queue;
         
