@@ -564,7 +564,7 @@ void NumericTaskProxy::build_numeric_goals(const TaskProxy &task) {
     AxiomsProxy axioms = task.get_axioms();
     for (OperatorProxy ax : axioms) {
       for (FactProxy pre : ax.get_preconditions()) {
-        // cout << "\tpre" << pre.get_name() << endl;
+        // cout << "\tpre" << pre.get_name() << " " << pre.get_variable().get_id() << endl;
         if (ax.get_effects().size() > 1) {
           cout << "non-numerical axioms" << endl;
           assert(false);
@@ -581,6 +581,7 @@ void NumericTaskProxy::build_numeric_goals(const TaskProxy &task) {
     int goal_id = goal.get_variable().get_id();
     if (axiom_table.find(goal_id) != axiom_table.end()) {
       for (int id_g : axiom_table[goal_id]) {
+        if (fact_to_axiom_map[id_g] == -1) continue;
         for (int id_n_con : numeric_conditions_id[fact_to_axiom_map[id_g]]) {
           // check if it's not empty
           LinearNumericCondition &check_goal = numeric_conditions[id_n_con];

@@ -21,7 +21,9 @@ namespace lm_cut_numeric_heuristic {
       ignore_numeric(opts.get<bool>("ignore_numeric")),
       use_random_pcf(opts.get<bool>("random_pcf")),
       use_irmax(opts.get<bool>("irmax")),
-      disable_ma(opts.get<bool>("disable_ma")) {
+      disable_ma(opts.get<bool>("disable_ma")),
+      use_linear_effects(opts.get<bool>("use_linear_effects")),
+      use_second_order_simple(opts.get<bool>("use_second_order_simple")) {
     }
     
     LandmarkCutNumericHeuristic::~LandmarkCutNumericHeuristic() {
@@ -32,7 +34,7 @@ namespace lm_cut_numeric_heuristic {
         cout << "Initializing landmark cut heuristic..." << endl;
         // TODO we don't need a pointer if we initialize in the constructor.
         landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(
-            task_proxy, ceiling_less_than_one, ignore_numeric, use_random_pcf, use_irmax, disable_ma);
+            task_proxy, ceiling_less_than_one, ignore_numeric, use_random_pcf, use_irmax, disable_ma, use_linear_effects, use_second_order_simple);
     }
     
     ap_float LandmarkCutNumericHeuristic::compute_heuristic(const GlobalState &global_state) {
@@ -66,6 +68,8 @@ namespace lm_cut_numeric_heuristic {
         parser.add_option<bool>("random_pcf", "use randomized precondition choice function", "false");
         parser.add_option<bool>("irmax", "use repetition relaxation for pcf", "false");
         parser.add_option<bool>("disable_ma", "use m_a = 1", "false");
+        parser.add_option<bool>("use_linear_effects", "use linear effects", "false");
+        parser.add_option<bool>("use_second_order_simple", "exploit second order simple effects", "false");
         
         Heuristic::add_options_to_parser(parser);
         Options opts = parser.parse();

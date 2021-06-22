@@ -76,10 +76,12 @@ namespace numeric_lm_cut_heuristic {
         RelaxedOperator(int id, std::vector<RelaxedProposition *> &&pre, int infinite_lhs, bool plus_infinity, int op_id, int base,
                         string &n)
         : id(id),
+          original_op_id_1(-1),
           original_op_id_2(op_id),
           preconditions(pre),
           infinite_lhs(infinite_lhs),
           plus_infinity(plus_infinity),
+          base_cost_1(0),
           base_cost_2(base),
           name(n) {}
         
@@ -103,7 +105,8 @@ namespace numeric_lm_cut_heuristic {
         numeric_helper::NumericTaskProxy numeric_task;
         std::vector<RelaxedOperator> relaxed_operators;
         std::vector<std::vector<RelaxedProposition>> propositions;
-        std::vector<LinearNumericCondition> conditions;
+        std::vector<numeric_helper::LinearNumericCondition> conditions;
+        std::vector<ap_float> epsilons;
         RelaxedProposition artificial_precondition;
         RelaxedProposition artificial_goal;
         int num_propositions;
@@ -116,8 +119,9 @@ namespace numeric_lm_cut_heuristic {
         bool use_linear_effects;
         bool use_second_order_simple;
         std::vector<ap_float> numeric_initial_state;
+        std::vector<vector<int>> original_to_relaxed_operator_index;
         
-        AdaptiveQueue<RelaxedProposition *> priority_queue;
+        HeapQueue<RelaxedProposition *> priority_queue;
         
         void initialize();
         void build_relaxed_operator(const OperatorProxy &op);
@@ -141,9 +145,9 @@ namespace numeric_lm_cut_heuristic {
         void second_exploration(const State &state,
                                 std::vector<RelaxedProposition *> &queue,
                                 std::vector<RelaxedOperator *> &cut,
-                                std::unordered_map<int, ap_float> &operator_to_m);
+                                std::vector<std::pair<ap_float, ap_float>> &m_list);
         
-        bool enqueue_if_necessary(RelaxedProposition *prop, int cost) {
+        bool enqueue_if_necessary(RelaxedProposition *prop, ap_float cost) {
             assert(cost >= 0);
             if (prop->status == UNREACHED || prop->h_max_cost > cost) {
                 prop->status = REACHED;
@@ -165,7 +169,8 @@ namespace numeric_lm_cut_heuristic {
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
         LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one = false, bool ignore_numeric = false,
-                             bool use_random_pcf = false, bool use_irmax = false, bool disable_ma = false);
+                             bool use_random_pcf = false, bool use_irmax = false, bool disable_ma = false, bool use_linear_effects = false,
+                             bool use_second_order_simple = false);
         virtual ~LandmarkCutLandmarks();
         
         /*
