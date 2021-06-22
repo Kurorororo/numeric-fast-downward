@@ -573,7 +573,6 @@ namespace numeric_lm_cut_heuristic {
                         ap_float new_supp_cost = relaxed_op->h_max_supporter_cost;
                         if (new_supp_cost != old_supp_cost) {
                             if (debug) cout << "\t  " << prop->name <<" "<< relaxed_op->name << " " << new_supp_cost << " " << old_supp_cost << " " << prop_cost << endl;
-                            if (debug) cout << new_supp_cost << " " << old_supp_cost << endl;
                             for (RelaxedProposition *effect : relaxed_op->effects)
                                 update_queue(state, relaxed_op->h_max_supporter, effect, relaxed_op);
                         }
@@ -710,8 +709,8 @@ namespace numeric_lm_cut_heuristic {
         // measurable speed boost.
         vector<RelaxedOperator *> cut;
         vector<pair<ap_float, ap_float>> m_list;
+        unordered_map<int, ap_float> operator_to_min_cut_cost;
         unordered_map<int, ap_float> operator_to_m;
-        unordered_map<int, ap_float> operator_to_updated;
         Landmark landmark;
         vector<RelaxedProposition *> second_exploration_queue;
         first_exploration(state);
@@ -729,51 +728,39 @@ namespace numeric_lm_cut_heuristic {
             ap_float cut_cost = numeric_limits<ap_float>::max();
             for (size_t i = 0; i < cut.size(); ++i) {
                 ap_float current_cut_cost = m_list[i].second * cut[i]->cost_2;
-                if (use_linear_effects && use_second_order_simple && cut[i]->original_op_id_1 != -1) {
+
+                if (cut[i]->original_op_id_1 != -1) {
                     current_cut_cost += m_list[i].first * cut[i]->cost_1;
+                    auto itr = operator_to_min_cut_cost.find(cut[i]->original_op_id_1);
+                    if (itr == operator_to_min_cut_cost.end() || current_cut_cost < itr->second)
+                        operator_to_min_cut_cost[cut[i]->original_op_id_1] = current_cut_cost;
                 }
-                if (current_cut_cost < cut_cost) {
-                    cut_cost = current_cut_cost;
-                    if (use_linear_effects && use_second_order_simple && cut[i]->original_op_id_1 != -1) {
-                        ap_float m_1 = m_list[i].first;
-                        ap_float m_2 = m_list[i].second;
-                        ap_float updated_cost_1 = cut[i]->cost_1;
-                        ap_float updated_cost_2 = cut[i]->cost_2;
-                        if (m_1 + m_2 > precision){
-                            updated_cost_1 -= current_cut_cost / (m_1 * cut[i]->cost_1 + m_2 * cut[i]->cost_2) * cut[i]->cost_1;
-                            updated_cost_2 -= current_cut_cost / (m_1 * cut[i]->cost_1 + m_2 * cut[i]->cost_2) * cut[i]->cost_2;
-                        }
-                        if (updated_cost_1 < precision) updated_cost_1 = 0;
-                        if (updated_cost_2 < precision) updated_cost_2 = 0;
-                        operator_to_updated[cut[i]->original_op_id_1] = updated_cost_1;
-                        operator_to_updated[cut[i]->original_op_id_2] = updated_cost_2;
-                        operator_to_m[cut[i]->original_op_id_1] = m_1;
-                        operator_to_m[cut[i]->original_op_id_2] = m_2;
-                    } else {
-                        ap_float m = m_list[i].second;
-                        ap_float updated_cost = cut[i]->cost_2;
-                        if (m > precision) {
-                            updated_cost -= cut_cost/ m_list[i].second;
-                        } 
-                        if (updated_cost < precision) updated_cost = 0;
-                        operator_to_updated[cut[i]->original_op_id_2] = updated_cost;
-                        operator_to_m[cut[i]->original_op_id_2] = m;
-                    }
-                }
+
+                auto itr = operator_to_min_cut_cost.find(cut[i]->original_op_id_2);
+                if (itr == operator_to_min_cut_cost.end() || current_cut_cost < itr->second)
+                    operator_to_min_cut_cost[cut[i]->original_op_id_2] = current_cut_cost;
+                cut_cost = std::min(cut_cost, current_cut_cost);
             }
-            if (debug) cout << "  cut cost " << artificial_goal.h_max_cost << " " << cut_cost << endl;
+            if (true) cout << "  cut cost " << artificial_goal.h_max_cost << " " << cut_cost << endl;
             
-            for (auto itr : operator_to_updated) {
+            for (auto itr : operator_to_min_cut_cost) {
                 for (RelaxedOperator *relaxed_op : original_to_relaxed_operators[itr.first]) {
-                    if (relaxed_op->original_op_id_1 == itr.first) {
-                        if (debug) cout << "\tcut " << relaxed_op->name << " cost1: " << relaxed_op->cost_1;
-                        relaxed_op->cost_1 = itr.second;
-                        if (debug) cout << " -> " << itr.second << " m1: " << operator_to_m[itr.first] << endl;
+                    ap_float m = itr.second;
+                    if (relaxed_op->original_op_id_1 == itr.first && relaxed_op->cost_1 > precision) {
+                        if (true) cout << "\tcut " << relaxed_op->name << " cost1: " << relaxed_op->cost_1;
+                        m /= relaxed_op->cost_1;
+                        relaxed_op->cost_1 -= cut_cost / m;
+                        if (relaxed_op->cost_1 < precision) relaxed_op->cost_1 = 0;
+                        if (true) cout << " -> " << relaxed_op->cost_1<< " m1: " << m << endl;
+                        operator_to_m[itr.first] = m;
                     }
-                    if (relaxed_op->original_op_id_2 == itr.first) {
-                        if (debug) cout << "\tcut " << relaxed_op->name << " cost2: " << relaxed_op->cost_2;
-                        relaxed_op->cost_2 = itr.second;
-                        if (debug) cout << " -> " << itr.second << " m2: " << operator_to_m[itr.first] << endl;
+                    if (relaxed_op->original_op_id_2 == itr.first && relaxed_op->cost_2 > precision) {
+                        if (true) cout << "\tcut " << relaxed_op->name << " cost2: " << relaxed_op->cost_2;
+                        m /= relaxed_op->cost_2;
+                        relaxed_op->cost_2 -= cut_cost / m;
+                        if (relaxed_op->cost_2 < precision) relaxed_op->cost_2 = 0;
+                        if (true) cout << " -> " << relaxed_op->cost_2 << " m2: " << m << endl;
+                        operator_to_m[itr.first] = m;
                     }
                 }
             }
@@ -784,11 +771,8 @@ namespace numeric_lm_cut_heuristic {
             if (debug) cout << "  cut cost " << cut_cost << endl;
             if (landmark_callback) {
                 landmark.clear();
-                for (RelaxedOperator *op: cut) {
-                    landmark.push_back({operator_to_m[op->original_op_id_2], op->original_op_id_1});
-                    if (use_linear_effects && use_second_order_simple && op->original_op_id_1 != -1) {
-                        landmark.push_back({operator_to_m[op->original_op_id_1], op->original_op_id_1});
-                    }
+                for (auto itr : operator_to_m) {
+                    landmark.push_back({itr.second, itr.first});
                 }
                 
                 landmark_callback(landmark, cut_cost);
@@ -798,8 +782,8 @@ namespace numeric_lm_cut_heuristic {
             // validate_h_max();  // too expensive to use even in regular debug mode
             cut.clear();
             m_list.clear();
-            operator_to_updated.clear();
             operator_to_m.clear();
+            operator_to_min_cut_cost.clear();
             
             /*
              Note: This could perhaps be made more efficient, for example by
