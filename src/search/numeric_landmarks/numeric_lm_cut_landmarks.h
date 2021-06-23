@@ -111,6 +111,8 @@ namespace numeric_lm_cut_heuristic {
         RelaxedProposition artificial_goal;
         int num_propositions;
         int n_var;
+        int n_infinite_operators;
+        int n_second_order_simple_operators;
         bool ceiling_less_than_one;
         bool ignore_numeric_conditions;
         bool use_random_pcf;
@@ -135,6 +137,8 @@ namespace numeric_lm_cut_heuristic {
                                               string &n_1, string &n_2);
         void add_infinite_operators(const std::vector<RelaxedProposition *> &precondition, const std::vector<ap_float> &coeff,
                                     ap_float constant, int infinite_lhs, int op_id, ap_float base_cost, string &n);
+        void add_infinite_operator(const std::vector<RelaxedProposition *> &precondiiton, numeric_helper::LinearNumericCondition &&lnc,
+                                   int lhs, bool plus_infinity, int op_id, ap_float base_cost, string &n);
         void build_numeric_effects();
         RelaxedProposition *get_proposition(const FactProxy &fact);
         RelaxedProposition *get_proposition(const int &n_condition);
