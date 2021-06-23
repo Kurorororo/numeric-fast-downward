@@ -363,9 +363,6 @@ namespace numeric_lm_cut_heuristic {
                 } else if (op_id_1 != -1) {
                     // operator with second-order simple effects
                     ap_float net = 0;
-                    for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
-                        net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op_id_2)[n_id];
-                    }
                     for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id_2); ++j){
                         const std::vector<ap_float> &linear_coeff = numeric_task.get_action_linear_coefficients(op_id_2)[j];
                         ap_float w = lnc.coefficients[lhs_ids[j]];
@@ -842,9 +839,11 @@ namespace numeric_lm_cut_heuristic {
                 if (relaxed_op->cost_1 < precision || relaxed_op->cost_2 < precision) return std::make_pair(1, 1);
 
                 const LinearNumericCondition &lnc = conditions[id_effect];
-                ap_float k_0 = 0;
                 int op_id = relaxed_op->original_op_id_2;
-
+                ap_float k_0 = 0;
+                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
+                    k_0 += lnc.coefficients[n_id] * numeric_task.get_action_eff_list(op_id)[n_id];
+                }
                 for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
                     int lhs = numeric_task.get_action_linear_lhs(op_id)[i];
                     ap_float w = lnc.coefficients[lhs];
