@@ -252,7 +252,6 @@ namespace numeric_lm_cut_heuristic {
             }
             if (!second_order_simple) {
                 std::vector<ap_float> coefficient_plus(coeff);
-                coefficient_plus[lhs_id_2] -= 1.0;
                 LinearNumericCondition lnc_plus(coefficient_plus, constant);
                 lnc_plus.is_strictly_greater = true;
                 add_infinite_operator(precondition, std::move(lnc_plus), lhs_id_2, true, op_2.get_id(), op_2.get_cost(), name);
