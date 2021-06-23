@@ -247,7 +247,7 @@ namespace numeric_lm_cut_heuristic {
                     if (c > precision || c < -precision) c = -c;
                 }
                 LinearNumericCondition lnc_minus(coefficient_minus, -constant);
-                lnc_plus.is_strictly_greater = true;
+                lnc_minus.is_strictly_greater = true;
                 add_infinite_operator(precondition, std::move(lnc_minus), lhs_id_2, false, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
             }
