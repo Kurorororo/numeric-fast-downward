@@ -856,8 +856,6 @@ namespace numeric_lm_cut_heuristic {
                     }
                 }
 
-                if (k_0 > numeric_initial_state[id_effect]) return std::make_pair(0, 1);
-
                 ap_float m = sqrt(numeric_initial_state[id_effect] / relaxed_op->numeric_effects[id_effect]);
                 ap_float m_1 = m * sqrt(relaxed_op->cost_2 / relaxed_op->cost_1) - k_0 / relaxed_op->numeric_effects[id_effect];
                 ap_float m_2 = m * sqrt(relaxed_op->cost_1 / relaxed_op->cost_2);
