@@ -257,7 +257,7 @@ namespace numeric_lm_cut_heuristic {
                 add_infinite_operator(precondition, std::move(lnc_plus), lhs_id_2, true, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
 
-                std::vector<ap_float> coefficient_minus(coefficient_plus);
+                std::vector<ap_float> coefficient_minus(coeff);
                 for (auto &c : coefficient_minus) {
                     if (c > precision || c < -precision) c = -c;
                 }
