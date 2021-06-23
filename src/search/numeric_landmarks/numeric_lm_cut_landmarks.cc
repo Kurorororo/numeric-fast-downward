@@ -350,7 +350,6 @@ namespace numeric_lm_cut_heuristic {
             int op_id_1 = relaxed_op.original_op_id_1;
             int op_id_2 = relaxed_op.original_op_id_2;
             const std::vector<int> &lhs_ids = numeric_task.get_action_linear_lhs(op_id_2);
-            const std::vector<std::vector<ap_float>> &linear_coeffs = numeric_task.get_action_linear_coefficients(op_id_2);
             vector<ap_float> numeric_effects(conditions.size(), 0);
             for (size_t i = 0; i < conditions.size(); ++i){
                 LinearNumericCondition& lnc = conditions[i];
@@ -368,9 +367,12 @@ namespace numeric_lm_cut_heuristic {
                         net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op_id_2)[n_id];
                     }
                     for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id_2); ++j){
+                        const std::vector<ap_float> &linear_coeff = numeric_task.get_action_linear_coefficients(op_id_2)[j];
                         ap_float w = lnc.coefficients[lhs_ids[j]];
                         for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id) {
-                            net += w * linear_coeffs[j][n_id] * numeric_task.get_action_eff_list(op_id_1)[n_id];
+                            ap_float k = linear_coeff[n_id];
+                            if (n_id == lhs_ids[j]) k -= 1.0;
+                            net += w * k * numeric_task.get_action_eff_list(op_id_1)[n_id];
                         }
                     }
                     if (net > precision) {
