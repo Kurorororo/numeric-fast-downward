@@ -212,20 +212,22 @@ namespace numeric_lm_cut_heuristic {
             int lhs_id_2 = numeric_task.get_action_linear_lhs(op_2.get_id())[i];
             coeff[lhs_id_2] -= 1.0;
             if (use_second_order_simple) {
-                second_order_simple = true;
                 // no self-loop
-                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id) {
-                    if ((numeric_task.get_action_eff_list(op_2.get_id())[n_id] > precision
-                         || numeric_task.get_action_eff_list(op_2.get_id())[n_id] < -precision)
-                         && (coeff[n_id] > precision || coeff[n_id] < -precision)) {
-                        second_order_simple = false;
-                        break;
+                second_order_simple = coeff[lhs_id_2] <= precision && coeff[lhs_id_2] >= -precision;
+                if (second_order_simple) {
+                    for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id) {
+                        if ((numeric_task.get_action_eff_list(op_2.get_id())[n_id] > precision
+                             || numeric_task.get_action_eff_list(op_2.get_id())[n_id] < -precision)
+                             && (coeff[n_id] > precision || coeff[n_id] < -precision)) {
+                            second_order_simple = false;
+                            break;
+                        }
                     }
                 }
-                if (coeff[lhs_id_2] <= precision && coeff[lhs_id_2] >= -precision) {
+                if (second_order_simple) {
                     std::vector<int> tmp_op_1_ids;
                     for (OperatorProxy op_1 : task_proxy.get_operators()) {
-                        // no linear effect
+                        // no linear support effect
                         const std::vector<int> lhs_ids_1 = numeric_task.get_action_linear_lhs(op_1.get_id());
                         for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_1.get_id()); ++j) {
                             if (coeff[lhs_ids_1[j]] > precision || coeff[lhs_ids_1[j]] < -precision) {
