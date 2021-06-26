@@ -607,7 +607,7 @@ namespace numeric_lm_cut_heuristic {
             const vector<RelaxedOperator *> &triggered_operators =
             prop->precondition_of;
             for (RelaxedOperator *relaxed_op : triggered_operators) {
-                bool furhter_exploration = true;
+                bool further_exploration = true;
                 if (relaxed_op->h_max_supporter == prop && std::find(cut.begin(), cut.end(), relaxed_op) == cut.end()) {
                     for (RelaxedProposition *effect : relaxed_op->effects) {
                         if (effect->status == GOAL_ZONE) {
@@ -620,12 +620,14 @@ namespace numeric_lm_cut_heuristic {
                                 m_list.push_back(ms);
 
                                 if (ms.second <= 1.0 && (relaxed_op->original_op_id_1 == -1 || ms.first <= 1.0)) {
-                                    furhter_exploration = false;
+                                    further_exploration = false;
                                 }
+                            } else {
+                                further_exploration = false;
                             }
                         }
                     }
-                    if (furhter_exploration) {
+                    if (further_exploration) {
                         for (RelaxedProposition *effect : relaxed_op->effects) {
                             if (effect->status != BEFORE_GOAL_ZONE && effect->status != GOAL_ZONE) {
                                 assert(effect->status == REACHED);
@@ -641,7 +643,7 @@ namespace numeric_lm_cut_heuristic {
         //cout << "\tsecond it " << n_iterations << endl;
     }
     
-    void LandmarkCutLandmarks::mark_goal_plateau(RelaxedProposition *subgoal) {
+    void LandmarkCutLandmarks::mark_goal_plateau(const State &state, RelaxedProposition *subgoal) {
         // NOTE: subgoal can be null if we got here via recursion through
         // a zero-cost action that is relaxed unreachable. (This can only
         // happen in domains which have zero-cost actions to start with.)
@@ -650,8 +652,15 @@ namespace numeric_lm_cut_heuristic {
             subgoal->status = GOAL_ZONE;
             for (RelaxedOperator *achiever : subgoal->effect_of) {
                 if (achiever->cost_1 < precision && achiever->cost_2 < precision && achiever->unsatisfied_preconditions == 0) {
-                    if (debug) cout << "\tadding subgoal " <<  achiever->h_max_supporter->name << " from precondition of " << achiever->name << " which has effect " << subgoal->name << endl;
-                    mark_goal_plateau(achiever->h_max_supporter);
+                    bool fire = true;
+                    if (use_second_order_simple) {
+                        std::pair<ap_float, ap_float> ms = calculate_numeric_times(state, subgoal, achiever, !disable_ma);
+                        fire = ms.first > precision || ms.second > precision;
+                    }
+                    if (fire) {
+                        if (debug) cout << "\tadding subgoal " <<  achiever->h_max_supporter->name << " from precondition of " << achiever->name << " which has effect " << subgoal->name << endl;
+                        mark_goal_plateau(state, achiever->h_max_supporter);
+                    }
                 }
             }
         }
@@ -706,7 +715,7 @@ namespace numeric_lm_cut_heuristic {
         int num_iterations = 0;
         while (artificial_goal.h_max_cost > precision) {
             ++num_iterations;
-            mark_goal_plateau(&artificial_goal);
+            mark_goal_plateau(state, &artificial_goal);
             assert(cut.empty());
             second_exploration(state, second_exploration_queue, cut, m_list);
             assert(!cut.empty());

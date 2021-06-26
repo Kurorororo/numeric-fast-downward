@@ -165,7 +165,7 @@ namespace numeric_lm_cut_heuristic {
         void update_queue(const State &state, RelaxedProposition *prec, RelaxedProposition *eff, RelaxedOperator *op);
         std::pair<ap_float, ap_float> calculate_numeric_times(const State &state, RelaxedProposition *effect, RelaxedOperator *relaxed_op, bool use_ma);
         
-        void mark_goal_plateau(RelaxedProposition *subgoal);
+        void mark_goal_plateau(const State &state, RelaxedProposition *subgoal);
         void validate_h_max() const;
     public:
         using Landmark = std::vector<pair<ap_float,int>>;
