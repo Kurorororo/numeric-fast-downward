@@ -485,9 +485,12 @@ def parse_domain_pddl(domain_pddl):
             if isinstance(el,list):
                 typesplit(alist[ix])
             elif len(el) > 1 and el[0] == "-":
-                msg = ("\nWARNING: %s seems to be a 'type' definition missing a space.\n" "Splitting Element into '-' and '%s'") % (el, el[1:])
-                print(msg, file=sys.stderr)               
-                alist[ix:ix+1] = el[0], el[1:]
+                try:
+                    float(el)
+                except ValueError:
+                    msg = ("\nWARNING: %s seems to be a 'type' definition missing a space.\n" "Splitting Element into '-' and '%s'") % (el, el[1:])
+                    print(msg, file=sys.stderr)               
+                    alist[ix:ix+1] = el[0], el[1:]
             ix += 1
             
     iterator = iter(domain_pddl)
