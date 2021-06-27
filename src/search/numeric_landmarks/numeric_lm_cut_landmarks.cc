@@ -106,9 +106,11 @@ namespace numeric_lm_cut_heuristic {
         if (!ignore_numeric_conditions) {
             // add numeric goal conditions
             for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-                list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
-                if (numeric_goals.empty()) continue; // this is not a numeric goal
-                for (int id_n_con : numeric_goals){
+                for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+                    FactProxy goal = task_proxy.get_variables()[var_value.first].get_fact(var_value.second);
+                    goal_op_pre.push_back(get_proposition(goal));
+                }
+                for (int id_n_con : numeric_task.get_numeric_goals(id_goal)) {
                     //LinearNumericCondition &num_values = numeric_task.get_condition(id_n_con);
                     goal_op_pre.push_back(get_proposition(id_n_con));
                     //cout << "Goal : " << num_values << " is a goal condition" << endl;
@@ -376,7 +378,7 @@ namespace numeric_lm_cut_heuristic {
                     for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id_2); ++j){
                         const std::vector<ap_float> &linear_coeff = numeric_task.get_action_linear_coefficients(op_id_2)[j];
                         ap_float w = lnc.coefficients[lhs_ids[j]];
-                        for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id) {
+                        for (int n_id = 0, n_vars = numeric_task.get_n_numeric_variables(); n_id < n_vars; ++n_id) {
                             ap_float k = linear_coeff[n_id];
                             if (n_id == lhs_ids[j]) k -= 1.0;
                             net += w * k * numeric_task.get_action_eff_list(op_id_1)[n_id];

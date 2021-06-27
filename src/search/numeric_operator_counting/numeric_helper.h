@@ -157,6 +157,7 @@ class NumericTaskProxy {
   LinearNumericCondition &get_artificial_variable(int variable_id) {
     return artificial_variables[variable_id];
   }
+  list<pair<int, int>> &get_propositoinal_goals(int id_goal) { return propositional_goals[id_goal]; }
   list<int> &get_numeric_goals(int id_goal) { return numeric_goals[id_goal]; }
   int get_n_numeric_conditions() { return numeric_conditions.size(); }
   list<int> &get_numeric_conditions_id(int pre_id) {
@@ -225,6 +226,8 @@ class NumericTaskProxy {
   std::vector<std::list<int>>
       numeric_goals;  // indexL goal, value: -1 if it's a propositional goal, id
                       // of numeric condition if it's a goal condition
+  std::vector<std::list<std::pair<int, int>>>
+      propositional_goals;
 
   // achievers
   std::vector<set<int>>

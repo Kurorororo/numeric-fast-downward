@@ -559,7 +559,9 @@ void NumericTaskProxy::generate_possible_achievers(const TaskProxy &task) {
 void NumericTaskProxy::build_numeric_goals(const TaskProxy &task) {
   // check other axioms
   numeric_goals.assign(task.get_goals().size(), *(new list<int>()));
+  propositional_goals.assign(task.get_goals().size(), *(new list<pair<int, int>>()));
   unordered_map<int, list<int>> axiom_table;
+  unordered_map<int, list<pair<int, int>>> fact_table;
   {
     AxiomsProxy axioms = task.get_axioms();
     for (OperatorProxy ax : axioms) {
@@ -570,8 +572,13 @@ void NumericTaskProxy::build_numeric_goals(const TaskProxy &task) {
           assert(false);
         }
         if (ax.get_effects().size() == 0) continue;
-        axiom_table[ax.get_effects()[0].get_fact().get_variable().get_id()]
-            .push_back(pre.get_variable().get_id());
+        int eff_id = ax.get_effects()[0].get_fact().get_variable().get_id();
+        int pre_id = pre.get_variable().get_id();
+        if (fact_to_axiom_map[pre_id] == -1) {
+          fact_table[eff_id].push_back(make_pair(pre_id, pre.get_value()));
+        } else {
+          axiom_table[eff_id].push_back(pre_id);
+        }
       }
     }
   }
@@ -580,8 +587,10 @@ void NumericTaskProxy::build_numeric_goals(const TaskProxy &task) {
     FactProxy goal = task.get_goals()[g_id];
     int goal_id = goal.get_variable().get_id();
     if (axiom_table.find(goal_id) != axiom_table.end()) {
+      for (pair<int, int> goal : fact_table[goal_id]) {
+        propositional_goals[g_id].push_back(goal);
+      }
       for (int id_g : axiom_table[goal_id]) {
-        if (fact_to_axiom_map[id_g] == -1) continue;
         for (int id_n_con : numeric_conditions_id[fact_to_axiom_map[id_g]]) {
           // check if it's not empty
           LinearNumericCondition &check_goal = numeric_conditions[id_n_con];
