@@ -41,6 +41,7 @@ class Heuristic : public ScalarEvaluator {
       this seems to be the only potential downside.
     */
     std::vector<const GlobalOperator *> preferred_operators;
+    int multiplicator;
 protected:
     /*
       Cache for saving h values
@@ -73,6 +74,7 @@ protected:
     ap_float get_adjusted_cost(const GlobalOperator &op) const;
     // TODO: Make private once all heuristics use the TaskProxy class.
     State convert_global_state(const GlobalState &global_state) const;
+    void compute_multiplicator(ap_float epsilon);
 
 public:
     Heuristic(const options::Options &options);
