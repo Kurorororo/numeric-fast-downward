@@ -100,7 +100,7 @@ class ConditionalEffect(object):
         if isinstance(norm_effect, ConjunctiveEffect):
             new_effects = []
             for effect in norm_effect.effects:
-                assert isinstance(effect, SimpleEffect) or isinstance(effect, ConditionalEffect)
+                assert isinstance(effect, SimpleEffect) or isinstance(effect, ConditionalEffect) or isinstance(effect, NumericEffect)
                 new_effects.append(ConditionalEffect(self.condition, effect))
             return ConjunctiveEffect(new_effects)
         elif isinstance(norm_effect, UniversalEffect):

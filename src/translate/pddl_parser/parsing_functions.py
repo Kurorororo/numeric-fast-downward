@@ -232,7 +232,7 @@ def add_effect(tmp_effect, result): # adds effect from tmp_effect to result
         elif isinstance(tmp_effect, pddl.ConditionalEffect):
 #             print ("conditional effect: ", tmp_effect)
             condition = tmp_effect.condition
-            assert isinstance(tmp_effect.effect, pddl.SimpleEffect)
+            assert isinstance(tmp_effect.effect, pddl.SimpleEffect) or isinstance(tmp_effect.effect, pddl.NumericEffect)
             effect = tmp_effect.effect.effect                    
         elif isinstance(tmp_effect, pddl.SimpleEffect):
 #             print ("simple effect: ", tmp_effect)

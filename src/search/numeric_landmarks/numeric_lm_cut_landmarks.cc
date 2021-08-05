@@ -32,7 +32,7 @@ namespace numeric_lm_cut_heuristic {
           use_linear_effects(use_linear_effects),
           use_second_order_simple(use_second_order_simple) {
         //verify_no_axioms(task_proxy);
-        verify_no_conditional_effects(task_proxy);
+        //verify_no_conditional_effects(task_proxy);
         // Build propositions.
         num_propositions = 2; // artificial goal and artificial precondition
         artificial_precondition.is_numeric_condition = false;
@@ -167,6 +167,7 @@ namespace numeric_lm_cut_heuristic {
         }
         
         for (EffectProxy eff : op.get_effects()) {
+            if (eff.get_conditions().size() > 0) continue;
             // check if it's numeric axiom
             if(!numeric_task.is_numeric_axiom(eff.get_fact().get_variable().get_id())){
                 effects.push_back(get_proposition(eff.get_fact()));
@@ -174,6 +175,32 @@ namespace numeric_lm_cut_heuristic {
         }
 
         string name = op.get_name();
+
+        for (int i = 0; i < numeric_task.get_action_n_conidtional_eff(op.get_id()); ++i) {
+            std::vector<RelaxedProposition *> conditional_effects;
+            int e = numeric_task.get_action_conditional_add_list(op.get_id())[i];
+            std::pair<int, int> e_var_value = numeric_task.get_var_val(e);
+            conditional_effects.push_back(&propositions[e_var_value.first][e_var_value.second]);
+
+            std::vector<RelaxedProposition *> extended_precondition = precondition;
+
+            for (int c : numeric_task.get_action_eff_conditions(op.get_id())[i]) {
+                std::pair<int, int> c_var_value = numeric_task.get_var_val(c);
+                extended_precondition.push_back(&propositions[c_var_value.first][c_var_value.second]);
+            }
+
+            if (!ignore_numeric_conditions) {
+                for (int c : numeric_task.get_action_eff_num_conditions(op.get_id())[i]) {
+                    for (int j : numeric_task.get_numeric_conditions_id(c)){
+                        LinearNumericCondition &lnc = numeric_task.get_condition(j);
+                        extended_precondition.push_back(get_proposition(j));
+                    }
+                }
+            }
+
+            add_relaxed_operator(move(extended_precondition), move(conditional_effects), op.get_id(), op.get_cost(), name);
+        }
+
         add_relaxed_operator(move(precondition), move(effects), op.get_id(), op.get_cost(), name);
     }
 
@@ -207,7 +234,18 @@ namespace numeric_lm_cut_heuristic {
         std::unordered_set<int> op_1_ids;
         string name = op_2.get_name();
 
-        for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_2.get_id()); ++i) {
+        for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_2.get_id()); ++i) {                
+            vector<RelaxedProposition *> extended_precondition = precondition;
+            for (int c : numeric_task.get_action_linear_eff_conditions(op_2.get_id())[i]) {
+                std::pair<int, int> c_var_value = numeric_task.get_var_val(c);
+                extended_precondition.push_back(&propositions[c_var_value.first][c_var_value.second]);
+            }
+            for (int c : numeric_task.get_action_linear_eff_num_conditions(op_2.get_id())[i]) {
+                for (int j : numeric_task.get_numeric_conditions_id(c)){
+                    extended_precondition.push_back(get_proposition(j));
+                }
+            }
+
             bool second_order_simple = false;
             std::vector<ap_float> coeff = numeric_task.get_action_linear_coefficients(op_2.get_id())[i];
             ap_float constant = numeric_task.get_action_linear_constants(op_2.get_id())[i];
@@ -225,6 +263,12 @@ namespace numeric_lm_cut_heuristic {
                             break;
                         }
                     }
+                    for (auto var_eff : numeric_task.get_action_conditional_eff_list(op_2.get_id())) {
+                        if (coeff[var_eff.first] > precision || coeff[var_eff.first] < -precision) {
+                            second_order_simple = false;
+                            break;
+                        }
+                    }
                 }
                 if (second_order_simple) {
                     std::vector<int> tmp_op_1_ids;
@@ -238,11 +282,26 @@ namespace numeric_lm_cut_heuristic {
                             }
                         }
                         if (second_order_simple) {
-                            ap_float net = 0;
-                            for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id) {
-                                net += coeff[n_id] * numeric_task.get_action_eff_list(op_1.get_id())[n_id];
+                            bool simple_supporter = false;
+                            for (auto var_eff : numeric_task.get_action_conditional_eff_list(op_1.get_id())) {
+                                // no parallel simple effect
+                                if (var_eff.first == lhs_id_2) {
+                                    second_order_simple = false;
+                                    break;
+                                }
+                                if (coeff[var_eff.first] > precision || coeff[var_eff.second] < -precision) {
+                                    simple_supporter = true;
+                                }
                             }
-                            if (net > precision || net < -precision) {
+                            if (!second_order_simple) break;
+                            if (!simple_supporter) {
+                                ap_float net = 0;
+                                for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id) {
+                                    net += coeff[n_id] * numeric_task.get_action_eff_list(op_1.get_id())[n_id];
+                                }
+                                simple_supporter = net > precision || net < -precision;
+                            }
+                            if (simple_supporter) {
                                 // no parallel simple effect
                                 ap_float simple_e = numeric_task.get_action_eff_list(op_1.get_id())[lhs_id_2];
                                 if (simple_e > precision || simple_e < -precision) {
@@ -266,7 +325,7 @@ namespace numeric_lm_cut_heuristic {
                 std::vector<ap_float> coefficient_plus(coeff);
                 LinearNumericCondition lnc_plus(coefficient_plus, constant);
                 lnc_plus.is_strictly_greater = true;
-                add_infinite_operator(precondition, std::move(lnc_plus), lhs_id_2, true, op_2.get_id(), op_2.get_cost(), name);
+                add_infinite_operator(extended_precondition, std::move(lnc_plus), lhs_id_2, true, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
 
                 std::vector<ap_float> coefficient_minus(coeff);
@@ -275,7 +334,7 @@ namespace numeric_lm_cut_heuristic {
                 }
                 LinearNumericCondition lnc_minus(coefficient_minus, -constant);
                 lnc_minus.is_strictly_greater = true;
-                add_infinite_operator(precondition, std::move(lnc_minus), lhs_id_2, false, op_2.get_id(), op_2.get_cost(), name);
+                add_infinite_operator(extended_precondition, std::move(lnc_minus), lhs_id_2, false, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
             }
         }
@@ -285,7 +344,7 @@ namespace numeric_lm_cut_heuristic {
             vector<RelaxedProposition *> precondition_1;
             for (FactProxy pre : op_1.get_preconditions()) {
                 if(!numeric_task.is_numeric_axiom(pre.get_variable().get_id())){
-                    precondition.push_back(get_proposition(pre));
+                    precondition_1.push_back(get_proposition(pre));
                 }
             }
             string name_1 = op_1.get_name();
@@ -381,7 +440,13 @@ namespace numeric_lm_cut_heuristic {
                         for (int n_id = 0, n_vars = numeric_task.get_n_numeric_variables(); n_id < n_vars; ++n_id) {
                             ap_float k = linear_coeff[n_id];
                             if (n_id == lhs_ids[j]) k -= 1.0;
-                            net += w * k * numeric_task.get_action_eff_list(op_id_1)[n_id];
+                            ap_float e = w * k * numeric_task.get_action_eff_list(op_id_1)[n_id];
+                            if (numeric_task.get_action_linear_eff_conditions(op_id_2)[j].size() == 0
+                                && numeric_task.get_action_linear_eff_num_conditions(op_id_2)[j].size() == 0) {
+                                net += e;
+                            } else if (e > 0) {
+                                net += e;
+                            }
                         }
                     }
                     if (net > precision) {
@@ -394,6 +459,10 @@ namespace numeric_lm_cut_heuristic {
                     ap_float net = 0;
                     for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
                         net += lnc.coefficients[n_id]*numeric_task.get_action_eff_list(op_id_2)[n_id];
+                    }
+                    for (auto var_eff : numeric_task.get_action_conditional_eff_list(op_id_2)) {
+                        ap_float e = lnc.coefficients[var_eff.first] * var_eff.second;
+                        if (e > 0) net += e;
                     }
                     if (net > precision) {
                         //cout << "adding effect of action " << op.get_name() << " " <<net << " on " << lnc << endl;
@@ -837,12 +906,18 @@ namespace numeric_lm_cut_heuristic {
                     for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
                         int lhs = numeric_task.get_action_linear_lhs(op_id)[i];
                         ap_float w = lnc.coefficients[lhs];
-                        net += w * numeric_task.get_action_linear_constants(op_id)[i];
+                        ap_float net_i = w * numeric_task.get_action_linear_constants(op_id)[i];
                         for (int n_id = 0, n_vars = numeric_task.get_n_numeric_variables(); n_id < n_vars; ++n_id) {
                             ap_float k = numeric_task.get_action_linear_coefficients(op_id)[i][n_id];
                             if (n_id == numeric_task.get_action_linear_lhs(op_id)[i]) k -= 1.0;
                             int id_num = numeric_task.get_numeric_variable(n_id).id_abstract_task;
-                            net += w * k * state.nval(id_num);
+                            net_i += w * k * state.nval(id_num);
+                        }
+                        if (numeric_task.get_action_linear_eff_conditions(op_id)[i].size() == 0
+                            && numeric_task.get_action_linear_eff_num_conditions(op_id)[i].size() == 0) {
+                            net += net_i;
+                        } else if (net_i > 0) {
+                            net += net_i;
                         }
                     }
                 }
@@ -865,15 +940,25 @@ namespace numeric_lm_cut_heuristic {
                 for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables(); ++n_id){
                     k_0 += lnc.coefficients[n_id] * numeric_task.get_action_eff_list(op_id)[n_id];
                 }
+                for (auto var_eff : numeric_task.get_action_conditional_eff_list(op_id)) {
+                    ap_float e = lnc.coefficients[var_eff.first] * var_eff.second;
+                    if (e > 0) k_0 += e;
+                }
                 for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
                     int lhs = numeric_task.get_action_linear_lhs(op_id)[i];
                     ap_float w = lnc.coefficients[lhs];
-                    k_0 += w * numeric_task.get_action_linear_constants(op_id)[i];
+                    ap_float k_0_i = w * numeric_task.get_action_linear_constants(op_id)[i];
                     for (int n_id = 0, n_vars = numeric_task.get_n_numeric_variables(); n_id < n_vars; ++n_id) {
                         ap_float k = numeric_task.get_action_linear_coefficients(op_id)[i][n_id];
                         if (n_id == numeric_task.get_action_linear_lhs(op_id)[i]) k -= 1.0;
                         int id_num = numeric_task.get_numeric_variable(n_id).id_abstract_task;
-                        k_0 += w * k * state.nval(id_num);
+                        k_0_i += w * k * state.nval(id_num);
+                    }
+                    if (numeric_task.get_action_linear_eff_conditions(op_id)[i].size() == 0
+                        && numeric_task.get_action_linear_eff_num_conditions(op_id)[i].size() == 0) {
+                        k_0 += k_0_i;
+                    } else if (k_0_i > 0) {
+                        k_0 += k_0_i;
                     }
                 }
 
