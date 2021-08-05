@@ -25,12 +25,23 @@ struct Action {
   std::set<int> add_list;
   std::set<int> del_list;
   std::set<int> pre_del_list;
+  int n_conditional_eff = 0;
+  std::vector<int> conidiontal_add_list;
+  std::vector<int> conidiontal_del_list;
+  std::vector<std::set<int>> eff_conditions;
+  std::vector<std::set<int>> eff_num_conditions;
   std::vector<double> eff_list;  // simple numeric effects
+  int n_conditional_num_eff = 0;
+  std::vector<std::pair<int, double>> conditional_eff_list;
+  std::vector<std::set<int>> num_eff_conditions;
+  std::vector<std::set<int>> num_eff_num_conditions;
   int n_linear_eff = 0;
   std::vector<int> linear_eff_lhs;  // affected variabels of linear effects;
   std::vector<std::vector<ap_float>>
       linear_eff_coefficeints;  // coefficients of linear effects;
   std::vector<ap_float> linear_eff_constants;  // constants of linear effects;
+  std::vector<std::set<int>> linear_eff_conditions;
+  std::vector<std::set<int>> linear_eff_num_conditions;
   std::set<int>
       possible_add_list;  // numeric effects on conditions (id condition is
                           // already con + n_propositions)
@@ -136,8 +147,31 @@ class NumericTaskProxy {
   std::set<int> &get_action_pre_del_list(int op_id) {
     return actions[op_id].pre_del_list;
   }
+  int get_action_n_conidtional_eff(int op_id) { return actions[op_id].n_conditional_eff; }
+  std::vector<int> &get_action_conditional_add_list(int op_id) {
+    return actions[op_id].conidiontal_add_list;
+  }
+  std::vector<int> &get_action_conditional_del_list(int op_id) {
+    return actions[op_id].conidiontal_del_list;
+  }
+  std::vector<std::set<int>> &get_action_eff_conditions(int op_id) {
+    return actions[op_id].eff_conditions;
+  }
+  std::vector<std::set<int>> &get_action_eff_num_conditions(int op_id) {
+    return actions[op_id].eff_num_conditions;
+  }
   std::vector<double> &get_action_eff_list(int op_id) {
     return actions[op_id].eff_list;
+  }
+  int get_action_n_conditional_num_eff(int op_id) { return actions[op_id].n_conditional_num_eff; }
+  std::vector<std::pair<int, double>> &get_action_conditional_eff_list(int op_id) {
+    return actions[op_id].conditional_eff_list;
+  }
+  std::vector<std::set<int>> &get_action_num_eff_conditions(int op_id) {
+    return actions[op_id].num_eff_conditions;
+  }
+  std::vector<std::set<int>> &get_action_num_eff_num_conditions(int op_id) {
+    return actions[op_id].num_eff_num_conditions;
   }
   int get_action_n_linear_eff(int op_id) { return actions[op_id].n_linear_eff; }
   std::vector<int> &get_action_linear_lhs(int op_id) {
@@ -149,6 +183,12 @@ class NumericTaskProxy {
   std::vector<std::vector<ap_float>> &get_action_linear_coefficients(
       int op_id) {
     return actions[op_id].linear_eff_coefficeints;
+  }
+  std::vector<std::set<int>> &get_action_linear_eff_conditions(int op_id) {
+    return actions[op_id].linear_eff_conditions;
+  }
+  std::vector<std::set<int>> &get_action_linear_eff_num_conditions(int op_id) {
+    return actions[op_id].linear_eff_num_conditions;
   }
   int get_action_cost(int op_id) { return actions[op_id].cost; }
   LinearNumericCondition &get_condition(int cond_id) {
@@ -186,6 +226,10 @@ class NumericTaskProxy {
   void build_artificial_variables(const TaskProxy &task_proxy);
   void build_numeric_conditions(const TaskProxy &task_proxy);
   void build_propositions(const TaskProxy &task_proxy);
+  void build_precondiiton(const FactProxy &condition, std::set<int> &pre_list, std::set<int> &num_list);
+  void add_redundant_constraint(int x, int y, std::set<int> &target_list);
+  void build_redundant_constraints(const std::set<int> &original_list, std::set<int> &target_list);
+  void build_redundant_constraints(const std::set<int> &list1, const std::set<int> &list2, std::set<int> &target_list);
   void build_actions(const TaskProxy &task_proxy, bool use_linear_effects);
   void build_mutex_actions(const TaskProxy &task_proxy);
   void build_numeric_goals(const TaskProxy &task_proxy);
