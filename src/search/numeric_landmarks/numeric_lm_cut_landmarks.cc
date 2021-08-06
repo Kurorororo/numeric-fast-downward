@@ -149,9 +149,15 @@ namespace numeric_lm_cut_heuristic {
     void LandmarkCutLandmarks::build_relaxed_operator(const OperatorProxy &op) {
         vector<RelaxedProposition *> precondition;
         vector<RelaxedProposition *> effects;
+        unordered_set<RelaxedProposition *> added_precondition;
         for (FactProxy pre : op.get_preconditions()) {
-            if(!numeric_task.is_numeric_axiom(pre.get_variable().get_id())){
-                precondition.push_back(get_proposition(pre));
+            if(!numeric_task.is_numeric_axiom(pre.get_variable().get_id())) {
+                RelaxedProposition *prop = get_proposition(pre);
+                if (added_precondition.find(prop) == added_precondition.end()){
+                    precondition.push_back(prop);
+                    added_precondition.insert(prop);
+                    //cout << "adding precondition " << get_proposition(pre)->name << " to action " << op.get_name() << endl;
+                }
             }
         }
 
@@ -159,9 +165,12 @@ namespace numeric_lm_cut_heuristic {
             // numeric precondition
             for (int pre : numeric_task.get_action_num_list(op.get_id())){
                 for (int i : numeric_task.get_numeric_conditions_id(pre)){
-                    precondition.push_back(get_proposition(i));
-                    //LinearNumericCondition &num_values = numeric_task.get_condition(i);
-                    //cout << "adding precondition " << num_values << " to action " << op.get_name() << endl;
+                    RelaxedProposition *prop = get_proposition(i);
+                    if (added_precondition.find(prop) == added_precondition.end()){
+                        precondition.push_back(prop);
+                        added_precondition.insert(prop);
+                        //cout << "adding precondition " << get_proposition(i)->name << " to action " << op.get_name() << endl;
+                    }
                 }
             }
         }
@@ -183,22 +192,31 @@ namespace numeric_lm_cut_heuristic {
             conditional_effects.push_back(&propositions[e_var_value.first][e_var_value.second]);
 
             std::vector<RelaxedProposition *> extended_precondition = precondition;
+            unordered_set<RelaxedProposition *> added_extended_precondition = added_precondition;
 
             for (int c : numeric_task.get_action_eff_conditions(op.get_id())[i]) {
                 std::pair<int, int> c_var_value = numeric_task.get_var_val(c);
-                extended_precondition.push_back(&propositions[c_var_value.first][c_var_value.second]);
+                RelaxedProposition *prop = &propositions[c_var_value.first][c_var_value.second];
+                if (added_extended_precondition.find(prop) == added_extended_precondition.end()) {
+                    extended_precondition.push_back(prop);
+                    added_extended_precondition.insert(prop);
+                }
             }
 
             if (!ignore_numeric_conditions) {
                 for (int c : numeric_task.get_action_eff_num_conditions(op.get_id())[i]) {
                     for (int j : numeric_task.get_numeric_conditions_id(c)){
-                        LinearNumericCondition &lnc = numeric_task.get_condition(j);
-                        extended_precondition.push_back(get_proposition(j));
+                        RelaxedProposition *prop = get_proposition(j);
+                        if (added_extended_precondition.find(prop) == added_extended_precondition.end()) {
+                            extended_precondition.push_back(prop);
+                            added_extended_precondition.insert(prop);
+                        }
                     }
                 }
             }
 
-            add_relaxed_operator(move(extended_precondition), move(conditional_effects), op.get_id(), op.get_cost(), name);
+            string conditional_name = name + " " + conditional_effects[0]->name;
+            add_relaxed_operator(move(extended_precondition), move(conditional_effects), op.get_id(), op.get_cost(), conditional_name);
         }
 
         add_relaxed_operator(move(precondition), move(effects), op.get_id(), op.get_cost(), name);
@@ -218,16 +236,25 @@ namespace numeric_lm_cut_heuristic {
         if (numeric_task.get_action_n_linear_eff(op_2.get_id()) == 0) return;
 
         vector<RelaxedProposition *> precondition;
+        unordered_set<RelaxedProposition *> added_precondition;
         for (FactProxy pre : op_2.get_preconditions()) {
             if(!numeric_task.is_numeric_axiom(pre.get_variable().get_id())){
-                precondition.push_back(get_proposition(pre));
+                RelaxedProposition *prop = get_proposition(pre);
+                if (added_precondition.find(prop) == added_precondition.end()){
+                    precondition.push_back(prop);
+                    added_precondition.insert(prop);
+                }
             }
         }
 
         // numeric precondition
         for (int pre : numeric_task.get_action_num_list(op_2.get_id())){
             for (int i : numeric_task.get_numeric_conditions_id(pre)){
-                precondition.push_back(get_proposition(i));
+                RelaxedProposition *prop = get_proposition(i);
+                if (added_precondition.find(prop) == added_precondition.end()){
+                    precondition.push_back(prop);
+                    added_precondition.insert(prop);
+                }
             }
         }
 
@@ -236,13 +263,22 @@ namespace numeric_lm_cut_heuristic {
 
         for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_2.get_id()); ++i) {                
             vector<RelaxedProposition *> extended_precondition = precondition;
+            unordered_set<RelaxedProposition *> added_extended_precondition = added_precondition;
             for (int c : numeric_task.get_action_linear_eff_conditions(op_2.get_id())[i]) {
                 std::pair<int, int> c_var_value = numeric_task.get_var_val(c);
-                extended_precondition.push_back(&propositions[c_var_value.first][c_var_value.second]);
+                RelaxedProposition *prop = &propositions[c_var_value.first][c_var_value.second];
+                if (added_extended_precondition.find(prop) == added_extended_precondition.end()) {
+                    extended_precondition.push_back(prop);
+                    added_extended_precondition.insert(prop);
+                }
             }
             for (int c : numeric_task.get_action_linear_eff_num_conditions(op_2.get_id())[i]) {
                 for (int j : numeric_task.get_numeric_conditions_id(c)){
-                    extended_precondition.push_back(get_proposition(j));
+                    RelaxedProposition *prop = get_proposition(j);
+                    if (added_extended_precondition.find(prop) == added_extended_precondition.end()) {
+                        extended_precondition.push_back(prop);
+                        added_extended_precondition.insert(prop);
+                    }
                 }
             }
 
@@ -342,9 +378,25 @@ namespace numeric_lm_cut_heuristic {
         for (int op_id_1 : op_1_ids) {
             OperatorProxy op_1 = task_proxy.get_operators()[op_id_1];
             vector<RelaxedProposition *> precondition_1;
+            unordered_set<RelaxedProposition *> added_precondition_1;
             for (FactProxy pre : op_1.get_preconditions()) {
                 if(!numeric_task.is_numeric_axiom(pre.get_variable().get_id())){
-                    precondition_1.push_back(get_proposition(pre));
+                    RelaxedProposition* prop = get_proposition(pre);
+                    if (added_precondition_1.find(prop) == added_precondition_1.end()
+                        && added_precondition.find(prop) == added_precondition.end()) {
+                        precondition_1.push_back(prop);
+                        added_precondition_1.insert(prop);
+                    }
+                }
+            }
+            for (int pre : numeric_task.get_action_num_list(op_id_1)){
+                for (int i : numeric_task.get_numeric_conditions_id(pre)){
+                    RelaxedProposition *prop = get_proposition(i);
+                    if (added_precondition_1.find(prop) == added_precondition_1.end()
+                        && added_precondition.find(prop) == added_precondition.end()) {
+                        precondition_1.push_back(prop);
+                        added_precondition_1.insert(prop);
+                    }
                 }
             }
             string name_1 = op_1.get_name();
@@ -588,7 +640,7 @@ namespace numeric_lm_cut_heuristic {
                     }
                     for (RelaxedProposition *effect : relaxed_op->effects)
                         update_queue(state, prop, effect, relaxed_op);
-                }
+                } 
             }
         }
     }
