@@ -312,10 +312,8 @@ void NumericTaskProxy::build_precondiiton(const FactProxy &condition,
   } else {
     // cout << op.get_id() << " " << op.get_name() << endl;
     if (condition.get_value() > 0) {
-        cerr << "This configuration does not support negative numeric preconditions"
-             << "(condition " << condition.get_name() << ")!" << endl
-             << "Terminating." << endl;
-        utils::exit_with(utils::ExitCode::UNSUPPORTED);
+      // ignore negative numeric condittions
+      return;
     }
     num_list.insert(fact_to_axiom_map[pre_var_id]);
     // for (auto num_id :
