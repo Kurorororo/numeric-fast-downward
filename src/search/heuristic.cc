@@ -20,6 +20,7 @@ using namespace std;
 Heuristic::Heuristic(const Options &opts)
     : description(opts.get_unparsed_config()),
       initialized(false),
+      multiplicator(0),
       heuristic_cache(HEntry(NO_VALUE_INT, true)), //TODO: is true really a good idea here?
       cache_h_values(opts.get<bool>("cache_estimates")),
       task(get_task_from_options(opts)),
@@ -27,6 +28,8 @@ Heuristic::Heuristic(const Options &opts)
       cost_type(OperatorCost(opts.get_enum("cost_type"))) {
           
           numeric_helper::NumericTaskProxy::redundant_constraints = opts.get<bool>("redundant_constraints");
+          
+          if (opts.get<bool>("rounding_up")) compute_multiplicator(1e-5);
 }
 
 Heuristic::~Heuristic() {
@@ -58,6 +61,25 @@ State Heuristic::convert_global_state(const GlobalState &global_state) const {
     return task_proxy.convert_global_state(global_state);
 }
 
+void Heuristic::compute_multiplicator(ap_float epsilon) {
+    for (OperatorProxy op : task_proxy.get_operators()) {
+        int m = 1;
+        ap_float cost = op.get_cost();
+        ap_float integral_part = 0;
+        ap_float fractional_part = std::modf(cost, &integral_part);
+
+        while (std::fabs(fractional_part) > epsilon) {
+            std::cout << cost << " " << fractional_part << " " << m << std::endl;
+            m *= 10;
+            cost = fractional_part * 10;
+            fractional_part = std::modf(cost, &integral_part);
+            std::cout << cost << " " << fractional_part << " " << m << std::endl;
+        }
+
+        if (m > multiplicator) multiplicator = m;
+    }
+}
+
 void Heuristic::add_options_to_parser(OptionParser &parser) {
     ::add_cost_type_option_to_parser(parser);
     // TODO: When the cost_type option is gone, use "no_transform" as default.
@@ -68,6 +90,7 @@ void Heuristic::add_options_to_parser(OptionParser &parser) {
         OptionParser::NONE);
     parser.add_option<bool>("cache_estimates", "cache heuristic estimates", "true");
     parser.add_option<bool>("redundant_constraints","add redundant_constraints", "true");
+    parser.add_option<bool>("rounding_up","rounding up the heuristic value", "false");
 }
 
 // This solution to get default values seems nonoptimal.
@@ -78,6 +101,7 @@ Options Heuristic::default_options() {
     opts.set<int>("cost_type", NORMAL);
     opts.set<bool>("cache_estimates", false);
     opts.set<bool>("redundant_constraints", false);
+    opts.set<bool>("rounding_up", false);
     return opts;
 }
 
@@ -130,6 +154,9 @@ EvaluationResult Heuristic::compute_result(EvaluationContext &eval_context) {
             assert(preferred_operators[i]->is_applicable(state));
     }
 #endif
+
+    if (multiplicator > 0)
+        heuristic = std::ceil(heuristic * multiplicator) / multiplicator;
 
     result.set_h_value(heuristic);
     result.set_preferred_operators(move(preferred_operators));
