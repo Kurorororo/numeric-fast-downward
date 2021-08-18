@@ -69,11 +69,9 @@ void Heuristic::compute_multiplicator(ap_float epsilon) {
         ap_float fractional_part = std::modf(cost, &integral_part);
 
         while (std::fabs(fractional_part) > epsilon) {
-            std::cout << cost << " " << fractional_part << " " << m << std::endl;
             m *= 10;
             cost = fractional_part * 10;
             fractional_part = std::modf(cost, &integral_part);
-            std::cout << cost << " " << fractional_part << " " << m << std::endl;
         }
 
         if (m > multiplicator) multiplicator = m;
