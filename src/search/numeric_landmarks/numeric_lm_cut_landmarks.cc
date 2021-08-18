@@ -341,6 +341,16 @@ namespace numeric_lm_cut_heuristic {
                                 simple_supporter = net > precision || net < -precision;
                             }
                             if (simple_supporter) {
+                                // no parallel linear effect
+                                for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_1.get_id()); ++j) {
+                                    if (lhs_id_2 == lhs_ids_1[j]) {
+                                        second_order_simple = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!second_order_simple) break;
+                            if (simple_supporter) {
                                 // no parallel simple effect
                                 ap_float simple_e = numeric_task.get_action_eff_list(op_1.get_id())[lhs_id_2];
                                 if (simple_e > precision || simple_e < -precision) {
