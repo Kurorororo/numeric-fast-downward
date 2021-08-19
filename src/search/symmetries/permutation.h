@@ -18,8 +18,6 @@ public:
 
     Permutation& inverse() const;
     bool identity() const;
-    bool greedy_permutation_step(std::vector<int> &values, std::vector<ap_float> &num_values,
-                                 std::vector<int> &new_values, std::vector<ap_float> &new_num_values) const;
     void permutation_on_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
                               std::vector<int> &new_values, std::vector<ap_float> &new_num_values) const;
     void set_value(int ind, int val);
@@ -30,8 +28,10 @@ public:
     static vector<int> var_by_val;
     static vector<int> dom_sum_by_var;
     static int dom_sum_num_var;
+    static vector<int> num_var_to_regular_id;
+    static vector<int> regular_id_to_num_var;
 
-    bool replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values);
+    bool replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values) const;
 
 private:
     int* value;
@@ -40,7 +40,6 @@ private:
     vector<bool> affected;
     vector<int> num_vars_affected;
     vector<bool> num_affected;
-    bool borrowed_buffer;
     // Need to keep the connection between affected vars, ie which var goes into which.
     vector<int> from_vars;
     vector<int> from_num_vars;

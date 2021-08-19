@@ -14,10 +14,11 @@ unsigned int Permutation::length;
 vector<int> Permutation::var_by_val;
 vector<int> Permutation::dom_sum_by_var;
 int Permutation::dom_sum_num_var;
+vector<int> Permutation::num_var_to_regular_id;
+vector<int> Permutation::regular_id_to_num_var;
 
 
 void Permutation::_allocate() {
-    borrowed_buffer = false;
     value = new int[length];
     inverse_value = new int[length];
     affected.assign(g_variable_domain.size(), false);
@@ -31,10 +32,8 @@ void Permutation::_allocate() {
 }
 
 void Permutation::_deallocate() {
-    if (!borrowed_buffer) {
-        delete[] value;
-        delete[] inverse_value;
-    }
+    delete[] value;
+    delete[] inverse_value;
 }
 
 void Permutation::_copy_value_from_permutation(const Permutation &perm) {
@@ -49,18 +48,14 @@ void Permutation::_inverse_value_from_permutation(const Permutation &perm) {
 
 Permutation &Permutation::operator=(const Permutation &other) {
     if (this != &other) {
-        if (borrowed_buffer) {
-            _allocate();
-        } else {
-            affected.assign(g_variable_domain.size(), false);
-            num_affected.assign(g_numeric_var_types.size(), false);
-            vars_affected.clear();
-            num_vars_affected.clear();
-            from_vars.assign(g_variable_domain.size(), -1);
-            from_num_vars.assign(g_numeric_var_types.size(), -1);
-            affected_vars_cycles.clear();
-            affected_num_vars_cycles.clear();
-        }
+        affected.assign(g_variable_domain.size(), false);
+        num_affected.assign(g_numeric_var_types.size(), false);
+        vars_affected.clear();
+        num_vars_affected.clear();
+        from_vars.assign(g_variable_domain.size(), -1);
+        from_num_vars.assign(g_numeric_var_types.size(), -1);
+        affected_vars_cycles.clear();
+        affected_num_vars_cycles.clear();
         _copy_value_from_permutation(other);
     }
     this->finalize();
@@ -231,28 +226,13 @@ bool Permutation::cmp_less_short(const std::vector<int> &l_values, const std::ve
     return false;
 }
 
-bool Permutation::greedy_permutation_step(std::vector<int> &values, std::vector<ap_float> &num_values,
-                                          std::vector<int> &new_values, std::vector<ap_float> &new_num_values) const {
-    permutation_on_state(values, num_values, new_values, new_num_values);
-
-    if (cmp_less_short(values, num_values, new_values, new_num_values)){
-        values = new_values;
-        num_values = new_num_values;
-        return true;
-    }else{
-        new_values = values;
-        new_num_values = num_values;
-        return false;
-    }
-}
-
 int Permutation::get_var_by_index(int ind) const {
     if (ind < g_variable_domain.size()) {
         cout << "=====> WARNING!!!! Check that this is done on purpose!" << endl;
         return ind;
     }
 
-    return var_by_val[ind-g_variable_domain.size()];
+    return var_by_val[ind - g_variable_domain.size()];
 }
 
 int Permutation::get_value_by_index(int ind, int var) const {
@@ -261,7 +241,7 @@ int Permutation::get_value_by_index(int ind, int var) const {
         return ind;
     }
 
-    return get_value(ind) - dom_sum_by_var[var];
+    return ind - dom_sum_by_var[var];
 }
 
 int Permutation::get_num_var_by_index(int ind) const {
@@ -270,7 +250,7 @@ int Permutation::get_num_var_by_index(int ind) const {
         return ind;
     }
 
-    return get_value(ind) - dom_sum_num_var;
+    return regular_id_to_num_var[ind - dom_sum_num_var];
 }
 
 pair<int, int> Permutation::get_new_var_val_by_old_var_val(int var, int value) const {
@@ -282,7 +262,9 @@ pair<int, int> Permutation::get_new_var_val_by_old_var_val(int var, int value) c
 }
 
 int Permutation::get_new_num_var_by_old_num_var(int num_var) const {
-    int ind = get_value(g_variable_domain.size() + dom_sum_num_var + num_var);
+    int regular_id = num_var_to_regular_id[num_var];
+    assert(regular_id != -1);
+    int ind = get_value(g_variable_domain.size() + dom_sum_num_var + regular_id);
 
     return get_num_var_by_index(ind);
 }
@@ -327,16 +309,14 @@ void Permutation::set_affected(int ind, int val) {
 //////////////////////////////////////////////////////////////////////////////////////////
 // This method compares the state to the state resulting from permuting it.
 // If the original state is bigger than the resulted one, it is rewritten with the latter and true is returned.
-bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values) {
+bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values) const {
     if (identity())
         return false;
 
-    int from_here = vars_affected.size(); // Will be set to value below vars_affected.size() if there is a need to overwrite the state,
-    // starting from that index in the vars_affected vector.
-
+    bool values_same = true;
     // Going over the affected variables, comparing the resulted values with the state values.
-    for(int i = vars_affected.size()-1; i>=0; i--) {
-        int to_var =  vars_affected[i];
+    for (int i = vars_affected.size() - 1; i >= 0; i--) {
+        int to_var = vars_affected[i];
         int from_var = from_vars[to_var];
         int from_val = values[from_var];
         pair<int, int> to_var_val = get_new_var_val_by_old_var_val(from_var, from_val);
@@ -344,15 +324,14 @@ bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float
         int to_val = to_var_val.second;
 
         // Check if the values are the same, then continue to the next aff. var.
-        if (to_val == values[to_var])
-            continue;
-
-        if (to_val < values[to_var])
-            from_here = i;
-        else
+        if (to_val < values[to_var]) {
+            values_same = false;
+            break;
+        } else if (to_val > values[to_var]) {
             return false;
+        }
     }
-    if (from_here < vars_affected.size()) {
+    if (!values_same) {
         for (int i = 0, n = affected_vars_cycles.size(); i < n; i++) {
             if (affected_vars_cycles[i].size() == 1) {
                 int var = affected_vars_cycles[i][0];
@@ -379,20 +358,35 @@ bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float
             pair<int, int> to_var_val = get_new_var_val_by_old_var_val(last_var, last_val);
             values[affected_vars_cycles[i][0]] = to_var_val.second;
         }
-    }
+    } 
 
-    for (int i = 0, n = affected_num_vars_cycles.size(); i < n; i++) {
-        int last_var = affected_num_vars_cycles[i][affected_num_vars_cycles[i].size() - 1];
-        int last_val = num_values[last_var];
+    bool num_values_same = true;
+    for (int i = num_vars_affected.size() - 1; i >= 0; i--) {
+        int to_var = num_vars_affected[i];
+        int from_var = from_num_vars[to_var];
 
-        for (int j = affected_num_vars_cycles[i].size() - 1; j > 0; j--) {
-            int to_num_var = affected_num_vars_cycles[i][j];
-            int from_num_var = affected_num_vars_cycles[i][j - 1];
-            num_values[to_num_var] = num_values[to_num_var];
+        // Check if the values are the same, then continue to the next aff. var.
+        if (values_same && value[from_var] > values[to_var]) {
+            return false;
+        } else if (values[from_var] != values[to_var]) {
+            num_values_same = false;
+            break;
         }
+    }
+    if (!num_values_same) {
+        for (int i = 0, n = affected_num_vars_cycles.size(); i < n; i++) {
+            int last_var = affected_num_vars_cycles[i][affected_num_vars_cycles[i].size() - 1];
+            int last_val = num_values[last_var];
 
-        num_values[affected_num_vars_cycles[i][0]] = last_val;
+            for (int j = affected_num_vars_cycles[i].size() - 1; j > 0; j--) {
+                int to_num_var = affected_num_vars_cycles[i][j];
+                int from_num_var = affected_num_vars_cycles[i][j - 1];
+                num_values[to_num_var] = num_values[to_num_var];
+            }
+
+            num_values[affected_num_vars_cycles[i][0]] = last_val;
+        }
     }
 
-    return true;
+    return !values_same || !num_values_same;
 }

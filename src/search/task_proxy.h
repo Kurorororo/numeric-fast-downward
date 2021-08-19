@@ -768,6 +768,15 @@ public:
         other.task = nullptr;
     }
 
+    State(const State &state, std::vector<int> &&values, std::vector<ap_float> &&num_vals)
+        : task(state.task), values(std::move(values)), num_values(std::move(num_vals)) {
+            //std::cout << "state " << size() << " " << this->task->get_num_variables() << std::endl;
+        assert(static_cast<int>(size()) == this->task->get_num_variables());
+       if (DEBUG)
+            std::cout << "num_values.size = " << num_values.size() << " task.get_num_numeric_vars = " << this->task->get_num_numeric_variables() << std::endl;
+        assert(static_cast<int>(num_values.size()) == this->task->get_num_numeric_variables());
+    }
+
     State &operator=(const State &&other) {
         if (this != &other) {
             values = std::move(other.values);

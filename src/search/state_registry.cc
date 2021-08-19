@@ -221,6 +221,83 @@ GlobalState StateRegistry::get_successor_state(const GlobalState &predecessor, c
     return successor;
 }
 
+GlobalState StateRegistry::register_state(const std::vector<container_int> &state, std::vector<ap_float> &numeric_state) {
+    PackedStateBin *buffer = new PackedStateBin[g_state_packer->get_num_bins()];
+    // Avoid garbage values in half-full bins.
+    fill_n(buffer, g_state_packer->get_num_bins(), 0);
+    for (size_t i = 0; i < state.size(); ++i) {
+        g_state_packer->set(buffer, i, state[i]);
+    }
+    int regular_index = state.size(); // regular numeric variables are stored after logic variables
+    int constant_index = 0;
+    int derived_index = 0;
+//    int instrumentation_index = 0;
+    vector<ap_float> instrumentation_variables = vector<ap_float>();
+    assert(instrumentation_variables.empty());
+    for (size_t i = 0; i < numeric_state.size(); ++i) {
+    	switch (g_numeric_var_types[i]) {
+    	case instrumentation:
+    		// instrumentation variables are stored in a PerStateInformation attachment
+    		assert(numeric_indices[i] == -1);
+    		numeric_indices[i] = instrumentation_variables.size();
+    		instrumentation_variables.push_back(numeric_state[i]);
+    		break;
+    	case constant:
+    		// constants are stored only once
+    		assert(numeric_indices[i] == -1);
+    		break;
+    	case unknown:
+    		assert(false);
+    		break;
+    	case derived:
+    		++derived_index;
+    		// skipping derived variables, they are evaluated on the fly when needed
+    		break;
+    	case regular:
+    		// only regular variables are stored within the state buffer
+    		assert(numeric_indices[i] == -1);
+    		numeric_indices[i] = regular_index;
+    		g_state_packer->set(buffer, regular_index++, g_state_packer->packDouble(numeric_state[i]));
+    		break;
+    	default:
+    		assert(false);
+    		break;
+    	}
+    }
+    g_axiom_evaluator->evaluate_arithmetic_axioms(numeric_state);
+    g_axiom_evaluator->evaluate(buffer, numeric_state); // evaluate logic axioms
+    state_data_pool.push_back(buffer);
+    // buffer is copied by push_back
+    delete[] buffer;
+    StateID id = insert_id_or_pop_state();
+    GlobalState new_state = lookup_state(id);
+
+    if (id.value == (int) state_data_pool.size()-1) {
+//    	if(DEBUG) cout << "New State!!!!" << endl;
+    	g_cost_information[new_state] = instrumentation_variables;
+    } else {
+    	vector<ap_float> old_metric = g_cost_information[new_state];
+    	ap_float old_val = evaluate_metric(get_numeric_vars(new_state));
+    	ap_float new_val = evaluate_metric(numeric_state);
+//    	if (DEBUG) cout << "Metric of old state = " << old_val << " new = " << new_val << endl;
+    	if (g_metric_minimizes && old_val < new_val) {
+    		g_cost_information[new_state] = old_metric;
+//    			cout << "metric minimizes, so the old metric value retains : " << evaluate_metric(successor);
+    	} else {
+    		g_cost_information[new_state] = instrumentation_variables;
+//    		cout << "metric maximizes or oldval > newval" << endl;
+    	}
+
+    	if (!g_metric_minimizes && old_val > new_val) {
+    		g_cost_information[new_state] = old_metric;
+//    		cout << "metric maximizes, so the old metric value retains : " << evaluate_metric(successor);
+    	} else {
+    		g_cost_information[new_state] = instrumentation_variables;
+    		//    	else cout << "metric minimizes or oldval < newval" << endl;
+    	}
+		}
+}
+
 void StateRegistry::subscribe(PerStateInformationBase *psi) const {
     subscribers.insert(psi);
 }
