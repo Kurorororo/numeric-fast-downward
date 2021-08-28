@@ -371,8 +371,8 @@ namespace numeric_lm_cut_heuristic {
                 }
             }
             if (!second_order_simple) {
-                double plus_constant = use_constant_threshold && constant > precision ? 0 : constant;
-                double minus_constant = use_constant_threshold && constant < -precision ? 0 : -constant;
+                double plus_constant = use_constant_threshold ? 0 : constant;
+                double minus_constant = use_constant_threshold ? 0 : -constant;
                 std::vector<ap_float> coefficient_plus(coeff);
                 LinearNumericCondition lnc_plus(coefficient_plus, plus_constant);
                 lnc_plus.is_strictly_greater = true;
@@ -388,25 +388,8 @@ namespace numeric_lm_cut_heuristic {
                 add_infinite_operator(extended_precondition, std::move(lnc_minus), lhs_id_2, false, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
 
-                if (use_constant_threshold) {
-                    if (constant > precision) {
-                        std::vector<LinearNumericCondition> lncs;
-                        LinearNumericCondition lnc(coefficient_plus, constant);
-                        lnc.is_strictly_greater = true;
-                        lncs.push_back(lnc);
-                        lncs.emplace_back(LinearNumericCondition(coefficient_minus, 0));
-                        add_constant_operator(extended_precondition, lncs, lhs_id_2, constant, op_2.get_id(), op_2.get_cost(), name);
-                        ++n_constant_operators;
-                    } else if (constant < -precision) {
-                        std::vector<LinearNumericCondition> lncs;
-                        lncs.emplace_back(LinearNumericCondition(coefficient_plus, 0));
-                        LinearNumericCondition lnc(coefficient_minus, -constant);
-                        lnc.is_strictly_greater = true;
-                        lncs.push_back(lnc);
-                        add_constant_operator(extended_precondition, lncs, lhs_id_2, constant, op_2.get_id(), op_2.get_cost(), name);
-                        ++n_constant_operators;
-                    }
-                }
+                if (use_constant_threshold && (constant > precision || constant < -precision))
+                    add_constant_operator(std::move(extended_precondition), lhs_id_2, constant, op_2.get_id(), op_2.get_cost(), name);
             }
         }
 
@@ -511,64 +494,12 @@ namespace numeric_lm_cut_heuristic {
         relaxed_operators.push_back(relaxed_op);
     }
 
-    void LandmarkCutLandmarks::add_constant_operator(const std::vector<RelaxedProposition *> &precondition,
-                                                     const vector<LinearNumericCondition> &lncs, int lhs, double constant,
-                                                     int op_id, ap_float base_cost, string &n) {
-        std::vector<RelaxedProposition *> new_precondition(precondition);
-        if (numeric_task.redundant_constraints) {
-            for (RelaxedProposition *pre : precondition) {
-                if (pre->is_numeric_condition) {
-                    for (auto lnc : lncs) {
-                        int red_id = conditions.size();
-                        LinearNumericCondition red = conditions[pre->id_numeric_condition] + lnc;
-                        int red_var_id = propositions.size();
-                        RelaxedProposition red_prop;
-                        red_prop.is_numeric_condition = true;
-                        red_prop.id_numeric_condition = conditions.size();
-                        stringstream red_name;
-                        red_name << "numeric (" << red << ")";
-                        red_prop.name = red_name.str();
-                        propositions.push_back(std::vector<RelaxedProposition>());
-                        propositions[red_var_id].push_back(red_prop);
-                        new_precondition.push_back(get_proposition(red_id));
-                        ++num_propositions;
-                        conditions.push_back(std::move(red));
-
-                        if (lnc.is_strictly_greater)
-                            epsilons.push_back(epsilon);
-                        else
-                            epsilons.push_back(epsilons[pre->id_numeric_condition]);
-                    }
-                }
-            }
-        }
-
-        for (auto lnc : lncs) {
-            int prop_id = conditions.size();
-            int var_id = propositions.size();
-            RelaxedProposition new_prop;
-            new_prop.is_numeric_condition = true;
-            new_prop.id_numeric_condition = prop_id;
-            stringstream prop_name;
-            prop_name << "numeric (" << lnc << ")";
-            new_prop.name = prop_name.str();
-            propositions.push_back(std::vector<RelaxedProposition>());
-            propositions[var_id].push_back(new_prop);
-            ++num_propositions;
-
-            if (lnc.is_strictly_greater)
-                epsilons.push_back(epsilon);
-            else
-                epsilons.push_back(0.0);
-
-            conditions.push_back(lnc);
-            new_precondition.push_back(get_proposition(prop_id));
-        }
-
+    void LandmarkCutLandmarks::add_constant_operator(std::vector<RelaxedProposition *> &&precondition,
+                                                     int lhs, double constant, int op_id, ap_float base_cost, string &n) {
         int relaxed_op_id = relaxed_operators.size();
         string relaxed_op_name = n + " " + std::to_string(lhs);
         relaxed_op_name += " " + std::to_string(constant);
-        RelaxedOperator relaxed_op(relaxed_op_id, move(new_precondition), lhs, constant, op_id, base_cost, relaxed_op_name);
+        RelaxedOperator relaxed_op(relaxed_op_id, move(precondition), lhs, constant, op_id, base_cost, relaxed_op_name);
         relaxed_operators.push_back(relaxed_op);
     }
 

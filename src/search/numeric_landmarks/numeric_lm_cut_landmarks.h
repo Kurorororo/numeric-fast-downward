@@ -159,8 +159,7 @@ namespace numeric_lm_cut_heuristic {
                                     ap_float constant, int infinite_lhs, int op_id, ap_float base_cost, string &n);
         void add_infinite_operator(const std::vector<RelaxedProposition *> &precondiiton, numeric_helper::LinearNumericCondition &&lnc,
                                    int lhs, bool plus_infinity, int op_id, ap_float base_cost, string &n);
-        void add_constant_operator(const std::vector<RelaxedProposition *> &precondiiton,
-                                   const std::vector<numeric_helper::LinearNumericCondition> &lncs,
+        void add_constant_operator(std::vector<RelaxedProposition *> &&precondiiton,
                                    int lhs, double constant, int op_id, ap_float base_cost, string &n);
         void build_numeric_effects();
         RelaxedProposition *get_proposition(const FactProxy &fact);
