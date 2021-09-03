@@ -9,8 +9,6 @@
 
 enum SymmetryBasedSearchType {
     NO_SYMMETRIES,
-    INIT_AND_GOAL_STABILIZED_REGULAR_SEARCH,
-    GOAL_ONLY_STABILIZED_REGULAR_SEARCH,
     GOAL_ONLY_STABILIZED_ORBIT_SEARCH,
     GOAL_ONLY_STABILIZED_NO_SEARCH
 };
@@ -25,13 +23,9 @@ enum color_t {PREDICATE_VERTEX, VALUE_VERTEX, NUM_VAR_VERTEX, GOAL_VERTEX, GTE_V
 
 class GraphCreator  {
     SymmetryBasedSearchType search_type;
-    bool add_generators_powers;
 
     bool no_search;
     bool initialized;
-
-    int time_bound;
-    int generators_bound;
     ap_float precision;
 
 public:
@@ -39,7 +33,7 @@ public:
     GraphCreator(const Options &opts);
     virtual ~GraphCreator();
 
-    void initialize(const TaskProxy &task_proxy);
+    void initialize(const std::shared_ptr<AbstractTask> task);
 
     void get_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
                              std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const {
@@ -56,7 +50,7 @@ private:
     Group group;
 
     int get_multiplicator(ap_float value) const;
-    bliss::Graph* create_bliss_directed_graph(const TaskProxy &task_proxy) const;
+    bliss::Digraph* create_bliss_directed_graph(const std::shared_ptr<AbstractTask> task) const;
 };
 
 #endif

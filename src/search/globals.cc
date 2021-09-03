@@ -843,3 +843,6 @@ cal_operator get_inverse_op(cal_operator cop) {
 	assert(false);
 	return sum;
 }
+
+// Globals for symmetries
+GraphCreator* g_symmetry_graph;

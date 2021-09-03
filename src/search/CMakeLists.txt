@@ -23,6 +23,10 @@ add_executable(downward ${PLANNER_SOURCES})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ext)
 
+if (PLUGIN_SYMMETRIES_ENABLED)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bliss-0.73)
+endif()
+
 ## == Libraries ==
 
 # On Linux, find the rt library for clock_gettime().
@@ -33,6 +37,10 @@ endif()
 # On Windows, find the psapi library for determining peak memory.
 if(WIN32)
     target_link_libraries(downward psapi)
+endif()
+
+if (PLUGIN_SYMMETRIES_ENABLED)
+    target_link_libraries(downward ${CMAKE_CURRENT_SOURCE_DIR}/bliss-0.73/libbliss.a)
 endif()
 
 # If any enabled plugin requires an LP solver, compile with all

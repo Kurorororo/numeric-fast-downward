@@ -10,9 +10,11 @@
 using namespace std;
 #include <sstream>
 
-unsigned int Permutation::length;
+int Permutation::length;
 vector<int> Permutation::var_by_val;
-vector<int> Permutation::dom_sum_by_var;
+vector<int> Permutation::dom_sum_by_regular_id;
+vector<int> Permutation::var_to_regular_id;
+vector<int> Permutation::regular_id_to_var;
 int Permutation::dom_sum_num_var;
 vector<int> Permutation::num_var_to_regular_id;
 vector<int> Permutation::regular_id_to_num_var;
@@ -21,12 +23,12 @@ vector<int> Permutation::regular_id_to_num_var;
 void Permutation::_allocate() {
     value = new int[length];
     inverse_value = new int[length];
-    affected.assign(g_variable_domain.size(), false);
-    num_affected.assign(g_variable_domain.size(), false);
+    affected.assign(regular_id_to_var.size(), false);
+    num_affected.assign(regular_id_to_num_var.size(), false);
     vars_affected.clear();
     num_vars_affected.clear();
-    from_vars.assign(g_variable_domain.size(), -1);
-    from_num_vars.assign(g_numeric_var_types.size(), -1);
+    from_vars.assign(var_to_regular_id.size(), -1);
+    from_num_vars.assign(num_var_to_regular_id.size(), -1);
     affected_vars_cycles.clear();
     affected_num_vars_cycles.clear();
 }
@@ -48,12 +50,12 @@ void Permutation::_inverse_value_from_permutation(const Permutation &perm) {
 
 Permutation &Permutation::operator=(const Permutation &other) {
     if (this != &other) {
-        affected.assign(g_variable_domain.size(), false);
-        num_affected.assign(g_numeric_var_types.size(), false);
+        affected.assign(regular_id_to_var.size(), false);
+        num_affected.assign(regular_id_to_num_var.size(), false);
         vars_affected.clear();
         num_vars_affected.clear();
-        from_vars.assign(g_variable_domain.size(), -1);
-        from_num_vars.assign(g_numeric_var_types.size(), -1);
+        from_vars.assign(regular_id_to_var.size(), -1);
+        from_num_vars.assign(regular_id_to_num_var.size(), -1);
         affected_vars_cycles.clear();
         affected_num_vars_cycles.clear();
         _copy_value_from_permutation(other);
@@ -118,7 +120,7 @@ void Permutation::finalize(){
     // Going over the vector from_vars of the mappings of the variables and finding cycles
 //	affected_vars_cycles.clear();
     vector<bool> marked;
-    marked.assign(g_variable_domain.size(), false);
+    marked.assign(regular_id_to_var.size(), false);
     for (int i = 0, n = from_vars.size(); i < n; i++) {
         if (marked[i] || from_vars[i] == -1)
             continue;
@@ -157,17 +159,6 @@ void Permutation::finalize(){
         }
         affected_num_vars_cycles.push_back(cycle);
     }
-}
-
-
-// Deprecated
-Permutation& Permutation::inverse() const{
-    Permutation *perm = new Permutation();
-    for(int i=0; i < length; i++){
-        perm->set_value(get_value(i), i);
-    }
-    perm->finalize();
-    return *perm;
 }
 
 bool Permutation::identity() const{
@@ -226,25 +217,27 @@ bool Permutation::cmp_less_short(const std::vector<int> &l_values, const std::ve
     return false;
 }
 
-int Permutation::get_var_by_index(int ind) const {
-    if (ind < g_variable_domain.size()) {
+int Permutation::get_var_by_index(int ind) {
+    if (ind < static_cast<int>(regular_id_to_var.size())) {
         cout << "=====> WARNING!!!! Check that this is done on purpose!" << endl;
         return ind;
     }
 
-    return var_by_val[ind - g_variable_domain.size()];
+    return var_by_val[ind - regular_id_to_var.size()];
 }
 
-int Permutation::get_value_by_index(int ind, int var) const {
-    if (ind < g_variable_domain.size() || ind >= dom_sum_num_var) {
+int Permutation::get_value_by_index(int ind, int var) {
+    if (ind < static_cast<int>(regular_id_to_var.size()) || ind >= dom_sum_num_var) {
         cout << "=====> WARNING!!!! Check that this is done on purpose!" << endl;
         return ind;
     }
 
-    return ind - dom_sum_by_var[var];
+    int regular_id = var_to_regular_id[var];
+
+    return ind - dom_sum_by_regular_id[regular_id];
 }
 
-int Permutation::get_num_var_by_index(int ind) const {
+int Permutation::get_num_var_by_index(int ind) {
     if (ind < dom_sum_num_var) {
         cout << "=====> WARNING!!!! Check that this is done on purpose!" << endl;
         return ind;
@@ -253,18 +246,39 @@ int Permutation::get_num_var_by_index(int ind) const {
     return regular_id_to_num_var[ind - dom_sum_num_var];
 }
 
-pair<int, int> Permutation::get_new_var_val_by_old_var_val(int var, int value) const {
-    int ind = get_value(g_variable_domain.size() + dom_sum_by_var[var] + value);
-    int var = get_var_by_index(ind);
-    int value = get_value_by_index(ind, var);
+int Permutation::get_index_by_var(int var) {
+    return var_to_regular_id[var];
+}
 
-    return make_pair(var, value);
+int Permutation::get_index_by_var_val(int var, int val) {
+    int regular_id = var_to_regular_id[var];
+
+    return dom_sum_by_regular_id[regular_id] + val;
+}
+
+int Permutation::get_index_by_num_var(int num_var) {
+    int regular_id = num_var_to_regular_id[num_var];
+
+    return dom_sum_num_var + regular_id;
+}
+
+int Permutation::get_index_by_num_regular_id(int regular_id) {
+    return dom_sum_num_var + regular_id;
+}
+
+pair<int, int> Permutation::get_new_var_val_by_old_var_val(int var, int value) const {
+    int regular_id = var_to_regular_id[var];
+    int ind = get_value(dom_sum_by_regular_id[regular_id] + value);
+    int new_var = get_var_by_index(ind);
+    int new_value = get_value_by_index(ind, new_var);
+
+    return make_pair(new_var, new_value);
 }
 
 int Permutation::get_new_num_var_by_old_num_var(int num_var) const {
     int regular_id = num_var_to_regular_id[num_var];
     assert(regular_id != -1);
-    int ind = get_value(g_variable_domain.size() + dom_sum_num_var + regular_id);
+    int ind = get_value(dom_sum_num_var + regular_id);
 
     return get_num_var_by_index(ind);
 }
@@ -276,7 +290,7 @@ void Permutation::set_value(int ind, int val) {
 }
 
 void Permutation::set_affected(int ind, int val) {
-    if (ind < g_variable_domain.size() || ind == val)
+    if (ind < static_cast<int>(regular_id_to_var.size()) || ind == val)
         return;
 
     if (ind < dom_sum_num_var) {
@@ -291,7 +305,7 @@ void Permutation::set_affected(int ind, int val) {
             affected[to_var] = true;
         }
         from_vars[to_var] = var;
-    } else if (ind < dom_sum_num_var + g_numeric_var_types.size()) {
+    } else if (ind < dom_sum_num_var + static_cast<int>(regular_id_to_num_var.size())) {
         int num_var = get_num_var_by_index(ind);
         int to_num_var = get_num_var_by_index(val);
         if (!num_affected[num_var]) {
@@ -381,7 +395,7 @@ bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float
             for (int j = affected_num_vars_cycles[i].size() - 1; j > 0; j--) {
                 int to_num_var = affected_num_vars_cycles[i][j];
                 int from_num_var = affected_num_vars_cycles[i][j - 1];
-                num_values[to_num_var] = num_values[to_num_var];
+                num_values[to_num_var] = num_values[from_num_var];
             }
 
             num_values[affected_num_vars_cycles[i][0]] = last_val;
@@ -389,4 +403,57 @@ bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float
     }
 
     return !values_same || !num_values_same;
+}
+
+void Permutation::print_cycle_notation() const {
+    vector<int> done;
+    int id_min = static_cast<int>(regular_id_to_var.size());
+    for (int i = id_min; i < dom_sum_num_var; i++) {
+        if (find(done.begin(), done.end(), i) == done.end()) { 
+            int current = i;
+            if(get_value(i) == i) continue; //don't print cycles of size 1
+
+            int var = get_var_by_index(i);
+            int value = get_value_by_index(i, var);
+//	        cout<<"("<< varval.first << "=" << (int) varval.second <<" ";
+            cout<<"("<< g_fact_names[var][value]  <<" ";
+
+//	        cout<<"("<<i<<" ";
+
+            while(get_value(current) != i){
+                done.push_back(current);
+                current = get_value(current);
+
+                int currvar = get_var_by_index(current);
+                int currvalue = get_value_by_index(current, currvar);
+                cout<< g_fact_names[currvar][currvalue] <<" ";
+//	            cout<< currvarval.first << "=" << (int) currvarval.second <<" ";
+//	            cout<<current<<" ";
+
+            }
+            done.push_back(current);
+            cout<<") ";
+        }
+    }
+    int id_max = dom_sum_num_var + static_cast<int>(regular_id_to_num_var.size());
+    for (int i = dom_sum_num_var; i < id_max; i++) {
+        if (find(done.begin(), done.end(), i) == done.end()) {
+            int current = i;
+            if(get_value(i) == i) continue; //don't print cycles of size 1
+
+            int num_var = get_num_var_by_index(i);
+            cout<<"("<< g_numeric_var_names[num_var] <<" ";
+
+            while(get_value(current) != i){
+                done.push_back(current);
+                current = get_value(current);
+
+                int currnum_var = get_num_var_by_index(current);
+                cout<< g_numeric_var_names[currnum_var] <<" ";
+            }
+            done.push_back(current);
+            cout<<") ";
+        }
+    }
+    std::cout << std::endl;
 }

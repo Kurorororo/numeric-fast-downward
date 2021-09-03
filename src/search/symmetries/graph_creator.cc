@@ -1,5 +1,6 @@
 #include "graph_creator.h"
 
+#include <iostream>
 #include <vector>
 
 #include "../utils/timer.h"
@@ -9,44 +10,36 @@
 using namespace std;
 using namespace numeric_helper;
 
-GraphCreator::GraphCreator(const Options &opts) : group(opts), precision(opts.get<ap_float>("precision")) {
-	initialized = false;
-    search_type = SymmetryBasedSearchType(opts.get_enum("symmetries"));
-
-
-    no_search = opts.get<bool>("no_search");
-
-    time_bound = opts.get<int>("time_bound");
-
-    generators_bound =  opts.get<int>("generators_bound");
+GraphCreator::GraphCreator(const Options &opts)
+    : search_type(SymmetryBasedSearchType(opts.get_enum("symmetries"))),
+      no_search(opts.get<bool>("no_search")),
+      initialized(false),
+      precision(opts.get<ap_float>("precision")) {
 }
 
 
-void GraphCreator::initialize(const TaskProxy &task_proxy) {
-	if (initialized)
-		return;
+void GraphCreator::initialize(const std::shared_ptr<AbstractTask> task) {
+    if (initialized)
+        return;
 
-	initialized = true;
+    initialized = true;
     cout << "Initializing symmetry " << endl;
-	group.initialize();
+    group.initialize();
 
-    bliss::Graph* graph = create_bliss_directed_graph(task_proxy);
+    bliss::Digraph* graph = create_bliss_directed_graph(task);
 
-    graph->set_splitting_heuristic(bliss::Graph::shs_flm);
-    // Added in version 0.5. Needs to be removed in version 0.72
-    graph->set_time_bound(time_bound);
-    graph->set_generators_bound(generators_bound);
+    graph->set_splitting_heuristic(bliss::Digraph::shs_flm);
 
     bliss::Stats stats1;
     cout << "Using Bliss to find group generators" << endl;
     graph->canonical_form(stats1,&(Group::add_permutation),&group);
-	cout << "Got " << group.get_num_generators() << " group generators, time step: [t=" << utils::g_timer << "]" << endl;
+    cout << "Got " << group.get_num_generators() << " group generators, time step: [t=" << utils::g_timer << "]" << endl;
 
     group.default_direct_product();
-	cout<<"Number of generators: "<< group.get_num_generators()<<endl;
+    cout<<"Number of generators: "<< group.get_num_generators()<<endl;
 
     if (no_search)
-    	exit(0);
+        exit(0);
 
     // Deleting the graph
     delete graph;
@@ -57,9 +50,9 @@ void GraphCreator::initialize(const TaskProxy &task_proxy) {
 
 
 GraphCreator::~GraphCreator() {
-	// Freeing the group
-	free_memory();
-	// Nothing to delete here
+    // Freeing the group
+    free_memory();
+    // Nothing to delete here
 }
 
 int GraphCreator::get_multiplicator(ap_float value) const {
@@ -75,18 +68,33 @@ int GraphCreator::get_multiplicator(ap_float value) const {
     return m;
 }
 
-bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_proxy) const {
+bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<AbstractTask> task) const {
    // initialization
 
+    TaskProxy task_proxy(*task);
     NumericTaskProxy numeric_task(task_proxy, false, true);
 
+    std::cout << "Computing number of vertices" << std::endl;
     VariablesProxy variables = task_proxy.get_variables();
-    int num_of_vertex = variables.size();
+    int num_of_vertex = 0;
     for (auto var : variables) {
-    	Permutation::dom_sum_by_var.push_back(num_of_vertex);
-        num_of_vertex += var.get_domain_size();
-        for (int num_of_value = 0; num_of_value < var.get_domain_size(); ++num_of_value) {
-            Permutation::var_by_val.push_back(var.get_id());
+        if (numeric_task.is_numeric_axiom(var.get_id())) {
+            std::cout << "numeric axiom " << var.get_name() << std::endl;
+            Permutation::var_to_regular_id.push_back(-1);
+        } else {
+            std::cout << "not numeric axiom " << var.get_name() << std::endl;
+            Permutation::var_to_regular_id.push_back(num_of_vertex);
+            Permutation::regular_id_to_var.push_back(var.get_id());
+            ++num_of_vertex;
+        }
+    }
+    for (auto var : variables) {
+        if (!numeric_task.is_numeric_axiom(var.get_id())) {
+            Permutation::dom_sum_by_regular_id.push_back(num_of_vertex);
+            num_of_vertex += var.get_domain_size();
+            for (int num_of_value = 0; num_of_value < var.get_domain_size(); ++num_of_value) {
+                Permutation::var_by_val.push_back(var.get_id());
+            }
         }
     }
     Permutation::dom_sum_num_var = num_of_vertex;
@@ -95,24 +103,30 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
         if (num_var.get_var_type() == regular) {
             Permutation::num_var_to_regular_id.push_back(num_of_vertex - Permutation::dom_sum_num_var);
             Permutation::regular_id_to_num_var.push_back(num_var.get_id());
-            num_of_vertex += 1;
+            ++num_of_vertex;
         } else {
             Permutation::num_var_to_regular_id.push_back(-1);
         }
     }
     Permutation::length = num_of_vertex;
 
-	bliss::Graph* g = new bliss::Graph();
+    std::cout << "Building a PDG" << std::endl;
+    bliss::Digraph* g = new bliss::Digraph();
     int idx = 0;
     // add vertex for each varaible
-    for (auto var : variables)
-       idx = g->add_vertex(PREDICATE_VERTEX);
+    for (auto var : variables) {
+        if (!numeric_task.is_numeric_axiom(var.get_id())) {
+            idx = g->add_vertex(PREDICATE_VERTEX);
+        }
+    }
     // now add values vertices for each predicate
     for (auto var : variables){
-       for (int j = 0; j < var.get_domain_size(); j++){
-          idx = g->add_vertex(VALUE_VERTEX);
-          g->add_edge(idx, var.get_id());
-       }
+        if (!numeric_task.is_numeric_axiom(var.get_id())) {
+            for (int j = 0; j < var.get_domain_size(); j++){
+               idx = g->add_vertex(VALUE_VERTEX);
+               g->add_edge(idx, Permutation::get_index_by_var(var.get_id()));
+            }
+        }
     }
     // add vertex for each numeric variable
     for (auto num_var : num_variables) {
@@ -196,13 +210,13 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
             if (!numeric_task.is_numeric_axiom(pre.get_variable().get_id())) {
                 int var = pre.get_variable().get_id();
                 int pre_val = pre.get_value();
-                int pre_idx = Permutation::dom_sum_by_var[var] + pre_val;
+                int pre_idx = Permutation::get_index_by_var_val(var, pre_val);
                 g->add_edge(pre_idx, op_idx);
             }
         }
         for (auto eff : op.get_effects()) {
             FactProxy eff_fact = eff.get_fact();
-            int eff_idx = Permutation::dom_sum_by_var[eff_fact.get_variable().get_id()] + eff_fact.get_value();
+            int eff_idx = Permutation::get_index_by_var_val(eff_fact.get_variable().get_id(), eff_fact.get_value());
             g->add_edge(op_idx, eff_idx);
         }
 
@@ -221,7 +235,7 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
                         int coeff_color = base_constant_color + multiplied_coeff;
                         int coeff_idx = g->add_vertex(coeff_color);
                         g->add_edge(coeff_idx, lnc_idx);
-                        g->add_edge(Permutation::dom_sum_num_var + j, coeff_idx);
+                        g->add_edge(Permutation::get_index_by_num_regular_id(j), coeff_idx);
                     }
                 }
             }
@@ -235,7 +249,7 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
                 int k_idx = g->add_vertex(k_color);
                 int eff_idx = g->add_vertex(NUM_EFF_VERTEX);
                 g->add_edge(k_idx, eff_idx);
-                g->add_edge(eff_idx, Permutation::dom_sum_num_var + i);
+                g->add_edge(eff_idx, Permutation::get_index_by_num_regular_id(i));
                 g->add_edge(op_idx, eff_idx);
             }
         }
@@ -243,7 +257,7 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
         for (int i = 0; i < numeric_task.get_action_n_linear_eff(op.get_id()); ++i) {
             int eff_idx = g->add_vertex(NUM_EFF_VERTEX);
             int lhs = numeric_task.get_action_linear_lhs(op.get_id())[i];
-            g->add_edge(eff_idx, Permutation::dom_sum_num_var + lhs);
+            g->add_edge(eff_idx, Permutation::get_index_by_num_regular_id(lhs));
             g->add_edge(op_idx, eff_idx);
 
             ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
@@ -260,7 +274,7 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
                 if (multiplied_coeff > 0) {
                     int coeff_color = base_constant_color + multiplied_coeff;
                     int coeff_idx = g->add_vertex(coeff_color);
-                    int var_idx = Permutation::dom_sum_num_var + j;
+                    int var_idx = Permutation::get_index_by_num_regular_id(j);
                     g->add_edge(coeff_idx, var_idx);
                     g->add_edge(var_idx, eff_idx);
                 }
@@ -272,8 +286,10 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
     int goal_idx = g->add_vertex(GOAL_VERTEX);
     for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
         for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
-            int val_idx = Permutation::dom_sum_by_var[var_value.first] + var_value.second;
-            g->add_edge(goal_idx, val_idx);
+            if (!numeric_task.is_numeric_axiom(var_value.first)) {
+                int val_idx = Permutation::get_index_by_var_val(var_value.first, var_value.second);
+                g->add_edge(goal_idx, val_idx);
+            }
         }
         for (int id_n_con : numeric_task.get_numeric_goals(id_goal)) {
             LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
@@ -289,7 +305,7 @@ bliss::Graph* GraphCreator::create_bliss_directed_graph(const TaskProxy &task_pr
                     int coeff_color = base_constant_color + multiplied_coeff;
                     int coeff_idx = g->add_vertex(coeff_color);
                     g->add_edge(coeff_idx, lnc_idx);
-                    g->add_edge(Permutation::dom_sum_num_var + j, coeff_idx);
+                    g->add_edge(Permutation::get_index_by_num_regular_id(j), coeff_idx);
                 }
             }
         }
@@ -302,8 +318,6 @@ void GraphCreator::add_options_to_parser(OptionParser &parser) {
 
     vector<string> sym_types;
     sym_types.push_back("none");
-    sym_types.push_back("init_and_goal_reg");
-    sym_types.push_back("goal_only_reg");
     sym_types.push_back("goal_only_orbit");
     sym_types.push_back("goal_only_no");
     parser.add_enum_option("symmetries", sym_types, "use symmetries", "none");
@@ -311,14 +325,6 @@ void GraphCreator::add_options_to_parser(OptionParser &parser) {
     parser.add_option<bool>("no_search",
                            "No search is performed, exiting after creating the symmetries",
                             "false");
-
-    parser.add_option<int>("time_bound", "Stopping after the Bliss software reached the time bound", "0");
-
-    parser.add_option<int>("generators_bound",
-                           "Stopping after the Bliss software reached the bound on the number of generators",
-                           "0");
-
-    parser.add_option<bool>("prune_operators", "Set pruning of symmetric operators", "false");
 
     parser.add_option<ap_float>("precision", "Threshold below which is considered as zero", "0.00001");
 }
@@ -334,66 +340,35 @@ static GraphCreator *_parse(OptionParser &parser) {
 
     SymmetryBasedSearchType type = SymmetryBasedSearchType(opts.get_enum("symmetries"));
     if (type == NO_SYMMETRIES) {
-#ifdef CANONICAL
-   		cout << "No symmetry type is defined, and yet additional buffer is allocated per state. If you do not wish to use symmetries, please recompile with CANONICAL=0" << endl;
-   		exit(1);
-#endif
-    	return 0;
+        return 0;
     }
     /*
     if (type == INIT_AND_GOAL_STABILIZED_REGULAR_SEARCH) {
-    	// To enable this, just use stabilizing initial state in PDG.
-    	cout << "Init and goal stabilized symmetry pruning (Pochter et. al.) is disabled in this version" << endl;
-    	exit(1);
+        // To enable this, just use stabilizing initial state in PDG.
+        cout << "Init and goal stabilized symmetry pruning (Pochter et. al.) is disabled in this version" << endl;
+        exit(1);
     }
     */
     if (!parser.dry_run()) {
 
-    if (type == GOAL_ONLY_STABILIZED_REGULAR_SEARCH || type == GOAL_ONLY_STABILIZED_ORBIT_SEARCH || type == GOAL_ONLY_STABILIZED_NO_SEARCH
-    		|| type == INIT_AND_GOAL_STABILIZED_REGULAR_SEARCH) {
-        if (type == GOAL_ONLY_STABILIZED_ORBIT_SEARCH) {
-#ifdef CANONICAL
-        	cout << "Orbit search symmetry is defined, and yet additional buffer is allocated per state. If you wish to use orbit search, please recompile with CANONICAL=0" << endl;
-        	exit(1);
-#endif
-        }
-        if (type == GOAL_ONLY_STABILIZED_NO_SEARCH) {
-#ifdef CANONICAL
-        	cout << "No states pruning is performed, and yet additional buffer is allocated per state. If you wish to use symmetries for operators pruning only, please recompile with CANONICAL=0" << endl;
-        	exit(1);
-#endif
+    if (type == GOAL_ONLY_STABILIZED_ORBIT_SEARCH || type == GOAL_ONLY_STABILIZED_NO_SEARCH) {
+        GraphCreator* gr = new GraphCreator(opts);
+        if (gr) {
+            cout << "Creating symmetry graph stabilizing goal only and using ";
+            if (gr->get_search_type() == GOAL_ONLY_STABILIZED_ORBIT_SEARCH) {
+                cout << "orbit ";
+            } else
+                cout << "no ";
+            cout << "search" << endl;
         }
 
-        if (type == GOAL_ONLY_STABILIZED_REGULAR_SEARCH || type == INIT_AND_GOAL_STABILIZED_REGULAR_SEARCH) {
-#ifndef CANONICAL
-        	cout << "Regular search symmetry is defined, and yet additional buffer is not allocated per state. If you wish to use regular symmetry search, please recompile with CANONICAL=1" << endl;
-        	exit(1);
-#endif
-        }
-
-    	GraphCreator* gr = new GraphCreator(opts);
-    	if (gr) {
-    		if (gr->get_search_type() == INIT_AND_GOAL_STABILIZED_REGULAR_SEARCH) {
-    			cout << "Creating symmetry graph stabilizing initial and goal and using regular search";
-    		} else {
-    			cout << "Creating symmetry graph stabilizing goal only and using ";
-    			if (gr->get_search_type() == GOAL_ONLY_STABILIZED_REGULAR_SEARCH) {
-    				cout << "regular ";
-    			} else if (gr->get_search_type() == GOAL_ONLY_STABILIZED_ORBIT_SEARCH) {
-    				cout << "orbit ";
-    			} else
-    				cout << "no ";
-    			cout << "search" << endl;
-    		}
-    	}
-
-    	return gr;
+        return gr;
     }
 
     cout << "Invalid option for symmetry type" << endl;
     exit(1);
     } else {
-    	return 0;
+        return 0;
     }
 
 }

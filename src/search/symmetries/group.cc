@@ -18,10 +18,6 @@ int nof_orbits;
 */
 
 
-
-Group::Group(const Options &opts) {
-}
-
 void Group::initialize() {
   safe_to_add_generators = true;
   num_identity_generators = 0;
@@ -137,8 +133,20 @@ void Group::dump_generators() const {
   if (generators.size() == 0)
     return;
 
-  cout << "Extra group info:" << endl;
+  int n_var_cycles = 0;
+  int n_num_var_cycles = 0;
+
+  for (int i = 0; i < get_num_generators(); i++) {
+		cout << "Generator " << i << endl;
+		get_permutation(i).print_cycle_notation();
+    n_var_cycles += get_permutation(i).n_var_cycles();
+    n_num_var_cycles += get_permutation(i).n_num_var_cycles();
+  }
+
   cout << "Permutation length: " << Permutation::length << endl;
+  cout << "Variable cycles: : " << n_var_cycles << endl;
+  cout << "Numeric variable cycles: : " << n_num_var_cycles << endl;
+
 }
 
 void Group::dump_subgroups() const {

@@ -604,6 +604,16 @@ fast_downward_plugin(
     DEPENDS LP_SOLVER
 )
 
+fast_downward_plugin(
+    NAME SYMMETRIES
+    HELP "Plugin containing the code for symmetry breaking"
+    SOURCES
+        search_engines/sym_eager_search.cc
+        symmetries/graph_creator.cc
+        symmetries/group.cc
+        symmetries/permutation.cc
+)
+
 fast_downward_add_plugin_sources(PLANNER_SOURCES)
 
 # The order in PLANNER_SOURCES influences the order in which object

@@ -13,7 +13,7 @@ typedef std::vector<Permutation> Gens; // the generators for the automorphism
 
 class Group{
 public:
-    Group(const Options &opts);
+    Group() {}
     ~Group();
     void initialize();
 

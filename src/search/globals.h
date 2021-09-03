@@ -25,6 +25,8 @@ class GlobalState;
 class IntPacker;
 class SuccessorGenerator;
 
+class GraphCreator;
+
 namespace utils {
 struct Log;
 class PlanVisLogger;
@@ -175,5 +177,7 @@ extern int g_last_logic_axiom_layer;
 extern const std::shared_ptr<AbstractTask> g_root_task();
 
 extern utils::Log g_log;
+
+extern GraphCreator *g_symmetry_graph;
 
 #endif
