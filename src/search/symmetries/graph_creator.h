@@ -49,7 +49,7 @@ public:
 private:
     Group group;
 
-    int get_multiplicator(ap_float value) const;
+    int float_to_int(ap_float value) const;
     bliss::Digraph* create_bliss_directed_graph(const std::shared_ptr<AbstractTask> task) const;
 };
 

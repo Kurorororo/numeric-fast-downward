@@ -55,17 +55,8 @@ GraphCreator::~GraphCreator() {
     // Nothing to delete here
 }
 
-int GraphCreator::get_multiplicator(ap_float value) const {
-    int m = 1;
-    ap_float integral_part = 0;
-    ap_float fractional_part = std::modf(value, &integral_part);
-    while (std::fabs(fractional_part) > precision) {
-        m *= 10;
-        value = fractional_part * 10;
-        fractional_part = std::modf(value, &integral_part);
-    }
-
-    return m;
+int GraphCreator::float_to_int(ap_float value) const {
+    return static_cast<int>(std::floor(value / precision));
 }
 
 bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<AbstractTask> task) const {
@@ -135,67 +126,78 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         }
     }
 
-    // calculate multiplicators to obtain colors from real values
-    int cost_multiplicator = 1;
-    int constant_multiplicator = 1;
+    // calculate offset to obtain colors from negative values
     int constant_offset = 0;
     for (OperatorProxy op : task_proxy.get_operators()) {
-        int m = get_multiplicator(op.get_cost());
-        if (m > cost_multiplicator) cost_multiplicator = m;
-
         for (int pre : numeric_task.get_action_num_list(op.get_id())){
             for (int i : numeric_task.get_numeric_conditions_id(pre)){
                 const LinearNumericCondition &lnc = numeric_task.get_condition(i);
-                int m = get_multiplicator(lnc.constant);
-                if (m > constant_multiplicator) constant_multiplicator = m;
-                int multiplied_constant = constant_multiplicator * lnc.constant;
-                if (constant_offset + multiplied_constant < 0) constant_offset = -1 * multiplied_constant;
-
+                ap_float denominator = 1.0;
+                bool first = true;
                 for (auto coeff : lnc.coefficients) {
-                    int m = get_multiplicator(coeff);
-                    if (m > constant_multiplicator) constant_multiplicator = m;
-                    int multiplied_coeff = constant_multiplicator * coeff;
-                    if (constant_offset + multiplied_coeff < 0) constant_offset = -1 * multiplied_coeff;
+                    if (std::fabs(coeff) > precision) {
+                        if (first) {
+                            denominator = std::fabs(coeff);
+                            first = false;
+                        }
+                        int normalized_coeff = float_to_int(coeff / denominator);
+                        if (constant_offset + normalized_coeff < 0) constant_offset = -1 * normalized_coeff;
+                    }
                 }
+                int normalized_constant = float_to_int(lnc.constant / denominator);
+                if (constant_offset + normalized_constant < 0) constant_offset = -1 * normalized_constant;
             }
 
-            for (auto k : numeric_task.get_action_num_list(op.get_id())) {
-                int m = get_multiplicator(k);
-                if (m > constant_multiplicator) constant_multiplicator = m;
-                int multiplied_k = constant_multiplicator * k;
-                if (constant_offset + multiplied_k < 0) constant_offset = -1 * multiplied_k;
+            for (ap_float k : numeric_task.get_action_eff_list(op.get_id())) {
+                if (std::fabs(k) > precision) {
+                    int normalized_k = float_to_int(k);
+                    if (constant_offset + normalized_k < 0) constant_offset = -1 * normalized_k;
+                }
             }
 
             for (int i = 0; i < numeric_task.get_action_n_linear_eff(op.get_id()); ++i) {
-                ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
-                int m = get_multiplicator(constant);
-                if (m > constant_multiplicator) constant_multiplicator = m;
-                int multiplied_constant = constant_multiplicator * constant;
-                if (constant_offset + multiplied_constant < 0) constant_offset = -1 * multiplied_constant;
-
+                ap_float denominator = 1.0;
+                bool first = true;
                 for (auto coeff : numeric_task.get_action_linear_coefficients(op.get_id())[i]) {
-                    int m = get_multiplicator(numeric_task.get_action_linear_constants(op.get_id())[i]);
-                    if (m > constant_multiplicator) constant_multiplicator = m;
-                    int multiplied_coeff = constant_multiplicator * coeff;
-                    if (constant_offset + multiplied_coeff < 0) constant_offset = -1 * multiplied_coeff;
+                    if (std::fabs(coeff) > precision) {
+                        if (first) {
+                            denominator = std::fabs(coeff);
+                            first = false;
+                        }
+                        int normalized_coeff = float_to_int(coeff / denominator);
+                        if (constant_offset + normalized_coeff < 0) constant_offset = -1 * normalized_coeff;
+                    }
                 }
+                ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
+                int normalized_constant = float_to_int(constant / denominator);
+                if (constant_offset + normalized_constant < 0) constant_offset = -1 * normalized_constant;
             }
         }
     }
     for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
         for (int id_n_con : numeric_task.get_numeric_goals(id_goal)) {
             const LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
-            int m = get_multiplicator(lnc.constant);
-            if (m > constant_multiplicator) constant_multiplicator = m;
-            int multiplied_constant = constant_multiplicator * lnc.constant;
-            if (constant_offset + multiplied_constant < 0) constant_offset = -1 * multiplied_constant;
+            ap_float denominator = 1.0;
+            bool first = true;
+            for (auto coeff : lnc.coefficients) {
+                if (std::fabs(coeff) > precision) {
+                    if (first) {
+                        denominator = std::fabs(coeff);
+                        first = false;
+                    }
+                    int normalized_coeff = float_to_int(coeff / denominator);
+                    if (constant_offset + normalized_coeff < 0) constant_offset = -1 * normalized_coeff;
+                }
+            }
+            int normalized_constant = float_to_int(lnc.constant / denominator);
+            if (constant_offset + normalized_constant < 0) constant_offset = -1 * normalized_constant;
         }
     }
 
     // calculate max color for operators
     int max_op_color = MAX_VALUE;
     for (OperatorProxy op : task_proxy.get_operators()) {
-        int op_color = MAX_VALUE + op.get_cost() * cost_multiplicator;
+        int op_color = MAX_VALUE + float_to_int(op.get_cost());
         max_op_color = std::max(op_color, max_op_color);
     }
     int base_constant_color = max_op_color + 1;
@@ -203,7 +205,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
     // now add vertices for operators
     OperatorsProxy operators = task_proxy.get_operators();
     for (auto op : operators) {
-        int op_color = MAX_VALUE + op.get_cost() * cost_multiplicator;
+        int op_color = MAX_VALUE + float_to_int(op.get_cost());
         int op_idx = g->add_vertex(op_color);
 
         for (auto pre : op.get_preconditions()) {
@@ -224,28 +226,32 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             for (int i : numeric_task.get_numeric_conditions_id(pre)) {
                 const LinearNumericCondition &lnc = numeric_task.get_condition(i);
                 int lnc_idx = lnc.is_strictly_greater ? g->add_vertex(GT_VERTEX) : g->add_vertex(GTE_VERTEX);
-                int constant_color = base_constant_color + constant_multiplicator * lnc.constant + constant_offset;
-                int constant_idx = g->add_vertex(constant_color);
-                g->add_edge(lnc_idx, constant_idx);
                 g->add_edge(lnc_idx, op_idx);
 
+                ap_float denominator = 1.0;
+                bool first = true;
                 for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
-                    int multiplied_coeff = lnc.coefficients[j] * constant_multiplicator + constant_offset;
-                    if (multiplied_coeff > 0) {
-                        int coeff_color = base_constant_color + multiplied_coeff;
+                    if (std::fabs(lnc.coefficients[j]) > precision) {
+                        if (first) {
+                            denominator = std::fabs(lnc.coefficients[j]);
+                            first = false;
+                        }
+                        int coeff_color = base_constant_color + float_to_int(lnc.coefficients[j] / denominator);
                         int coeff_idx = g->add_vertex(coeff_color);
                         g->add_edge(coeff_idx, lnc_idx);
                         g->add_edge(Permutation::get_index_by_num_regular_id(j), coeff_idx);
                     }
                 }
+                int constant_color = base_constant_color + float_to_int(lnc.constant / denominator);
+                int constant_idx = g->add_vertex(constant_color);
+                g->add_edge(lnc_idx, constant_idx);
             }
         }
 
         for (int i = 0, n = Permutation::regular_id_to_num_var.size(); i < n; ++i) {
             ap_float k = numeric_task.get_action_eff_list(op.get_id())[i];
-            ap_float multipleid_k = k * constant_multiplicator + constant_offset;
-            if (multipleid_k > 0) {
-                int k_color = base_constant_color + multipleid_k;
+            if (std::fabs(k) > precision) {
+                int k_color = base_constant_color + float_to_int(k);
                 int k_idx = g->add_vertex(k_color);
                 int eff_idx = g->add_vertex(NUM_EFF_VERTEX);
                 g->add_edge(k_idx, eff_idx);
@@ -260,24 +266,29 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             g->add_edge(eff_idx, Permutation::get_index_by_num_regular_id(lhs));
             g->add_edge(op_idx, eff_idx);
 
-            ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
-            int multiplied_constant = constant * constant_multiplicator + constant_offset;
-            if (multiplied_constant > 0) {
-                int constant_color = base_constant_color + multiplied_constant;
-                int constant_idx = g->add_vertex(constant_color);
-                g->add_edge(constant_idx, eff_idx);
-            }
+            ap_float denominator = 1.0;
+            bool first = true;
 
             for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
                 ap_float coeff = numeric_task.get_action_linear_coefficients(op.get_id())[i][j];
-                int multiplied_coeff = coeff * constant_multiplicator + constant_offset;
-                if (multiplied_coeff > 0) {
-                    int coeff_color = base_constant_color + multiplied_coeff;
+                if (std::fabs(coeff) > precision) {
+                    if (first) {
+                        denominator = coeff;
+                        first = false;
+                    }
+                    int coeff_color = base_constant_color + float_to_int(coeff / denominator);
                     int coeff_idx = g->add_vertex(coeff_color);
                     int var_idx = Permutation::get_index_by_num_regular_id(j);
                     g->add_edge(coeff_idx, var_idx);
                     g->add_edge(var_idx, eff_idx);
                 }
+            }
+
+            ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
+            if (std::fabs(constant) > precision) {
+                int constant_color = base_constant_color + float_to_int(constant / denominator);
+                int constant_idx = g->add_vertex(constant_color);
+                g->add_edge(constant_idx, eff_idx);
             }
         }
     }
@@ -294,20 +305,27 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         for (int id_n_con : numeric_task.get_numeric_goals(id_goal)) {
             LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
             int lnc_idx = lnc.is_strictly_greater ? g->add_vertex(GT_VERTEX) : g->add_vertex(GTE_VERTEX);
-            int constant_color = base_constant_color + constant_multiplicator * lnc.constant + constant_offset;
-            int constant_idx = g->add_vertex(constant_color);
-            g->add_edge(lnc_idx, constant_idx);
             g->add_edge(goal_idx, lnc_idx);
 
+            ap_float denominator = 1.0;
+            bool first = true;
+
             for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
-                int multiplied_coeff = lnc.coefficients[j] * constant_multiplicator + constant_offset;
-                if (multiplied_coeff > 0) {
-                    int coeff_color = base_constant_color + multiplied_coeff;
+                if (std::fabs(lnc.coefficients[j]) > precision) {
+                    if (first) {
+                        denominator = std::fabs(lnc.coefficients[j]);
+                        first = false;
+                    }
+                    int coeff_color = base_constant_color + float_to_int(lnc.coefficients[j] / denominator);
                     int coeff_idx = g->add_vertex(coeff_color);
                     g->add_edge(coeff_idx, lnc_idx);
                     g->add_edge(Permutation::get_index_by_num_regular_id(j), coeff_idx);
                 }
             }
+
+            int constant_color = base_constant_color + float_to_int(lnc.constant / denominator);
+            int constant_idx = g->add_vertex(constant_color);
+            g->add_edge(lnc_idx, constant_idx);
         }
     }
 
