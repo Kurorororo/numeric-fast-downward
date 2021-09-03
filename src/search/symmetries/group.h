@@ -40,7 +40,6 @@ private:
     static bool safe_to_add_generators;
 
     static int num_identity_generators;
-    static int stop_after_false_generated;
 
     // Methods for finding a canonical state for each state.
     void calculate_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,

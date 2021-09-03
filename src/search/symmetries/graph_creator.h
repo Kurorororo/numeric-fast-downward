@@ -25,16 +25,14 @@ enum color_t {PREDICATE_VERTEX, VALUE_VERTEX, NUM_VAR_VERTEX, GOAL_VERTEX, GTE_V
 
 class GraphCreator  {
     SymmetryBasedSearchType search_type;
-    bool use_both_comparison_methods;
-    bool generate_whole_group;
     bool add_generators_powers;
 
     bool no_search;
     bool initialized;
-    bool op_pruning;
 
     int time_bound;
     int generators_bound;
+    ap_float precision;
 
 public:
 
@@ -51,13 +49,13 @@ public:
     static void add_options_to_parser(OptionParser &parser);
 
     SymmetryBasedSearchType get_search_type() const { return search_type; }
-    bool is_generate_whole_group() const { return generate_whole_group; }
 
     void free_memory() { group.free_memory(); }
 
 private:
     Group group;
 
+    int get_multiplicator(ap_float value) const;
     bliss::Graph* create_bliss_directed_graph(const TaskProxy &task_proxy) const;
 };
 

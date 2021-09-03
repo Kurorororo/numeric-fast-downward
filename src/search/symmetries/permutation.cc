@@ -187,7 +187,7 @@ bool Permutation::operator ==(const Permutation &other) const{
 void Permutation::permutation_on_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
                                        std::vector<int> &new_values, std::vector<ap_float> &new_num_values) const {
     for (int i = 0, n = vars_affected.size(); i < n; i++) {
-        int var =  vars_affected[i];
+        int var = vars_affected[i];
         int value = values[var];
         pair<int, int> new_var_val = get_new_var_val_by_old_var_val(var, value);
         int new_var = new_var_val.first;

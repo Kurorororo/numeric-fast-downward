@@ -10,7 +10,6 @@ using namespace std;
 //Gens Group::generators;
 bool Group::safe_to_add_generators;
 int Group::num_identity_generators;
-int Group::stop_after_false_generated;
 //Disabled
 /*
 bool Group::prune_operators;
@@ -21,11 +20,6 @@ int nof_orbits;
 
 
 Group::Group(const Options &opts) {
-  stop_after_false_generated = opts.get<int>("stop_after_false_generated");
-  //Disabled
-  /*
-  prune_operators = opts.get<bool>("prune_operators");
-  */
 }
 
 void Group::initialize() {
@@ -93,11 +87,6 @@ void Group::add_permutation(void* param, unsigned int, const unsigned int * full
 #ifdef DEBUGMODE
     cout<<"No! Identity generator number " << num_identity_generators << ". Until now found " << generators.size() << " generators.";
 #endif
-    if (num_identity_generators > stop_after_false_generated) {
-      cout << endl << "Problems with generating symmetry group! Too many false generators." << endl;
-      cout<<"Number of generators: 0"<<endl;
-      exit(1);
-    }
   }
 #ifdef DEBUGMODE
   cout<<endl;
@@ -167,11 +156,6 @@ void Group::dump_subgroups() const {
 void Group::get_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
                                 std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const {
 
-  /*
-   * Disabled
-  if (g_generate_whole_group)
-      return get_exact_canonical(state);
-  */
   calculate_canonical_state(values, num_values, canonical_values, canonical_num_values);
 }
 
