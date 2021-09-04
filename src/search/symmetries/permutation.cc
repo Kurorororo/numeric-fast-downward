@@ -120,7 +120,7 @@ void Permutation::finalize(){
     // Going over the vector from_vars of the mappings of the variables and finding cycles
 //	affected_vars_cycles.clear();
     vector<bool> marked;
-    marked.assign(regular_id_to_var.size(), false);
+    marked.assign(var_to_regular_id.size(), false);
     for (int i = 0, n = from_vars.size(); i < n; i++) {
         if (marked[i] || from_vars[i] == -1)
             continue;
