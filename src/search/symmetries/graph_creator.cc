@@ -199,11 +199,14 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         int op_color = MAX_VALUE + float_to_int(op.get_cost());
         max_op_color = std::max(op_color, max_op_color);
     }
+    for (OperatorProxy op : task_proxy.get_axioms()) {
+        int op_color = MAX_VALUE + float_to_int(op.get_cost());
+        max_op_color = std::max(op_color, max_op_color);
+    }
     int base_constant_color = max_op_color + 1 + constant_offset;
     
-    // now add vertices for operators
-    OperatorsProxy operators = task_proxy.get_operators();
-    for (auto op : operators) {
+    // add vertices for operators
+    for (auto op : task_proxy.get_operators()) {
         int op_color = MAX_VALUE + float_to_int(op.get_cost());
         int op_idx = g->add_vertex(op_color);
 
@@ -290,6 +293,26 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 int constant_idx = g->add_vertex(constant_color);
                 g->add_edge(constant_idx, eff_idx);
             }
+        }
+    }
+    
+    // add vertices for propositional axioms 
+    for (auto op : task_proxy.get_axioms()) {
+        int op_color = MAX_VALUE + float_to_int(op.get_cost());
+        int op_idx = g->add_vertex(op_color);
+
+        for (auto pre : op.get_preconditions()) {
+            if (!numeric_task.is_numeric_axiom(pre.get_variable().get_id())) {
+                int var = pre.get_variable().get_id();
+                int pre_val = pre.get_value();
+                int pre_idx = Permutation::get_index_by_var_val(var, pre_val);
+                g->add_edge(pre_idx, op_idx);
+            }
+        }
+        for (auto eff : op.get_effects()) {
+            FactProxy eff_fact = eff.get_fact();
+            int eff_idx = Permutation::get_index_by_var_val(eff_fact.get_variable().get_id(), eff_fact.get_value());
+            g->add_edge(op_idx, eff_idx);
         }
     }
 
