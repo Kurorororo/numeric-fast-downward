@@ -144,8 +144,8 @@ void Group::dump_generators() const {
   }
 
   cout << "Permutation length: " << Permutation::length << endl;
-  cout << "Variable cycles: : " << n_var_cycles << endl;
-  cout << "Numeric variable cycles: : " << n_num_var_cycles << endl;
+  cout << "Variable cycles: " << n_var_cycles << endl;
+  cout << "Numeric variable cycles: " << n_num_var_cycles << endl;
 
 }
 
