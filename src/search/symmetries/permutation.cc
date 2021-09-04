@@ -23,8 +23,8 @@ vector<int> Permutation::regular_id_to_num_var;
 void Permutation::_allocate() {
     value = new int[length];
     inverse_value = new int[length];
-    affected.assign(regular_id_to_var.size(), false);
-    num_affected.assign(regular_id_to_num_var.size(), false);
+    affected.assign(var_to_regular_id.size(), false);
+    num_affected.assign(num_var_to_regular_id.size(), false);
     vars_affected.clear();
     num_vars_affected.clear();
     from_vars.assign(var_to_regular_id.size(), -1);
@@ -50,8 +50,8 @@ void Permutation::_inverse_value_from_permutation(const Permutation &perm) {
 
 Permutation &Permutation::operator=(const Permutation &other) {
     if (this != &other) {
-        affected.assign(regular_id_to_var.size(), false);
-        num_affected.assign(regular_id_to_num_var.size(), false);
+        affected.assign(var_to_regular_id.size(), false);
+        num_affected.assign(num_var_to_regular_id.size(), false);
         vars_affected.clear();
         num_vars_affected.clear();
         from_vars.assign(regular_id_to_var.size(), -1);
@@ -142,7 +142,7 @@ void Permutation::finalize(){
     ::sort(num_vars_affected.begin(), num_vars_affected.end());
 
     vector<bool> num_marked;
-    num_marked.assign(g_numeric_var_types.size(), false);
+    num_marked.assign(num_var_to_regular_id.size(), false);
     for (int i = 0, n = from_num_vars.size(); i < n; ++i) {
         if (num_marked[i] || from_num_vars[i] == -1)
             continue;
@@ -278,7 +278,7 @@ pair<int, int> Permutation::get_new_var_val_by_old_var_val(int var, int value) c
 int Permutation::get_new_num_var_by_old_num_var(int num_var) const {
     int regular_id = num_var_to_regular_id[num_var];
     assert(regular_id != -1);
-    int ind = get_value(dom_sum_num_var + regular_id);
+    int ind = get_value(get_index_by_num_regular_id(regular_id));
 
     return get_num_var_by_index(ind);
 }

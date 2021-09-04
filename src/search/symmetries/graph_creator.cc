@@ -63,6 +63,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
    // initialization
 
     TaskProxy task_proxy(*task);
+    NumericTaskProxy::redundant_constraints = false;
     NumericTaskProxy numeric_task(task_proxy, false, true);
 
     std::cout << "Computing number of vertices" << std::endl;
@@ -70,10 +71,8 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
     int num_of_vertex = 0;
     for (auto var : variables) {
         if (numeric_task.is_numeric_axiom(var.get_id())) {
-            std::cout << "numeric axiom " << var.get_name() << std::endl;
             Permutation::var_to_regular_id.push_back(-1);
         } else {
-            std::cout << "not numeric axiom " << var.get_name() << std::endl;
             Permutation::var_to_regular_id.push_back(num_of_vertex);
             Permutation::regular_id_to_var.push_back(var.get_id());
             ++num_of_vertex;
@@ -200,7 +199,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         int op_color = MAX_VALUE + float_to_int(op.get_cost());
         max_op_color = std::max(op_color, max_op_color);
     }
-    int base_constant_color = max_op_color + 1;
+    int base_constant_color = max_op_color + 1 + constant_offset;
     
     // now add vertices for operators
     OperatorsProxy operators = task_proxy.get_operators();
@@ -225,7 +224,8 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         for (int pre : numeric_task.get_action_num_list(op.get_id())) {
             for (int i : numeric_task.get_numeric_conditions_id(pre)) {
                 const LinearNumericCondition &lnc = numeric_task.get_condition(i);
-                int lnc_idx = lnc.is_strictly_greater ? g->add_vertex(GT_VERTEX) : g->add_vertex(GTE_VERTEX);
+                int lnc_color = lnc.is_strictly_greater ? GT_VERTEX : GTE_VERTEX;
+                int lnc_idx = g->add_vertex(lnc_color);
                 g->add_edge(lnc_idx, op_idx);
 
                 ap_float denominator = 1.0;
@@ -304,7 +304,8 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         }
         for (int id_n_con : numeric_task.get_numeric_goals(id_goal)) {
             LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
-            int lnc_idx = lnc.is_strictly_greater ? g->add_vertex(GT_VERTEX) : g->add_vertex(GTE_VERTEX);
+            int lnc_color = lnc.is_strictly_greater ? GT_VERTEX : GTE_VERTEX;
+            int lnc_idx = g->add_vertex(lnc_color);
             g->add_edge(goal_idx, lnc_idx);
 
             ap_float denominator = 1.0;
