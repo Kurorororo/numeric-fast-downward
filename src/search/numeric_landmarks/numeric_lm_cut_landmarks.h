@@ -31,10 +31,9 @@ namespace numeric_lm_cut_heuristic {
         std::vector<RelaxedProposition *> preconditions;
         std::vector<RelaxedProposition *> effects;
         std::vector<ap_float> numeric_effects;
+        bool infinite;
         int infinite_lhs;
         bool plus_infinity;
-        int constant_lhs;
-        double constant;
         
         ap_float base_cost_1; // 0 for axioms, 1 for regular operators
         ap_float base_cost_2; // 0 for axioms, 1 for regular operators
@@ -55,8 +54,8 @@ namespace numeric_lm_cut_heuristic {
           original_op_id_2(op_id),
           preconditions(pre),
           effects(eff),
+          infinite(false),
           infinite_lhs(-1),
-          constant_lhs(-1),
           base_cost_1(0),
           base_cost_2(base),
           name(n) {
@@ -69,8 +68,8 @@ namespace numeric_lm_cut_heuristic {
           original_op_id_1(op_id_1),
           original_op_id_2(op_id_2),
           preconditions(pre_1),
+          infinite(false),
           infinite_lhs(-1),
-          constant_lhs(-1),
           base_cost_1(base_1),
           base_cost_2(base_2),
           name(n_1 + " " + n_2) {
@@ -83,28 +82,15 @@ namespace numeric_lm_cut_heuristic {
           original_op_id_1(-1),
           original_op_id_2(op_id),
           preconditions(pre),
+          infinite(true),
           infinite_lhs(infinite_lhs),
           plus_infinity(plus_infinity),
-          constant_lhs(-1),
           base_cost_1(0),
           base_cost_2(base),
           name(n) {}
 
-        RelaxedOperator(int id, std::vector<RelaxedProposition *> &&pre, int constant_lhs, double constant, int op_id, int base,
-                        string &n)
-        : id(id),
-          original_op_id_1(-1),
-          original_op_id_2(op_id),
-          preconditions(pre),
-          infinite_lhs(-1),
-          constant_lhs(constant_lhs),
-          constant(constant),
-          base_cost_1(0),
-          base_cost_2(base),
-          name(n) {}
-
-        inline void update_h_max_supporter();
-        inline void select_random_supporter();
+        void update_h_max_supporter();
+        void select_random_supporter();
     };
     
     struct RelaxedProposition {
@@ -130,7 +116,6 @@ namespace numeric_lm_cut_heuristic {
         int num_propositions;
         int n_var;
         int n_infinite_operators;
-        int n_constant_operators;
         int n_second_order_simple_operators;
         bool ceiling_less_than_one;
         bool ignore_numeric_conditions;
@@ -160,8 +145,7 @@ namespace numeric_lm_cut_heuristic {
                                     ap_float constant, int infinite_lhs, int op_id, ap_float base_cost, string &n);
         void add_infinite_operator(const std::vector<RelaxedProposition *> &precondiiton, numeric_helper::LinearNumericCondition &&lnc,
                                    int lhs, bool plus_infinity, int op_id, ap_float base_cost, string &n);
-        void add_constant_operator(std::vector<RelaxedProposition *> &&precondiiton,
-                                   int lhs, double constant, int op_id, ap_float base_cost, string &n);
+        void build_composite_conditions(const TaskProxy &task_proxy);
         void build_numeric_effects();
         RelaxedProposition *get_proposition(const FactProxy &fact);
         RelaxedProposition *get_proposition(const int &n_condition);
