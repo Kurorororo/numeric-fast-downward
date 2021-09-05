@@ -630,15 +630,17 @@ namespace numeric_lm_cut_heuristic {
                         ap_float e = lnc.coefficients[var_eff.first] * var_eff.second;
                         if (e > precision) net += e;
                     }
-                    for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id_2); ++j) {
-                        int lhs = numeric_task.get_action_linear_lhs(op_id_2)[j];
-                        ap_float constant = numeric_task.get_action_linear_constants(op_id_2)[j];
-                        ap_float e = lnc.coefficients[lhs] * constant;
-                        if (numeric_task.get_action_linear_eff_conditions(op_id_2)[j].size() == 0
-                            && numeric_task.get_action_linear_eff_num_conditions(op_id_2)[j].size() == 0) {
-                            net += e;
-                        } else if (e > precision) {
-                            net += e;
+                    if (use_linear_effects) {
+                        for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id_2); ++j) {
+                            int lhs = numeric_task.get_action_linear_lhs(op_id_2)[j];
+                            ap_float constant = numeric_task.get_action_linear_constants(op_id_2)[j];
+                            ap_float e = lnc.coefficients[lhs] * constant;
+                            if (numeric_task.get_action_linear_eff_conditions(op_id_2)[j].size() == 0
+                                && numeric_task.get_action_linear_eff_num_conditions(op_id_2)[j].size() == 0) {
+                                net += e;
+                            } else if (e > precision) {
+                                net += e;
+                            }
                         }
                     }
                     if (net > precision) {
