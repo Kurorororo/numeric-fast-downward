@@ -1055,10 +1055,10 @@ namespace numeric_lm_cut_heuristic {
                 }
 
                 if (relaxed_op->cost_2 < precision) {
-                    if (k_0 > precision)
-                        return std::make_pair(0, 1);
+                    if (k_0 < -precision)
+                        return std::make_pair(-k_0 / relaxed_op->numeric_effects[id_effect] , 1);
                     else
-                        return std::make_pair(numeric_initial_state[id_effect] / k_0 , 1);
+                        return std::make_pair(0, 1);
                 }
 
                 ap_float m = sqrt(numeric_initial_state[id_effect] / relaxed_op->numeric_effects[id_effect]);
