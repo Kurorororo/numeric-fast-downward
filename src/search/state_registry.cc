@@ -1,8 +1,10 @@
 #include "state_registry.h"
 
 #include "axioms.h"
+#include "globals.h"
 #include "global_operator.h"
 #include "per_state_information.h"
+#include "../symmetries/graph_creator.h"
 #include <cassert>
 
 using namespace std;
@@ -164,6 +166,15 @@ void StateRegistry::get_numeric_successor(
 			break;
 		}
 	}
+
+	if (g_symmetry_graph != nullptr) {
+		if (g_symmetry_graph->to_canonical_state(buffer, predecessor_vals) && buffer) {
+			for (size_t i = 0; i < predecessor_vals.size(); ++i) {
+				g_state_packer->setDouble(buffer, numeric_indices[i], predecessor_vals[i]);
+			}
+		}
+	}
+
 	g_axiom_evaluator->evaluate_arithmetic_axioms(predecessor_vals);
 	if (buffer) g_axiom_evaluator->evaluate(buffer, predecessor_vals); // evaluate logic + comparison axioms
 }

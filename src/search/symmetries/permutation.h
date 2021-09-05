@@ -47,6 +47,7 @@ public:
     static std::vector<int> regular_id_to_num_var;
 
     bool replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values) const;
+    bool replace_if_less(PackedStateBin *buffer, std::vector<ap_float> &num_values) const;
 
 private:
     int* value;

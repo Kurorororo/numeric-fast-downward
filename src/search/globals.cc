@@ -845,4 +845,4 @@ cal_operator get_inverse_op(cal_operator cop) {
 }
 
 // Globals for symmetries
-GraphCreator* g_symmetry_graph;
+GraphCreator* g_symmetry_graph = nullptr;

@@ -201,3 +201,37 @@ void Group::calculate_canonical_state_subgroup(int ind, std::vector<int> &values
 //	cout << "==================================================================================" << endl;
 
 }
+
+bool Group::to_canonical_state(PackedStateBin *buffer, std::vector<ap_float> &num_values) const {
+    bool changed = false;
+
+    for (int i = 0; i < sub_groups.size(); i++) {
+      if (to_canonical_state_subgroup(i, buffer, num_values) && !changed) 
+        changed = true;
+    }
+
+    return changed;
+}
+
+bool Group::to_canonical_state_subgroup(int ind, PackedStateBin *buffer, std::vector<ap_float> &num_values) const {
+    // Going to the best successor, continue until local minima is reached
+    // Warning: before running the method, the state is copied into the original_state.
+    //          after finishing the run, the minimal state is in original_state
+    int size = sub_groups[ind].size();
+    if (size == 0)
+        return false;
+
+    bool changed_at_least_once = false;
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (int i=0; i < size; i++) {
+            if (generators[sub_groups[ind][i]].replace_if_less(buffer, num_values)) {
+                changed =  true;
+                if (!changed_at_least_once) changed_at_least_once = true;
+            }
+        }
+    }
+
+    return changed_at_least_once;
+}

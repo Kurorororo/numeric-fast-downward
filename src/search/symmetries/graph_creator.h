@@ -40,6 +40,10 @@ public:
         group.get_canonical_state(values, num_values, canonical_values, canonical_num_values);
     }
 
+    bool to_canonical_state(PackedStateBin* buffer, std::vector<ap_float> &num_values) const {
+        group.to_canonical_state(buffer, num_values);
+    }
+
     static void add_options_to_parser(OptionParser &parser);
 
     SymmetryBasedSearchType get_search_type() const { return search_type; }

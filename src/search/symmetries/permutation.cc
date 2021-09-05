@@ -380,9 +380,9 @@ bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float
         int from_var = from_num_vars[to_var];
 
         // Check if the values are the same, then continue to the next aff. var.
-        if (values_same && value[from_var] > values[to_var]) {
+        if (values_same && num_values[from_var] > num_values[to_var]) {
             return false;
-        } else if (values[from_var] != values[to_var]) {
+        } else if (num_values[from_var] != num_values[to_var]) {
             num_values_same = false;
             break;
         }
@@ -390,7 +390,89 @@ bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float
     if (!num_values_same) {
         for (int i = 0, n = affected_num_vars_cycles.size(); i < n; i++) {
             int last_var = affected_num_vars_cycles[i][affected_num_vars_cycles[i].size() - 1];
-            int last_val = num_values[last_var];
+            ap_float last_val = num_values[last_var];
+
+            for (int j = affected_num_vars_cycles[i].size() - 1; j > 0; j--) {
+                int to_num_var = affected_num_vars_cycles[i][j];
+                int from_num_var = affected_num_vars_cycles[i][j - 1];
+                num_values[to_num_var] = num_values[from_num_var];
+            }
+
+            num_values[affected_num_vars_cycles[i][0]] = last_val;
+        }
+    }
+
+    return !values_same || !num_values_same;
+}
+
+bool Permutation::replace_if_less(PackedStateBin *buffer, std::vector<ap_float> &num_values) const {
+    if (identity())
+        return false;
+
+    bool values_same = true;
+    // Going over the affected variables, comparing the resulted values with the state values.
+    for (int i = vars_affected.size() - 1; i >= 0; i--) {
+        int to_var = vars_affected[i];
+        int from_var = from_vars[to_var];
+        int from_val = g_state_packer->get(buffer, from_var);
+        pair<int, int> to_var_val = get_new_var_val_by_old_var_val(from_var, from_val);
+        assert(to_var == to_var_val.first);
+        int to_val = to_var_val.second;
+        int current_to_val = g_state_packer->get(buffer, to_var);
+
+        // Check if the values are the same, then continue to the next aff. var.
+        if (to_val < current_to_val) {
+            break;
+        } else if (to_val > current_to_val) {
+            return false;
+        }
+    }
+    if (!values_same) {
+        for (int i = 0, n = affected_vars_cycles.size(); i < n; i++) {
+            if (affected_vars_cycles[i].size() == 1) {
+                int var = affected_vars_cycles[i][0];
+                int from_val = g_state_packer->get(buffer, var);
+                pair<int, int> to_var_val = get_new_var_val_by_old_var_val(var, from_val);
+                assert(var == to_var_val.first);
+                g_state_packer->set(buffer, var, to_var_val.second);
+                continue;
+            }
+            // Remembering one value to be rewritten last
+            int last_var = affected_vars_cycles[i][affected_vars_cycles[i].size() - 1];
+            int last_val = g_state_packer->get(buffer, last_var);
+
+            for (int j = affected_vars_cycles[i].size() - 1; j > 0; j--) {
+                // writing into variable affected_vars_cycles[i][j]
+                int to_var = affected_vars_cycles[i][j];
+                int from_var = affected_vars_cycles[i][j - 1];
+                int from_val = g_state_packer->get(buffer, from_var);
+                pair<int, int> to_var_val = get_new_var_val_by_old_var_val(from_var, from_val);
+                assert(to_var == to_var_val.first);
+                g_state_packer->set(buffer, to_var, to_var_val.second);
+            }
+            // writing the last one
+            pair<int, int> to_var_val = get_new_var_val_by_old_var_val(last_var, last_val);
+            g_state_packer->set(buffer, affected_vars_cycles[i][0], to_var_val.second);
+        }
+    }
+
+    bool num_values_same = true;
+    for (int i = num_vars_affected.size() - 1; i >= 0; i--) {
+        int to_var = num_vars_affected[i];
+        int from_var = from_num_vars[to_var];
+
+        // Check if the values are the same, then continue to the next aff. var.
+        if (values_same && num_values[from_var] > num_values[to_var]) {
+            return false;
+        } else if (num_values[from_var] != num_values[to_var]) {
+            num_values_same = false;
+            break;
+        }
+    }
+    if (!num_values_same) {
+        for (int i = 0, n = affected_num_vars_cycles.size(); i < n; i++) {
+            int last_var = affected_num_vars_cycles[i][affected_num_vars_cycles[i].size() - 1];
+            ap_float last_val = num_values[last_var];
 
             for (int j = affected_num_vars_cycles[i].size() - 1; j > 0; j--) {
                 int to_num_var = affected_num_vars_cycles[i][j];
