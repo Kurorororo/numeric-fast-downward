@@ -139,7 +139,8 @@ namespace numeric_lm_cut_heuristic {
         bool disable_ma;
         bool use_linear_effects;
         bool use_second_order_simple;
-        bool use_constant_threshold;
+        ap_float precision;
+        ap_float epsilon;
         std::vector<ap_float> numeric_initial_state;
         std::vector<vector<RelaxedOperator *>> original_to_relaxed_operators;
         
@@ -196,7 +197,7 @@ namespace numeric_lm_cut_heuristic {
         
         LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one = false, bool ignore_numeric = false,
                              bool use_random_pcf = false, bool use_irmax = false, bool disable_ma = false, bool use_linear_effects = false,
-                             bool use_second_order_simple = false, bool use_constant_threshold = false);
+                             bool use_second_order_simple = false, ap_float precision = 0.000001, ap_float epsilon = 0.001);
         virtual ~LandmarkCutLandmarks();
         
         /*
