@@ -13,14 +13,12 @@ using namespace std;
 using namespace numeric_helper;
 
 bool debug = false;
-double precision = 0.000001;
-double epsilon = 0.001;
 
 namespace numeric_lm_cut_heuristic {
     // construction and destruction
     LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one, bool ignore_numeric,
                                                bool use_random_pcf, bool use_irmax, bool disable_ma, bool use_linear_effects,
-                                               bool use_second_order_simple, bool use_constant_threshold)
+                                               bool use_second_order_simple, ap_float precision, ap_float epsilon)
         : numeric_task(NumericTaskProxy(task_proxy, false, use_linear_effects)),
           n_infinite_operators(0),
           n_constant_operators(0),
@@ -32,7 +30,8 @@ namespace numeric_lm_cut_heuristic {
           disable_ma(disable_ma),
           use_linear_effects(use_linear_effects),
           use_second_order_simple(use_second_order_simple),
-          use_constant_threshold(use_constant_threshold) {
+          precision(precision),
+          epsilon(epsilon) {
         //verify_no_axioms(task_proxy);
         //verify_no_conditional_effects(task_proxy);
         // Build propositions.
@@ -371,10 +370,8 @@ namespace numeric_lm_cut_heuristic {
                 }
             }
             if (!second_order_simple) {
-                double plus_constant = use_constant_threshold ? 0 : constant;
-                double minus_constant = use_constant_threshold ? 0 : -constant;
                 std::vector<ap_float> coefficient_plus(coeff);
-                LinearNumericCondition lnc_plus(coefficient_plus, plus_constant);
+                LinearNumericCondition lnc_plus(coefficient_plus, 0);
                 lnc_plus.is_strictly_greater = true;
                 add_infinite_operator(extended_precondition, std::move(lnc_plus), lhs_id_2, true, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
@@ -383,12 +380,12 @@ namespace numeric_lm_cut_heuristic {
                 for (auto &c : coefficient_minus) {
                     if (c > precision || c < -precision) c = -c;
                 }
-                LinearNumericCondition lnc_minus(coefficient_minus, minus_constant);
+                LinearNumericCondition lnc_minus(coefficient_minus, 0);
                 lnc_minus.is_strictly_greater = true;
                 add_infinite_operator(extended_precondition, std::move(lnc_minus), lhs_id_2, false, op_2.get_id(), op_2.get_cost(), name);
                 ++n_infinite_operators;
 
-                if (use_constant_threshold && (constant > precision || constant < -precision))
+                if (constant > precision || constant < -precision)
                     add_constant_operator(std::move(extended_precondition), lhs_id_2, constant, op_2.get_id(), op_2.get_cost(), name);
             }
         }
@@ -1027,7 +1024,7 @@ namespace numeric_lm_cut_heuristic {
 
                 return std::make_pair(0, m);
             } else {
-                if (relaxed_op->cost_1 < precision || relaxed_op->cost_2 < precision) return std::make_pair(1, 1);
+                if (relaxed_op->cost_1 < precision) return std::make_pair(1, 1);
 
                 const LinearNumericCondition &lnc = conditions[id_effect];
                 int op_id = relaxed_op->original_op_id_2;
@@ -1055,6 +1052,13 @@ namespace numeric_lm_cut_heuristic {
                     } else if (k_0_i > 0) {
                         k_0 += k_0_i;
                     }
+                }
+
+                if (relaxed_op->cost_2 < precision) {
+                    if (k_0 > precision)
+                        return std::make_pair(0, 1);
+                    else
+                        return std::make_pair(numeric_initial_state[id_effect] / k_0 , 1);
                 }
 
                 ap_float m = sqrt(numeric_initial_state[id_effect] / relaxed_op->numeric_effects[id_effect]);

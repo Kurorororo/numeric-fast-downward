@@ -24,7 +24,8 @@ namespace lm_cut_numeric_heuristic {
       disable_ma(opts.get<bool>("disable_ma")),
       use_linear_effects(opts.get<bool>("use_linear_effects")),
       use_second_order_simple(opts.get<bool>("use_second_order_simple")),
-      use_constant_threshold(opts.get<bool>("use_constant_threshold")) {
+      precision(opts.get<ap_float>("precision")),
+      epsilon(opts.get<ap_float>("epsilon")) {
     }
     
     LandmarkCutNumericHeuristic::~LandmarkCutNumericHeuristic() {
@@ -36,7 +37,7 @@ namespace lm_cut_numeric_heuristic {
         // TODO we don't need a pointer if we initialize in the constructor.
         landmark_generator = utils::make_unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks>(
             task_proxy, ceiling_less_than_one, ignore_numeric, use_random_pcf, use_irmax, disable_ma, use_linear_effects,
-            use_second_order_simple, use_constant_threshold);
+            use_second_order_simple, precision, epsilon);
     }
     
     ap_float LandmarkCutNumericHeuristic::compute_heuristic(const GlobalState &global_state) {
@@ -72,8 +73,8 @@ namespace lm_cut_numeric_heuristic {
         parser.add_option<bool>("disable_ma", "use m_a = 1", "false");
         parser.add_option<bool>("use_linear_effects", "use linear effects", "false");
         parser.add_option<bool>("use_second_order_simple", "exploit second order simple effects", "false");
-        parser.add_option<bool>("use_constant_threshold", "use the constant in a linear effect as the threshold of conditional infinite effects",
-                                "false");
+        parser.add_option<ap_float>("precision", "values less than this value are considered as zero", "0.000001");
+        parser.add_option<ap_float>("epsilon", "small value added to strict inequalities", "0.001");
         
         Heuristic::add_options_to_parser(parser);
         Options opts = parser.parse();
