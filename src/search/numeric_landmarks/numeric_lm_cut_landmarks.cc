@@ -1085,7 +1085,7 @@ namespace numeric_lm_cut_heuristic {
                     for (int i = 0; i < numeric_task.get_action_n_linear_eff(op_id); ++i) {
                         int lhs = numeric_task.get_action_linear_lhs(op_id)[i];
                         ap_float w = lnc.coefficients[lhs];
-                        ap_float net_i = w * numeric_task.get_action_linear_constants(op_id)[i];
+                        ap_float net_i = 0;
                         for (int n_id = 0, n_vars = numeric_task.get_n_numeric_variables(); n_id < n_vars; ++n_id) {
                             ap_float k = numeric_task.get_action_linear_coefficients(op_id)[i][n_id];
                             if (n_id == numeric_task.get_action_linear_lhs(op_id)[i]) k -= 1.0;
