@@ -318,6 +318,12 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
 
     // adding edges from goal vertex
     int goal_idx = g->add_vertex(GOAL_VERTEX);
+    for (FactProxy goal : task_proxy.get_goals()) {
+        if(!numeric_task.is_numeric_axiom(goal.get_variable().get_id())){
+            int val_idx = Permutation::get_index_by_var_val(goal.get_variable().get_id(), goal.get_value());
+            g->add_edge(goal_idx, val_idx);
+        }
+    }
     for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
         for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
             if (!numeric_task.is_numeric_axiom(var_value.first)) {
@@ -361,7 +367,6 @@ void GraphCreator::add_options_to_parser(OptionParser &parser) {
     vector<string> sym_types;
     sym_types.push_back("none");
     sym_types.push_back("goal_only_orbit");
-    sym_types.push_back("goal_only_no");
     parser.add_enum_option("symmetries", sym_types, "use symmetries", "none");
 
     parser.add_option<bool>("no_search",
@@ -393,14 +398,12 @@ static GraphCreator *_parse(OptionParser &parser) {
     */
     if (!parser.dry_run()) {
 
-    if (type == GOAL_ONLY_STABILIZED_ORBIT_SEARCH || type == GOAL_ONLY_STABILIZED_NO_SEARCH) {
+    if (type == GOAL_ONLY_STABILIZED_ORBIT_SEARCH) {
         GraphCreator* gr = new GraphCreator(opts);
         if (gr) {
             cout << "Creating symmetry graph stabilizing goal only and using ";
-            if (gr->get_search_type() == GOAL_ONLY_STABILIZED_ORBIT_SEARCH) {
+            if (gr->get_search_type() == GOAL_ONLY_STABILIZED_ORBIT_SEARCH)
                 cout << "orbit ";
-            } else
-                cout << "no ";
             cout << "search" << endl;
         }
 

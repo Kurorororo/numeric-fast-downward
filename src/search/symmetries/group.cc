@@ -227,7 +227,7 @@ bool Group::to_canonical_state_subgroup(int ind, PackedStateBin *buffer, std::ve
         changed = false;
         for (int i=0; i < size; i++) {
             if (generators[sub_groups[ind][i]].replace_if_less(buffer, num_values)) {
-                changed =  true;
+                changed = true;
                 if (!changed_at_least_once) changed_at_least_once = true;
             }
         }

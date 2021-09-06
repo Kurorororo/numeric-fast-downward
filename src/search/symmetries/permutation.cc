@@ -422,6 +422,7 @@ bool Permutation::replace_if_less(PackedStateBin *buffer, std::vector<ap_float> 
 
         // Check if the values are the same, then continue to the next aff. var.
         if (to_val < current_to_val) {
+            values_same = false;
             break;
         } else if (to_val > current_to_val) {
             return false;

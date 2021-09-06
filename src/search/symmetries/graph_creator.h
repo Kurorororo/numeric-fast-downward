@@ -10,7 +10,6 @@
 enum SymmetryBasedSearchType {
     NO_SYMMETRIES,
     GOAL_ONLY_STABILIZED_ORBIT_SEARCH,
-    GOAL_ONLY_STABILIZED_NO_SEARCH
 };
 
 
@@ -41,7 +40,7 @@ public:
     }
 
     bool to_canonical_state(PackedStateBin* buffer, std::vector<ap_float> &num_values) const {
-        group.to_canonical_state(buffer, num_values);
+        return group.to_canonical_state(buffer, num_values);
     }
 
     static void add_options_to_parser(OptionParser &parser);

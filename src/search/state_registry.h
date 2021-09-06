@@ -165,10 +165,6 @@ public:
     */
     GlobalState get_successor_state(const GlobalState &predecessor, const GlobalOperator &op);
 
-    GlobalState get_canonical_successor_state(const GlobalState &predecessor, const GlobalOperator &op);
-
-    GlobalState register_state(const std::vector<container_int> &state, std::vector<ap_float> &numeric_state);
-
     /*
       Returns the number of states registered so far.
     */
