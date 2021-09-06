@@ -88,8 +88,6 @@ namespace numeric_lm_cut_heuristic {
 
             std::cout << "Infinite operators: " << n_infinite_operators << std::endl;
             std::cout << "Second-order simple operators: " << n_second_order_simple_operators << std::endl;
-
-            if (n_second_order_simple_operators == 0) this->use_second_order_simple = false;
         }
 
         original_to_relaxed_operators.resize(task_proxy.get_operators().size(), vector<RelaxedOperator*>());
