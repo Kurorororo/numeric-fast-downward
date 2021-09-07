@@ -359,6 +359,8 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         }
     }
 
+    NumericTaskProxy::redundant_constraints = true;
+
     return g;
 }
 
