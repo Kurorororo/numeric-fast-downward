@@ -159,8 +159,6 @@ public:
     */
     const GlobalState &get_initial_state();
 
-    const GlobalState &get_canonical_initial_state();
-
     /*
       Returns the state that results from applying op to predecessor and
       registers it if this was not done before. This is an expensive operation

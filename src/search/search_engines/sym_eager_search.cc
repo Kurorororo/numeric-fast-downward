@@ -76,7 +76,14 @@ void SymEagerSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    const GlobalState &initial_state = g_state_registry->get_canonical_initial_state();
+    const GlobalState &original_initial_state = g_state_registry->get_initial_state();
+    std::vector<container_int> values(g_variable_domain.size());
+    for (size_t i = 0; i < g_variable_domain.size(); ++i) {
+        values[i] = original_initial_state[i];
+    }
+    std::vector<ap_float> numeric_values = original_initial_state.get_numeric_vars();
+    g_symmetry_graph->get_canonical_state(values, numeric_values);
+    const GlobalState &initial_state = g_state_registry->register_state(values, numeric_values);
     // Note: we consider the initial state as reached by a preferred
     // operator.
     EvaluationContext eval_context(initial_state, 0, true, &statistics);
