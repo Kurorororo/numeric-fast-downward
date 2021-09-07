@@ -51,6 +51,9 @@ class SearchSpace {
     PerStateInformation<SearchNodeInfo> search_node_infos;
 
     OperatorCost cost_type;
+
+    void trace_path_symmetry(const GlobalState &goal_state,
+                    std::vector<const GlobalOperator *> &path) const;
 public:
     SearchSpace(OperatorCost cost_type_);
     SearchNode get_node(const GlobalState &state);

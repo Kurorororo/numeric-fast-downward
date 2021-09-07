@@ -150,9 +150,9 @@ void Group::dump_generators() const {
 }
 
 void Group::dump_subgroups() const {
-  for (int i= 0; i < sub_groups.size(); i++){
+  for (size_t i = 0; i < sub_groups.size(); i++) {
     cout << "Subgroup " << i << endl;
-    for (int j= 0; j < sub_groups[i].size(); j++){
+    for (size_t j = 0; j < sub_groups[i].size(); j++) {
       cout << sub_groups[i][j] << " " ;
     }
     cout << endl;
@@ -160,23 +160,12 @@ void Group::dump_subgroups() const {
 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
-void Group::get_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                                std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const {
-
-  calculate_canonical_state(values, num_values, canonical_values, canonical_num_values);
+void Group::get_canonical_state(std::vector<container_int> &values, std::vector<ap_float> &num_values) const {
+    for (size_t i = 0; i < sub_groups.size(); i++)
+      calculate_canonical_state_subgroup(i, values, num_values);
 }
 
-void Group::calculate_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                                      std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const {
-//	cout << "Calculating canonical state for state " << endl;
-    canonical_values = values;
-    canonical_num_values = num_values;
-    for (int i = 0; i < sub_groups.size(); i++)
-      calculate_canonical_state_subgroup(i, canonical_values, canonical_num_values);
-}
-
-void Group::calculate_canonical_state_subgroup(int ind, std::vector<int> &values, std::vector<ap_float> &num_values) const {
+void Group::calculate_canonical_state_subgroup(int ind, std::vector<container_int> &values, std::vector<ap_float> &num_values) const {
     // Going to the best successor, continue until local minima is reached
     // Warning: before running the method, the state is copied into the original_state.
     //          after finishing the run, the minimal state is in original_state
@@ -205,7 +194,7 @@ void Group::calculate_canonical_state_subgroup(int ind, std::vector<int> &values
 bool Group::to_canonical_state(PackedStateBin *buffer, std::vector<ap_float> &num_values) const {
     bool changed = false;
 
-    for (int i = 0; i < sub_groups.size(); i++) {
+    for (size_t i = 0; i < sub_groups.size(); i++) {
       if (to_canonical_state_subgroup(i, buffer, num_values) && !changed) 
         changed = true;
     }
@@ -234,4 +223,41 @@ bool Group::to_canonical_state_subgroup(int ind, PackedStateBin *buffer, std::ve
     }
 
     return changed_at_least_once;
+}
+
+std::vector<int> Group::get_trace(std::vector<container_int> &values, std::vector<ap_float> &num_values) const {
+//	cout << "Calculating canonical state for state " << endl;
+    std::vector<int> trace;
+    for (size_t i = 0; i < sub_groups.size(); i++)
+      get_trace_subgroup(i, values, num_values, trace);
+    return trace;
+}
+
+void Group::get_trace_subgroup(int ind, std::vector<container_int> &values, std::vector<ap_float> &num_values,
+                               std::vector<int> &trace) const {
+    // Going to the best successor, continue until local minima is reached
+    // Warning: before running the method, the state is copied into the original_state.
+    //          after finishing the run, the minimal state is in original_state
+    int size = sub_groups[ind].size();
+    if (size == 0)
+        return;
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (int i=0; i < size; i++) {
+            if (generators[sub_groups[ind][i]].replace_if_less(values, num_values)) {
+                trace.push_back(sub_groups[ind][i]);
+                changed =  true;
+            }
+        }
+    }
+}
+
+Permutation Group::compose_permutation(const std::vector<int> &trace) const {
+  Permutation p;
+  for (int i : trace) {
+    p = Permutation(p, generators[i]);
+  }
+  return p;
 }

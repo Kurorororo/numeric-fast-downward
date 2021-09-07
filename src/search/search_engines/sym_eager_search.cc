@@ -76,7 +76,7 @@ void SymEagerSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    const GlobalState &initial_state = g_initial_state();
+    const GlobalState &initial_state = g_state_registry->get_canonical_initial_state();
     // Note: we consider the initial state as reached by a preferred
     // operator.
     EvaluationContext eval_context(initial_state, 0, true, &statistics);
@@ -172,7 +172,7 @@ SearchStatus SymEagerSearch::step() {
         if ((node.get_real_g() + op->get_cost()) >= bound)
             continue;
 
-        GlobalState succ_state = g_state_registry->get_successor_state(s, *op);
+        GlobalState succ_state = g_state_registry->get_canonical_successor_state(s, *op);
         statistics.inc_generated();
         bool is_preferred = (preferred_ops.find(op) != preferred_ops.end());
 

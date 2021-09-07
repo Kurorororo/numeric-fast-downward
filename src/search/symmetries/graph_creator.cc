@@ -362,6 +362,24 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
     return g;
 }
 
+Permutation GraphCreator::create_permutation_from_state_to_state(const GlobalState &from_state, const GlobalState &to_state) const {
+    std::vector<container_int> tmp_state(g_variable_domain.size());
+    for (size_t i = 0; i < g_variable_domain.size(); ++i)
+        tmp_state[i] = from_state[i];
+    std::vector<ap_float> tmp_numeric_values = from_state.get_numeric_vars();
+    std::vector<int> from_trace = group.get_trace(tmp_state, tmp_numeric_values);
+
+    for (size_t i = 0; i < g_variable_domain.size(); ++i)
+        tmp_state[i] = to_state[i];
+    tmp_numeric_values = to_state.get_numeric_vars();
+    std::vector<int> to_trace = group.get_trace(tmp_state, tmp_numeric_values);
+
+    Permutation p1(group.compose_permutation(to_trace), true);
+    Permutation p2 = group.compose_permutation(from_trace);
+    
+    return Permutation(p2, p1);
+}
+
 void GraphCreator::add_options_to_parser(OptionParser &parser) {
 
     vector<string> sym_types;

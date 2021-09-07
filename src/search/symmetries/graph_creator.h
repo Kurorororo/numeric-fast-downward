@@ -34,14 +34,15 @@ public:
 
     void initialize(const std::shared_ptr<AbstractTask> task);
 
-    void get_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                             std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const {
-        group.get_canonical_state(values, num_values, canonical_values, canonical_num_values);
+    void get_canonical_state(std::vector<container_int> &values, std::vector<ap_float> &num_values) const {
+        group.get_canonical_state(values, num_values);
     }
 
     bool to_canonical_state(PackedStateBin* buffer, std::vector<ap_float> &num_values) const {
         return group.to_canonical_state(buffer, num_values);
     }
+
+    Permutation create_permutation_from_state_to_state(const GlobalState &from_state, const GlobalState &to_state) const;
 
     static void add_options_to_parser(OptionParser &parser);
 

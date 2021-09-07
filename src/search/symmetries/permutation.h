@@ -18,8 +18,7 @@ public:
     bool operator ==(const Permutation&) const;
 
     bool identity() const;
-    void permutation_on_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                              std::vector<int> &new_values, std::vector<ap_float> &new_num_values) const;
+    void permutation_on_state(std::vector<container_int> &values, std::vector<ap_float> &num_values) const;
     void set_value(int ind, int val);
     int get_value(int ind) const { return value[ind]; }
     int get_inverse_value(int ind) const { return inverse_value[ind]; }
@@ -46,7 +45,7 @@ public:
     static std::vector<int> num_var_to_regular_id;
     static std::vector<int> regular_id_to_num_var;
 
-    bool replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values) const;
+    bool replace_if_less(std::vector<container_int> &values, std::vector<ap_float> &num_values) const;
     bool replace_if_less(PackedStateBin *buffer, std::vector<ap_float> &num_values) const;
 
 private:
@@ -62,9 +61,6 @@ private:
     // Affected vars by cycles
     std::vector<std::vector<int> > affected_vars_cycles;
     std::vector<std::vector<int> > affected_num_vars_cycles;
-
-    bool cmp_less_short(const std::vector<int> &l_values, const std::vector<ap_float> &l_num_values,
-                        const std::vector<int> &r_values, const std::vector<ap_float> &r_num_values) const;
 
     void set_affected(int ind, int val);
     bool is_numeric(int ind) const { return ind >= dom_sum_num_var; }

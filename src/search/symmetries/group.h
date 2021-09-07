@@ -25,9 +25,10 @@ public:
     void add_generator(Permutation gen);
     int get_num_generators() const;
     void dump_generators() const;
-    void get_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                             std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const;
+    void get_canonical_state(std::vector<container_int> &values, std::vector<ap_float> &num_values) const;
     bool to_canonical_state(PackedStateBin* buffer, std::vector<ap_float> &num_values) const;
+    std::vector<int> get_trace(std::vector<container_int> &values, std::vector<ap_float> &num_values) const;
+    Permutation compose_permutation(const std::vector<int> &trace) const;
 
     void free_memory();
 
@@ -43,12 +44,11 @@ private:
     static int num_identity_generators;
 
     // Methods for finding a canonical state for each state.
-    void calculate_canonical_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                                   std::vector<int> &canonical_values, std::vector<ap_float> &canonical_num_values) const;
     const Permutation& get_permutation(int) const;
 
-    void calculate_canonical_state_subgroup(int ind, std::vector<int> &values, std::vector<ap_float> &num_values) const;
+    void calculate_canonical_state_subgroup(int ind, std::vector<container_int> &values, std::vector<ap_float> &num_values) const;
     bool to_canonical_state_subgroup(int ind, PackedStateBin* buffer, std::vector<ap_float> &num_values) const;
+    void get_trace_subgroup(int ind, std::vector<container_int> &values, std::vector<ap_float> &num_values, std::vector<int> &trace) const;
 
     void dump_subgroups() const;
     void dump_subgroups_verbous() const;

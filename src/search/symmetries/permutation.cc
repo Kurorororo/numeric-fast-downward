@@ -175,8 +175,10 @@ bool Permutation::operator ==(const Permutation &other) const{
 }
 
 
-void Permutation::permutation_on_state(const std::vector<int> &values, const std::vector<ap_float> &num_values,
-                                       std::vector<int> &new_values, std::vector<ap_float> &new_num_values) const {
+void Permutation::permutation_on_state(std::vector<container_int> &values, std::vector<ap_float> &num_values) const {
+    std::vector<container_int> new_values = values;
+    std::vector<ap_float> new_num_values = num_values;
+
     for (int i = 0, n = vars_affected.size(); i < n; i++) {
         int var = vars_affected[i];
         int value = values[var];
@@ -202,19 +204,9 @@ void Permutation::permutation_on_state(const std::vector<int> &values, const std
             new_num_values[new_var] = num_values[var];
         }
     }
-}
 
-bool Permutation::cmp_less_short(const std::vector<int> &l_values, const std::vector<ap_float> &l_num_values,
-                                 const std::vector<int> &r_values, const std::vector<ap_float> &r_num_values) const {
-    for(int i = vars_affected.size()-1; i >= 0; --i) {
-        if (l_values[vars_affected[i]] > r_values[vars_affected[i]]) return false;
-        if (l_values[vars_affected[i]] < r_values[vars_affected[i]]) return true;
-    }
-    for(int i = num_vars_affected.size()-1; i >= 0; --i) {
-        if (l_num_values[num_vars_affected[i]] > r_num_values[num_vars_affected[i]]) return false;
-        if (l_num_values[num_vars_affected[i]] < r_num_values[num_vars_affected[i]]) return true;
-    }
-    return false;
+    values = new_values;
+    num_values = new_num_values;
 }
 
 int Permutation::get_var_by_index(int ind) {
@@ -323,7 +315,7 @@ void Permutation::set_affected(int ind, int val) {
 //////////////////////////////////////////////////////////////////////////////////////////
 // This method compares the state to the state resulting from permuting it.
 // If the original state is bigger than the resulted one, it is rewritten with the latter and true is returned.
-bool Permutation::replace_if_less(std::vector<int> &values, std::vector<ap_float> &num_values) const {
+bool Permutation::replace_if_less(std::vector<container_int> &values, std::vector<ap_float> &num_values) const {
     if (identity())
         return false;
 

@@ -47,6 +47,10 @@ public:
 
     container_int operator[](std::size_t index) const;
 
+    bool same_values(const GlobalState &state) const;
+
+    bool same_values(const std::vector<container_int> &values, const std::vector<ap_float> &numeric_values) const;
+
     std::vector<ap_float> get_numeric_vars() const;
     void dump_pddl() const;
     void dump_fdr() const;

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cassert>
+#include <cmath>
 #include <sstream>
 using namespace std;
 
@@ -24,6 +25,33 @@ GlobalState::~GlobalState() {
 
 container_int GlobalState::operator[](size_t index) const {
     return g_state_packer->get(buffer, index);
+}
+
+bool GlobalState::same_values(const GlobalState &state) const {
+    for (size_t i = 0; i < g_variable_domain.size(); ++i) {
+        if (this->operator[](i) != state[i]) return false;
+    }
+    std::vector<ap_float> this_numeric_values = this->get_numeric_vars();
+    std::vector<ap_float> numeric_values = state.get_numeric_vars();
+    for (size_t i = 0; i < this_numeric_values.size(); ++i) {
+        if (g_numeric_var_types[i] == regular) {
+            if (std::fabs(this_numeric_values[i] - numeric_values[i]) > 0.00001) return false;
+        }
+    }
+    return true;
+}
+
+bool GlobalState::same_values(const std::vector<container_int> &values, const std::vector<ap_float> &numeric_values) const {
+    for (size_t i = 0; i < g_variable_domain.size(); ++i) {
+        if (this->operator[](i) != values[i]) return false;
+    }
+    std::vector<ap_float> this_numeric_values = this->get_numeric_vars();
+    for (size_t i = 0; i < this_numeric_values.size(); ++i) {
+        if (g_numeric_var_types[i] == regular) {
+            if (std::fabs(this_numeric_values[i] - numeric_values[i]) > 0.00001) return false;
+        }
+    }
+    return true;
 }
 
 void GlobalState::dump_pddl() const {
