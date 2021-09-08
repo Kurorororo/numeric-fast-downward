@@ -63,7 +63,8 @@ void DeleteRelaxationConstraints::add_goal_state_constraints(
   for (size_t id_goal = 0; id_goal < task_proxy.get_goals().size(); ++id_goal) {
     FactProxy goal = task_proxy.get_goals()[id_goal];
     lp::LPConstraint constraint(1., 1.);
-    if (numeric_task.is_numeric_axiom(goal.get_variable().get_id())) continue;
+    if (numeric_task.is_numeric_axiom(goal.get_variable().get_id())
+        || !numeric_task.numeric_goals_empty(id_goal)) continue;  // this is a numeric goal
     constraint.insert(indices_u_p[numeric_task.get_proposition(
                           goal.get_variable().get_id(), goal.get_value())],
                       1.);
@@ -72,10 +73,18 @@ void DeleteRelaxationConstraints::add_goal_state_constraints(
     // cout << "goal " <<
     // task_proxy.get_variables()[goal.get_variable().get_id()].get_fact(goal.get_value()).get_name()
     // << endl;
-    if (!numeric_task.numeric_goals_empty(id_goal))
-      continue;  // this is a numeric goal
     if (!constraint.empty()) {
       constraints.push_back(constraint);
+    }
+  }
+  for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
+    for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+      lp::LPConstraint constraint(1., 1.);
+      constraint.insert(indices_u_p[numeric_task.get_proposition(var_value.first, var_value.second)], 1.);
+      goals.insert(numeric_task.get_proposition(var_value.first, var_value.second));
+      if (!constraint.empty()) {
+        constraints.push_back(constraint);
+      }
     }
   }
 }
