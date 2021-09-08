@@ -608,7 +608,8 @@ fast_downward_plugin(
     NAME SYMMETRIES
     HELP "Plugin containing the code for symmetry breaking"
     SOURCES
-        search_engines/sym_eager_search.cc
+        search_engines/dks_eager_search.cc
+        search_engines/orbit_eager_search.cc
         symmetries/graph_creator.cc
         symmetries/group.cc
         symmetries/permutation.cc

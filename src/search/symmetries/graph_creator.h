@@ -9,7 +9,7 @@
 
 enum SymmetryBasedSearchType {
     NO_SYMMETRIES,
-    GOAL_ONLY_STABILIZED_ORBIT_SEARCH,
+    GOAL_ONLY_STABILIZED,
 };
 
 

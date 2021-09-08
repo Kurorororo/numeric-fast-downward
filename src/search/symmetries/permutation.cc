@@ -189,7 +189,7 @@ void Permutation::permutation_on_state(std::vector<container_int> &values, std::
             new_values[var] = value;
         } else {
             //cout << "Value " << new_val << " for variable " << new_var << endl;
-            if (new_val< 0 || new_val >= g_variable_domain[new_var])
+            if (new_val< 0 || new_val >= static_cast<int>(g_variable_domain[new_var]))
                 cout << "Value " << new_val << " for variable " << new_var << endl;
             new_values[new_var] = new_val;
         }
@@ -330,10 +330,10 @@ bool Permutation::replace_if_less(std::vector<container_int> &values, std::vecto
         int to_val = to_var_val.second;
 
         // Check if the values are the same, then continue to the next aff. var.
-        if (to_val < values[to_var]) {
+        if (to_val < static_cast<int>(values[to_var])) {
             values_same = false;
             break;
-        } else if (to_val > values[to_var]) {
+        } else if (to_val > static_cast<int>(values[to_var])) {
             return false;
         }
     }

@@ -386,8 +386,8 @@ void GraphCreator::add_options_to_parser(OptionParser &parser) {
 
     vector<string> sym_types;
     sym_types.push_back("none");
-    sym_types.push_back("goal_only_orbit");
-    parser.add_enum_option("symmetries", sym_types, "use symmetries", "none");
+    sym_types.push_back("goal_only");
+    parser.add_enum_option("symmetries", sym_types, "use symmetries", "goal_only");
 
     parser.add_option<bool>("no_search",
                            "No search is performed, exiting after creating the symmetries",
@@ -418,13 +418,10 @@ static GraphCreator *_parse(OptionParser &parser) {
     */
     if (!parser.dry_run()) {
 
-    if (type == GOAL_ONLY_STABILIZED_ORBIT_SEARCH) {
+    if (type == GOAL_ONLY_STABILIZED) {
         GraphCreator* gr = new GraphCreator(opts);
         if (gr) {
-            cout << "Creating symmetry graph stabilizing goal only and using ";
-            if (gr->get_search_type() == GOAL_ONLY_STABILIZED_ORBIT_SEARCH)
-                cout << "orbit ";
-            cout << "search" << endl;
+            cout << "Creating symmetry graph stabilizing goal only" << endl;;
         }
 
         return gr;

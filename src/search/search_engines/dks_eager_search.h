@@ -1,5 +1,5 @@
-#ifndef SYM_EAGER_SEARCH_ENGINES_EAGER_SYM_EAGER_SEARCH_H
-#define SYM_EAGER_SEARCH_ENGINES_EAGER_SYM_EAGER_SEARCH_H
+#ifndef DKS_EAGER_SEARCH_ENGINES_EAGER_DKS_EAGER_SEARCH_H
+#define DKS_EAGER_SEARCH_ENGINES_EAGER_DKS_EAGER_SEARCH_H
 
 #include "../search_engine.h"
 
@@ -17,8 +17,8 @@ namespace options {
 class Options;
 }
 
-namespace sym_eager_search {
-class SymEagerSearch : public SearchEngine {
+namespace dks_eager_search {
+class DksEagerSearch : public SearchEngine {
     const bool reopen_closed_nodes;
     const bool use_multi_path_dependence;
 
@@ -29,6 +29,8 @@ class SymEagerSearch : public SearchEngine {
     std::vector<Heuristic *> preferred_operator_heuristics;
 
     std::shared_ptr<PruningMethod> pruning_method;
+
+    PerStateInformation<StateID> canonical_to_state_id;
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);
@@ -42,8 +44,8 @@ protected:
     virtual SearchStatus step() override;
 
 public:
-    explicit SymEagerSearch(const options::Options &opts);
-    virtual ~SymEagerSearch() = default;
+    explicit DksEagerSearch(const options::Options &opts);
+    virtual ~DksEagerSearch() = default;
 
     virtual void print_statistics() const override;
 
@@ -52,4 +54,5 @@ public:
 }
 
 #endif
+
 

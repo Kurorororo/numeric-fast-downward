@@ -1,4 +1,4 @@
-#include "sym_eager_search.h"
+#include "dks_eager_search.h"
 
 #include "search_common.h"
 
@@ -24,8 +24,8 @@
 
 using namespace std;
 
-namespace sym_eager_search {
-SymEagerSearch::SymEagerSearch(const Options &opts)
+namespace dks_eager_search {
+DksEagerSearch::DksEagerSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
       use_multi_path_dependence(opts.get<bool>("mpd")),
@@ -33,7 +33,8 @@ SymEagerSearch::SymEagerSearch(const Options &opts)
                 create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
-      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")) {
+      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
+      canonical_to_state_id(StateID::no_state) {
     // Setting the symmetry global variable -- works for any eager search
     g_symmetry_graph = opts.get<GraphCreator *>("symmetry");
     const std::shared_ptr<AbstractTask> task(get_task_from_options(opts));
@@ -43,9 +44,10 @@ SymEagerSearch::SymEagerSearch(const Options &opts)
       cout << "No symmetry is defined for this search" << endl;
       exit(1);
     }
+    g_state_registry->subscribe(&canonical_to_state_id);
 }
 
-void SymEagerSearch::initialize() {
+void DksEagerSearch::initialize() {
     cout << "Conducting best first search"
          << (reopen_closed_nodes ? " with" : " without")
          << " reopening closed nodes, (real) bound = " << bound
@@ -76,14 +78,16 @@ void SymEagerSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    const GlobalState &original_initial_state = g_state_registry->get_initial_state();
+    const GlobalState &initial_state = g_state_registry->get_initial_state();
     std::vector<container_int> values(g_variable_domain.size());
     for (size_t i = 0; i < g_variable_domain.size(); ++i) {
-        values[i] = original_initial_state[i];
+        values[i] = initial_state[i];
     }
-    std::vector<ap_float> numeric_values = original_initial_state.get_numeric_vars();
+    std::vector<ap_float> numeric_values = initial_state.get_numeric_vars();
     g_symmetry_graph->get_canonical_state(values, numeric_values);
-    const GlobalState &initial_state = g_state_registry->register_state(values, numeric_values);
+    GlobalState canonical_initial_state = g_state_registry->register_state(values, numeric_values);
+    canonical_to_state_id[canonical_initial_state] = initial_state.get_id();
+
     // Note: we consider the initial state as reached by a preferred
     // operator.
     EvaluationContext eval_context(initial_state, 0, true, &statistics);
@@ -122,19 +126,19 @@ void SymEagerSearch::initialize() {
     }
 }
 
-void SymEagerSearch::print_checkpoint_line(int g) const {
+void DksEagerSearch::print_checkpoint_line(int g) const {
     cout << "[g=" << g << ", ";
     statistics.print_basic_statistics();
     cout << "]" << endl;
 }
 
-void SymEagerSearch::print_statistics() const {
+void DksEagerSearch::print_statistics() const {
     statistics.print_detailed_statistics();
     search_space.print_statistics();
     pruning_method->print_statistics();
 }
 
-SearchStatus SymEagerSearch::step() {
+SearchStatus DksEagerSearch::step() {
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
         return FAILED;
@@ -179,7 +183,18 @@ SearchStatus SymEagerSearch::step() {
         if ((node.get_real_g() + op->get_cost()) >= bound)
             continue;
 
-        GlobalState succ_state = g_state_registry->get_canonical_successor_state(s, *op);
+        GlobalState succ_state = g_state_registry->get_successor_state(s, *op);
+        std::vector<container_int> values(g_variable_domain.size());
+        for (size_t i = 0; i < g_variable_domain.size(); ++i) {
+            values[i] = succ_state[i];
+        }
+        std::vector<ap_float> numeric_values = succ_state.get_numeric_vars();
+        g_symmetry_graph->get_canonical_state(values, numeric_values);
+        GlobalState canonical_succ_state = g_state_registry->register_state(values, numeric_values);
+
+        StateID previous_state_id = canonical_to_state_id[canonical_succ_state];
+        bool is_new = previous_state_id == StateID::no_state;
+
         statistics.inc_generated();
         bool is_preferred = (preferred_ops.find(op) != preferred_ops.end());
 
@@ -190,7 +205,7 @@ SearchStatus SymEagerSearch::step() {
             continue;
 
         // update new path
-        if (use_multi_path_dependence || succ_node.is_new()) {
+        if (use_multi_path_dependence || is_new) {
             /*
               Note: we must call reach_state for each heuristic, so
               don't break out of the for loop early.
@@ -200,13 +215,15 @@ SearchStatus SymEagerSearch::step() {
             }
         }
 
-        if (succ_node.is_new()) {
+        if (is_new) {
             // We have not seen this state before.
             // Evaluate and create a new node.
 
             // Careful: succ_node.get_g() is not available here yet,
             // hence the stupid computation of succ_g.
             // TODO: Make this less fragile.
+            canonical_to_state_id[canonical_succ_state] = succ_state.get_id();
+
             ap_float succ_g = node.get_g() + get_adjusted_cost(*op);
 
             EvaluationContext eval_context(
@@ -245,47 +262,51 @@ SearchStatus SymEagerSearch::step() {
             test_goal(succ_state),
               false);
             }
-        } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
-            // We found a new cheapest path to an open or closed state.
-            if (reopen_closed_nodes) {
-                if (succ_node.is_closed()) {
+        } else {
+            GlobalState previous_state = g_state_registry->lookup_state(previous_state_id);
+            SearchNode previous_node = search_space.get_node(previous_state);
+            if (previous_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
+                // We found a new cheapest path to an open or closed state.
+                if (reopen_closed_nodes) {
+                    if (previous_node.is_closed()) {
+                        /*
+                          TODO: It would be nice if we had a way to test
+                          that reopening is expected behaviour, i.e., exit
+                          with an error when this is something where
+                          reopening should not occur (e.g. A* with a
+                          consistent heuristic).
+                        */
+                        statistics.inc_reopened();
+                    }
+                    previous_node.reopen(node, op);
+
+                    EvaluationContext eval_context(
+                        previous_state, previous_node.get_g(), is_preferred, &statistics);
+
                     /*
-                      TODO: It would be nice if we had a way to test
-                      that reopening is expected behaviour, i.e., exit
-                      with an error when this is something where
-                      reopening should not occur (e.g. A* with a
-                      consistent heuristic).
+                      Note: our old code used to retrieve the h value from
+                      the search node here. Our new code recomputes it as
+                      necessary, thus avoiding the incredible ugliness of
+                      the old "set_evaluator_value" approach, which also
+                      did not generalize properly to settings with more
+                      than one heuristic.
+
+                      Reopening should not happen all that frequently, so
+                      the performance impact of this is hopefully not that
+                      large. In the medium term, we want the heuristics to
+                      remember heuristic values for states themselves if
+                      desired by the user, so that such recomputations
+                      will just involve a look-up by the Heuristic object
+                      rather than a recomputation of the heuristic value
+                      from scratch.
                     */
-                    statistics.inc_reopened();
+                    open_list->insert(eval_context, previous_state.get_id());
+                } else {
+                    // If we do not reopen closed nodes, we just update the parent pointers.
+                    // Note that this could cause an incompatibility between
+                    // the g-value and the actual path that is traced back.
+                    previous_node.update_parent(node, op);
                 }
-                succ_node.reopen(node, op);
-
-                EvaluationContext eval_context(
-                    succ_state, succ_node.get_g(), is_preferred, &statistics);
-
-                /*
-                  Note: our old code used to retrieve the h value from
-                  the search node here. Our new code recomputes it as
-                  necessary, thus avoiding the incredible ugliness of
-                  the old "set_evaluator_value" approach, which also
-                  did not generalize properly to settings with more
-                  than one heuristic.
-
-                  Reopening should not happen all that frequently, so
-                  the performance impact of this is hopefully not that
-                  large. In the medium term, we want the heuristics to
-                  remember heuristic values for states themselves if
-                  desired by the user, so that such recomputations
-                  will just involve a look-up by the Heuristic object
-                  rather than a recomputation of the heuristic value
-                  from scratch.
-                */
-                open_list->insert(eval_context, succ_state.get_id());
-            } else {
-                // If we do not reopen closed nodes, we just update the parent pointers.
-                // Note that this could cause an incompatibility between
-                // the g-value and the actual path that is traced back.
-                succ_node.update_parent(node, op);
             }
             if (PLAN_VIS_LOG == plan_vis_log)
               g_plan_logger->log_duplicate(succ_state.get_id(),node.get_g() + get_adjusted_cost(*op),s.get_id());
@@ -295,7 +316,7 @@ SearchStatus SymEagerSearch::step() {
     return IN_PROGRESS;
 }
 
-pair<SearchNode, bool> SymEagerSearch::fetch_next_node() {
+pair<SearchNode, bool> DksEagerSearch::fetch_next_node() {
     /* TODO: The bulk of this code deals with multi-path dependence,
        which is a bit unfortunate since that is a special case that
        makes the common case look more complicated than it would need
@@ -356,17 +377,17 @@ pair<SearchNode, bool> SymEagerSearch::fetch_next_node() {
     }
 }
 
-void SymEagerSearch::reward_progress() {
+void DksEagerSearch::reward_progress() {
     // Boost the "preferred operator" open lists somewhat whenever
     // one of the heuristics finds a state with a new best h value.
     open_list->boost_preferred();
 }
 
-void SymEagerSearch::dump_search_space() const {
+void DksEagerSearch::dump_search_space() const {
     search_space.dump();
 }
 
-void SymEagerSearch::start_f_value_statistics(EvaluationContext &eval_context) {
+void DksEagerSearch::start_f_value_statistics(EvaluationContext &eval_context) {
     if (f_evaluator) {
         ap_float f_value = eval_context.get_heuristic_value(f_evaluator);
         statistics.report_f_value_progress(f_value);
@@ -375,7 +396,7 @@ void SymEagerSearch::start_f_value_statistics(EvaluationContext &eval_context) {
 
 /* TODO: HACK! This is very inefficient for simply looking up an h value.
    Also, if h values are not saved it would recompute h for each and every state. */
-void SymEagerSearch::update_f_value_statistics(const SearchNode &node) {
+void DksEagerSearch::update_f_value_statistics(const SearchNode &node) {
     if (f_evaluator) {
         /*
           TODO: This code doesn't fit the idea of supporting
@@ -399,7 +420,7 @@ void add_pruning_option(OptionParser &parser) {
 }
 
 static SearchEngine *_parse(OptionParser &parser) {
-    parser.document_synopsis("Eager best-first search", "");
+    parser.document_synopsis("Dks eager best-first search", "");
 
     parser.add_option<shared_ptr<OpenListFactory>>("open", "open list");
     parser.add_option<bool>("reopen_closed",
@@ -418,10 +439,10 @@ static SearchEngine *_parse(OptionParser &parser) {
     parser.add_option<GraphCreator *>("symmetry", "use symmetries", OptionParser::NONE);
     Options opts = parser.parse();
 
-    SymEagerSearch *engine = nullptr;
+    DksEagerSearch *engine = nullptr;
     if (!parser.dry_run()) {
         opts.set<bool>("mpd", false);
-        engine = new SymEagerSearch(opts);
+        engine = new DksEagerSearch(opts);
     }
 
     return engine;
@@ -429,7 +450,7 @@ static SearchEngine *_parse(OptionParser &parser) {
 
 static SearchEngine *_parse_astar(OptionParser &parser) {
     parser.document_synopsis(
-        "A* search (eager)",
+        "Dks A* search (eager)",
         "A* is a special case of eager best first search that uses g+h "
         "as f-function. "
         "We break ties using the evaluator. Closed nodes are re-opened.");
@@ -456,7 +477,7 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
     parser.add_option<GraphCreator *>("symmetry", "use symmetries", OptionParser::NONE);
     Options opts = parser.parse();
 
-    SymEagerSearch *engine = nullptr;
+    DksEagerSearch *engine = nullptr;
     if (!parser.dry_run()) {
         auto temp = search_common::create_astar_open_list_factory_and_f_eval(opts);
         opts.set("open", temp.first);
@@ -464,14 +485,14 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         opts.set("reopen_closed", true);
         vector<Heuristic *> preferred_list;
         opts.set("preferred", preferred_list);
-        engine = new SymEagerSearch(opts);
+        engine = new DksEagerSearch(opts);
     }
 
     return engine;
 }
 
 static SearchEngine *_parse_greedy(OptionParser &parser) {
-    parser.document_synopsis("Greedy search (eager) using symmetry breaking", "");
+    parser.document_synopsis("Dks greedy search (eager)", "");
     parser.document_note(
         "Open list",
         "In most cases, eager greedy best first search uses "
@@ -525,20 +546,21 @@ static SearchEngine *_parse_greedy(OptionParser &parser) {
     Options opts = parser.parse();
     opts.verify_list_non_empty<ScalarEvaluator *>("evals");
 
-    SymEagerSearch *engine = nullptr;
+    DksEagerSearch *engine = nullptr;
     if (!parser.dry_run()) {
         opts.set("open", search_common::create_greedy_open_list_factory(opts));
         opts.set("reopen_closed", false);
         opts.set("mpd", false);
         ScalarEvaluator *evaluator = nullptr;
         opts.set("f_eval", evaluator);
-        engine = new SymEagerSearch(opts);
+        engine = new DksEagerSearch(opts);
     }
     return engine;
 }
 
-static Plugin<SearchEngine> _plugin("sym_eager", _parse);
-static Plugin<SearchEngine> _plugin_astar("sym_astar", _parse_astar);
-static Plugin<SearchEngine> _plugin_greedy("sym_eager_greedy", _parse_greedy);
+static Plugin<SearchEngine> _plugin("dks_eager", _parse);
+static Plugin<SearchEngine> _plugin_astar("dks_astar", _parse_astar);
+static Plugin<SearchEngine> _plugin_greedy("dks_eager_greedy", _parse_greedy);
 }
+
 
