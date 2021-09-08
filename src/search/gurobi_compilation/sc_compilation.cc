@@ -194,6 +194,17 @@ void GurobiStateChangeModel::goal_state_constraint(
     int p = numeric_task.get_proposition(var, g_val);
     model->addConstr(y_a[t_max][p] + y_pa[t_max][p] + y_m[t_max][p] >= 1, name);
   }
+  for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
+    for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+      int p = numeric_task.get_proposition(var_value.first, var_value.second);
+      std::string name = "SC_goal_" + std::to_string(id_goal) + "_" + std::to_string(p);
+      if (!first) {
+        GRBConstr constraint = model->getConstrByName(name);
+        model->remove(constraint);
+      }
+      model->addConstr(y_a[t_max][p] + y_pa[t_max][p] + y_m[t_max][p] >= 1, name);
+    }
+  }
 }
 
 void GurobiStateChangeModel::update_state_change_constraint(

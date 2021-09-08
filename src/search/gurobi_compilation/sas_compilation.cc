@@ -186,6 +186,21 @@ void GurobiSASStateChangeModel::goal_state_constraint(
       lhs.addTerms(&coeff, &y[t_max - 1][var][val][g_val], 1);
     model->addConstr(lhs == 1, name);
   }
+  for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
+    for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+      std::string name = "SAS_goal_" + std::to_string(id_goal) + "_" + std::to_string(var_value.first);
+      if (!first) {
+        GRBConstr constraint = model->getConstrByName(name);
+        model->remove(constraint);
+      }
+      int num_values = numeric_task.get_n_proposition_value(var_value.first);
+      GRBLinExpr lhs;
+      double coeff = 1;
+      for (int val = 0; val < num_values; val++)
+        lhs.addTerms(&coeff, &y[t_max - 1][var_value.first][val][var_value.second], 1);
+      model->addConstr(lhs == 1, name);
+    }
+  }
 }
 
 void GurobiSASStateChangeModel::update_state_change_constraint(
