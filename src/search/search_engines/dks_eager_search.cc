@@ -265,6 +265,9 @@ SearchStatus DksEagerSearch::step() {
         } else {
             GlobalState previous_state = g_state_registry->lookup_state(previous_state_id);
             SearchNode previous_node = search_space.get_node(previous_state);
+            if (previous_node.is_dead_end())
+                continue;
+
             if (previous_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
                 // We found a new cheapest path to an open or closed state.
                 if (reopen_closed_nodes) {
