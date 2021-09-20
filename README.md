@@ -164,6 +164,33 @@ fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(blin
 fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true))"
 ```
 
+##### Options
+
+- \bar{h}^{LM-cut}_{cri}
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, roudning_up=true))"
+```
+- h^{LM-cut}_{cri,+}
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, ceiling_less_than_one=true))"
+```
+- h^{LM-cut}_{ir}
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, irmax=true, disable_ma=true))"
+```
+- h^{LM-cut}_{ir,m}
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, irmax=true, disable_ma=false))"
+```
+- h^{LM-cut}_{ir,m+}
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, irmax=true, disable_ma=false, ceiling_less_than_one=true))"
+```
+- h^{LM-cut}_{rnd}
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, random_pcf=true))"
+```
+
 #### Propositional LM-cut (Kuroiwa et al. 2020)
 ```
 fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(ignore_numeric=true, redundant_constraints=true))"
@@ -198,6 +225,12 @@ fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(oper
 #### OC with the Numeric LM-cut Constraints (h^{LM-cut}_{LP}) (Kuroiwa et al. 2020)
 ```
 fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints],cplex,lp,redundant_constraints=true))"
+```
+
+##### Options
+- h^{LM-cut}_{ir,+} constraints
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints(ceiling_less_than_one=true)],cplex,lp,redundant_constraints=true))"
 ```
 
 #### OC with the Delete-relaxation and SEQ Constraints using IP (h^C_{IP}) (Piacentini et al. 2018)
