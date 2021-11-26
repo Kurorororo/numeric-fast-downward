@@ -314,6 +314,33 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             int eff_idx = Permutation::get_index_by_var_val(eff_fact.get_variable().get_id(), eff_fact.get_value());
             g->add_edge(op_idx, eff_idx);
         }
+
+        for (int pre : numeric_task.get_action_num_list(task_proxy.get_operators().size() + op.get_id())) {
+            for (int i : numeric_task.get_numeric_conditions_id(pre)) {
+                const LinearNumericCondition &lnc = numeric_task.get_condition(i);
+                int lnc_color = lnc.is_strictly_greater ? GT_VERTEX : GTE_VERTEX;
+                int lnc_idx = g->add_vertex(lnc_color);
+                g->add_edge(lnc_idx, op_idx);
+
+                ap_float denominator = 1.0;
+                bool first = true;
+                for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
+                    if (std::fabs(lnc.coefficients[j]) > precision) {
+                        if (first) {
+                            denominator = std::fabs(lnc.coefficients[j]);
+                            first = false;
+                        }
+                        int coeff_color = base_constant_color + float_to_int(lnc.coefficients[j] / denominator);
+                        int coeff_idx = g->add_vertex(coeff_color);
+                        g->add_edge(coeff_idx, lnc_idx);
+                        g->add_edge(Permutation::get_index_by_num_regular_id(j), coeff_idx);
+                    }
+                }
+                int constant_color = base_constant_color + float_to_int(lnc.constant / denominator);
+                int constant_idx = g->add_vertex(constant_color);
+                g->add_edge(lnc_idx, constant_idx);
+            }
+        }
     }
 
     // adding edges from goal vertex

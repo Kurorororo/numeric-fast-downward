@@ -73,8 +73,13 @@ namespace numeric_lm_cut_heuristic {
         }
 
         // Build relaxed operators for operators and axioms.
-        for (OperatorProxy op : task_proxy.get_operators())
-            build_relaxed_operator(op);
+        OperatorsProxy ops = task_proxy.get_operators();
+        for (OperatorProxy op : ops)
+            build_relaxed_operator(op, op.get_id());
+
+        for (OperatorProxy op : task_proxy.get_axioms()) {
+            build_relaxed_operator(op, ops.size() + op.get_id());
+        }
 
         if (!ignore_numeric && use_linear_effects) {
             for (OperatorProxy op : task_proxy.get_operators())
@@ -90,7 +95,8 @@ namespace numeric_lm_cut_heuristic {
             std::cout << "Second-order simple operators: " << n_second_order_simple_operators << std::endl;
         }
 
-        original_to_relaxed_operators.resize(task_proxy.get_operators().size(), vector<RelaxedOperator*>());
+        size_t op_size = task_proxy.get_operators().size() + task_proxy.get_axioms().size();
+        original_to_relaxed_operators.resize(op_size, vector<RelaxedOperator*>());
         
         if (!ignore_numeric) build_numeric_effects();
 
@@ -145,13 +151,13 @@ namespace numeric_lm_cut_heuristic {
             for (RelaxedProposition *eff : op.effects)
                 eff->effect_of.push_back(&op);
         }
-        cout << "ops " <<  task_proxy.get_operators().size() << ", prop: " << num_propositions << ", numeric conditions " <<  conditions.size() << endl;
+        cout << "ops " <<  op_size << ", prop: " << num_propositions << ", numeric conditions " <<  conditions.size() << endl;
     }
     
     LandmarkCutLandmarks::~LandmarkCutLandmarks() {
     }
     
-    void LandmarkCutLandmarks::build_relaxed_operator(const OperatorProxy &op) {
+    void LandmarkCutLandmarks::build_relaxed_operator(const OperatorProxy &op, size_t op_id) {
         vector<RelaxedProposition *> precondition;
         vector<RelaxedProposition *> effects;
         unordered_set<RelaxedProposition *> added_precondition;
@@ -168,7 +174,7 @@ namespace numeric_lm_cut_heuristic {
 
         if (!ignore_numeric_conditions) {
             // numeric precondition
-            for (int pre : numeric_task.get_action_num_list(op.get_id())){
+            for (int pre : numeric_task.get_action_num_list(op_id)){
                 for (int i : numeric_task.get_numeric_conditions_id(pre)){
                     RelaxedProposition *prop = get_proposition(i);
                     if (added_precondition.find(prop) == added_precondition.end()){
@@ -190,16 +196,16 @@ namespace numeric_lm_cut_heuristic {
 
         string name = op.get_name();
 
-        for (int i = 0; i < numeric_task.get_action_n_conidtional_eff(op.get_id()); ++i) {
+        for (int i = 0; i < numeric_task.get_action_n_conidtional_eff(op_id); ++i) {
             std::vector<RelaxedProposition *> conditional_effects;
-            int e = numeric_task.get_action_conditional_add_list(op.get_id())[i];
+            int e = numeric_task.get_action_conditional_add_list(op_id)[i];
             std::pair<int, int> e_var_value = numeric_task.get_var_val(e);
             conditional_effects.push_back(&propositions[e_var_value.first][e_var_value.second]);
 
             std::vector<RelaxedProposition *> extended_precondition = precondition;
             unordered_set<RelaxedProposition *> added_extended_precondition = added_precondition;
 
-            for (int c : numeric_task.get_action_eff_conditions(op.get_id())[i]) {
+            for (int c : numeric_task.get_action_eff_conditions(op_id)[i]) {
                 std::pair<int, int> c_var_value = numeric_task.get_var_val(c);
                 RelaxedProposition *prop = &propositions[c_var_value.first][c_var_value.second];
                 if (added_extended_precondition.find(prop) == added_extended_precondition.end()) {
@@ -209,7 +215,7 @@ namespace numeric_lm_cut_heuristic {
             }
 
             if (!ignore_numeric_conditions) {
-                for (int c : numeric_task.get_action_eff_num_conditions(op.get_id())[i]) {
+                for (int c : numeric_task.get_action_eff_num_conditions(op_id)[i]) {
                     for (int j : numeric_task.get_numeric_conditions_id(c)){
                         RelaxedProposition *prop = get_proposition(j);
                         if (added_extended_precondition.find(prop) == added_extended_precondition.end()) {
@@ -221,10 +227,10 @@ namespace numeric_lm_cut_heuristic {
             }
 
             string conditional_name = name + " " + conditional_effects[0]->name;
-            add_relaxed_operator(move(extended_precondition), move(conditional_effects), op.get_id(), op.get_cost(), conditional_name);
+            add_relaxed_operator(move(extended_precondition), move(conditional_effects), op_id, op.get_cost(), conditional_name);
         }
 
-        add_relaxed_operator(move(precondition), move(effects), op.get_id(), op.get_cost(), name);
+        add_relaxed_operator(move(precondition), move(effects), op_id, op.get_cost(), name);
     }
 
     void LandmarkCutLandmarks::add_relaxed_operator(vector<RelaxedProposition *> &&precondition,

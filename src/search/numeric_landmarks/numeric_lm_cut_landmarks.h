@@ -132,7 +132,7 @@ namespace numeric_lm_cut_heuristic {
         HeapQueue<RelaxedProposition *> priority_queue;
         
         void initialize();
-        void build_relaxed_operator(const OperatorProxy &op);
+        void build_relaxed_operator(const OperatorProxy &op, size_t op_id);
         void add_relaxed_operator(std::vector<RelaxedProposition *> &&precondition,
                                   std::vector<RelaxedProposition *> &&effects,
                                   int op_id, ap_float base_cost, string &n);

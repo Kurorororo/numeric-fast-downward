@@ -173,8 +173,8 @@ class PrimitiveNumericExpression(FunctionalExpression):
     def rename_variables(self, renamings):
         new_args = [renamings.get(arg, arg) for arg in self.args]
         return self.__class__(self.symbol, new_args, self.ntype)    
-#    def free_variables(self):
-#        return set(arg for arg in self.args if arg[0] == "?")
+    def free_variables(self):
+        return set(arg for arg in self.args if arg[0] == "?")
     def instantiate(self, var_mapping, fluent_functions, 
                         init_function_vals, task, new_axioms): #=set()): ## removed default constructor for debug reasons
         args = [var_mapping.get(arg, arg) for arg in self.args]

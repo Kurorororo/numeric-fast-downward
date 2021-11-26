@@ -230,6 +230,7 @@ class NumericTaskProxy {
   void add_redundant_constraint(int x, int y, std::set<int> &target_list);
   void build_redundant_constraints(const std::set<int> &original_list, std::set<int> &target_list);
   void build_redundant_constraints(const std::set<int> &list1, const std::set<int> &list2, std::set<int> &target_list);
+  void build_action(const TaskProxy &task_proxy, const OperatorProxy &op, size_t op_id, bool use_linear_effects);
   void build_actions(const TaskProxy &task_proxy, bool use_linear_effects);
   void build_mutex_actions(const TaskProxy &task_proxy);
   void build_numeric_goals(const TaskProxy &task_proxy);

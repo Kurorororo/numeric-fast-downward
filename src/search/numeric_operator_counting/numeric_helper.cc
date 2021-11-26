@@ -372,211 +372,214 @@ void NumericTaskProxy::build_redundant_constraints(const std::set<int> &list1, c
   }
 }
 
-void NumericTaskProxy::build_actions(const TaskProxy &task,
-                                     bool use_linear_effects) {
-  OperatorsProxy ops = task.get_operators();
-  VariablesProxy vars = task.get_variables();
-  NumericVariablesProxy num_variables = task.get_numeric_variables();
-  actions.assign(ops.size(), Action(n_numeric_variables));
-  achievers.assign(n_propositions + n_conditions, set<int>());
-  n_actions = ops.size();
-  proposition_names.assign(n_propositions + n_conditions, "");
-  for (size_t op_id = 0; op_id < ops.size(); ++op_id) {
-    const OperatorProxy &op = ops[op_id];
-    vector<int> precondition(vars.size(), -1);
-    actions[op_id].cost = op.get_cost();
-    // cout << op.get_id() << " " << op.get_name() <<  " " <<
-    // op.get_preconditions().size() <<  " " << op.get_effects().size() << " "
-    // << op.get_ass_effects().size() << endl;
-    for (FactProxy condition : op.get_preconditions()) {
-      int pre_var_id = condition.get_variable().get_id();
-      precondition[pre_var_id] = condition.get_value();
-      build_precondiiton(condition, actions[op_id].pre_list, actions[op_id].num_list);
-    }
+void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &op, size_t op_id, bool use_linear_effects) {
+  vector<int> precondition(task.get_variables().size(), -1);
+  actions[op_id].cost = op.get_cost();
+  //cout << op_id << " " << op.get_name() <<  " " <<
+  //op.get_preconditions().size() <<  " " << op.get_effects().size() << " "
+  //<< op.get_ass_effects().size() << endl;
+  for (FactProxy condition : op.get_preconditions()) {
+    int pre_var_id = condition.get_variable().get_id();
+    precondition[pre_var_id] = condition.get_value();
+    build_precondiiton(condition, actions[op_id].pre_list, actions[op_id].num_list);
+  }
 
-    if (redundant_constraints) {
-      set<int> original_list = actions[op_id].num_list;
-      build_redundant_constraints(original_list, actions[op_id].num_list);
-    }
+  if (redundant_constraints) {
+    set<int> original_list = actions[op_id].num_list;
+    build_redundant_constraints(original_list, actions[op_id].num_list);
+  }
 
-    for (EffectProxy effect_proxy : op.get_effects()) {
-      FactProxy effect = effect_proxy.get_fact();
-      int var = effect.get_variable().get_id();
-      int post = effect.get_value();
-      // cout << "\teff " << var << " " << post << endl;//effect.get_name() <<
-      // endl;
-      assert(post != -1);
-      // assert(pre != post);
-      add_effects[var][post].insert(op_id);
-      achievers[propositions[var][post]].insert(op_id);
-      proposition_names[propositions[var][post]] = effect.get_name();
-      // cout << "--- " << effect.get_name() << endl;
+  for (EffectProxy effect_proxy : op.get_effects()) {
+    FactProxy effect = effect_proxy.get_fact();
+    int var = effect.get_variable().get_id();
+    int post = effect.get_value();
+    // cout << "\teff " << var << " " << post << endl;//effect.get_name() <<
+    // endl;
+    assert(post != -1);
+    // assert(pre != post);
+    add_effects[var][post].insert(op_id);
+    achievers[propositions[var][post]].insert(op_id);
+    proposition_names[propositions[var][post]] = effect.get_name();
+    // cout << "--- " << effect.get_name() << endl;
 
-      EffectConditionsProxy conditions = effect_proxy.get_conditions();
+    EffectConditionsProxy conditions = effect_proxy.get_conditions();
 
-      if (conditions.size() == 0) {
-        int pre = precondition[var];
-        if (pre != -1) {
-          actions[op_id].add_list.insert(propositions[var][post]);
-          actions[op_id].del_list.insert(propositions[var][pre]);
-        } else {
-          actions[op_id].add_list.insert(propositions[var][post]);
-        }
+    if (conditions.size() == 0) {
+      int pre = precondition[var];
+      if (pre != -1) {
+        actions[op_id].add_list.insert(propositions[var][post]);
+        actions[op_id].del_list.insert(propositions[var][pre]);
       } else {
-        int index = actions[op_id].n_conditional_eff;
-        ++actions[op_id].n_conditional_eff;
-        actions[op_id].eff_conditions.push_back(std::set<int>());
-        actions[op_id].eff_num_conditions.push_back(std::set<int>());
-        vector<int> extended_precondition = precondition;
+        actions[op_id].add_list.insert(propositions[var][post]);
+      }
+    } else {
+      int index = actions[op_id].n_conditional_eff;
+      ++actions[op_id].n_conditional_eff;
+      actions[op_id].eff_conditions.push_back(std::set<int>());
+      actions[op_id].eff_num_conditions.push_back(std::set<int>());
+      vector<int> extended_precondition = precondition;
 
-        for (FactProxy condition : conditions) {
-          int pre_var_id = condition.get_variable().get_id();
-          extended_precondition[pre_var_id] = condition.get_value();
-          build_precondiiton(condition, actions[op_id].eff_conditions[index],
-                             actions[op_id].eff_num_conditions[index]);
+      for (FactProxy condition : conditions) {
+        int pre_var_id = condition.get_variable().get_id();
+        extended_precondition[pre_var_id] = condition.get_value();
+        build_precondiiton(condition, actions[op_id].eff_conditions[index],
+                           actions[op_id].eff_num_conditions[index]);
+      }
+
+      if (redundant_constraints) {
+        set<int> original_list = actions[op_id].eff_num_conditions[index];
+        build_redundant_constraints(original_list, actions[op_id].eff_num_conditions[index]);
+        build_redundant_constraints(original_list, actions[op_id].num_list, actions[op_id].eff_num_conditions[index]);
+      }
+
+      int pre = extended_precondition[var];
+      if (pre != -1) {
+        actions[op_id].conidiontal_add_list.push_back(propositions[var][post]);
+        actions[op_id].conidiontal_del_list.push_back(propositions[var][pre]);
+      } else {
+        actions[op_id].conidiontal_add_list.push_back(propositions[var][post]);
+        actions[op_id].conidiontal_del_list.push_back(-1);
+      }
+    }
+  }
+
+  // add intersection
+  set<int>::iterator pre_it = actions[op_id].pre_list.begin();
+  set<int>::iterator pre_end = actions[op_id].pre_list.end();
+  set<int>::iterator del_it = actions[op_id].del_list.begin();
+  set<int>::iterator del_end = actions[op_id].del_list.end();
+  set<int> intersect;
+  set_intersection(pre_it, pre_end, del_it, del_end,
+                   inserter(intersect, intersect.begin()));
+  actions[op_id].pre_del_list = intersect;
+  // cout << "intersections " << op_id << " " << intersect.size() << " " <<
+  // actions[op_id].pre_list.size() << " " << actions[op_id].del_list.size()
+  // << endl; numeric effects
+  // actions[op_id].eff_list.assign(n_numeric_variables, 0);
+  AssEffectsProxy effs = op.get_ass_effects();
+  // cout << op.get_name() << " - " << effs.size() << endl;
+  for (size_t eff_id = 0; eff_id < effs.size(); ++eff_id) {
+    AssEffectProxy eff = effs[eff_id];
+    // cout << "\t" << eff.op_index << " " << eff.eff_index << " " <<
+    // eff.is_axiom << endl;
+    int lhs = eff.get_assignment().get_affected_variable().get_id();
+    int rhs = eff.get_assignment().get_assigned_variable().get_id();
+    f_operator oper = eff.get_assignment().get_assigment_operator_type();
+
+    // cout << "effect " << lhs << " " << rhs << " " << oper << endl;
+    if (task.get_numeric_variables()[lhs].get_var_type() == instrumentation) {
+      continue;
+    }
+    int id_num = id_numeric_variable_inv[lhs];
+    if (id_num == -1) {
+      cout << "Error: variable not constant" << endl;
+      assert(false);
+    }
+
+    AssEffectConditionsProxy conditions = eff.get_conditions();
+
+    LinearNumericCondition &av = artificial_variables[rhs];
+    bool is_simple_effect = oper == increase || oper == decrease;
+    if (use_linear_effects) {
+      for (int var = 0; var < n_numeric_variables; ++var) {
+        if (fabs(av.coefficients[var]) >= 0.0001) {
+          is_simple_effect = false;
+          break;
         }
-
+      }
+    }
+    if (is_simple_effect) {
+      if (conditions.size() == 0) {
+        if (oper == increase) actions[op_id].eff_list[id_num] = av.constant;
+        if (oper == decrease) actions[op_id].eff_list[id_num] = -av.constant;
+      } else {
+        int index = actions[op_id].n_conditional_num_eff;
+        ++actions[op_id].n_conditional_num_eff;
+        actions[op_id].num_eff_conditions.push_back(std::set<int>());
+        actions[op_id].num_eff_num_conditions.push_back(std::set<int>());
+        for (FactProxy condition : conditions) {
+          build_precondiiton(condition, actions[op_id].num_eff_conditions[index],
+                             actions[op_id].num_eff_num_conditions[index]);
+        }
         if (redundant_constraints) {
-          set<int> original_list = actions[op_id].eff_num_conditions[index];
+          set<int> original_list = actions[op_id].num_eff_num_conditions[index];
           build_redundant_constraints(original_list, actions[op_id].eff_num_conditions[index]);
           build_redundant_constraints(original_list, actions[op_id].num_list, actions[op_id].eff_num_conditions[index]);
         }
+        if (oper == increase)
+          actions[op_id].conditional_eff_list.push_back(std::make_pair(id_num, av.constant));
+        if (oper == decrease)
+          actions[op_id].conditional_eff_list.push_back(std::make_pair(id_num, -av.constant));
+      }
+    } else {
+      int index = actions[op_id].n_linear_eff;
+      ++actions[op_id].n_linear_eff;
+      actions[op_id].linear_eff_lhs.push_back(id_num);
+      actions[op_id].linear_eff_conditions.push_back(std::set<int>());
+      actions[op_id].linear_eff_num_conditions.push_back(std::set<int>());
 
-        int pre = extended_precondition[var];
-        if (pre != -1) {
-          actions[op_id].conidiontal_add_list.push_back(propositions[var][post]);
-          actions[op_id].conidiontal_del_list.push_back(propositions[var][pre]);
-        } else {
-          actions[op_id].conidiontal_add_list.push_back(propositions[var][post]);
-          actions[op_id].conidiontal_del_list.push_back(-1);
+      if (conditions.size() > 0) {
+        for (FactProxy condition : conditions) {
+          build_precondiiton(condition, actions[op_id].linear_eff_conditions[index],
+                             actions[op_id].linear_eff_num_conditions[index]);
+        }
+        if (redundant_constraints) {
+          set<int> original_list = actions[op_id].linear_eff_num_conditions[index];
+          build_redundant_constraints(original_list, actions[op_id].eff_num_conditions[index]);
+          build_redundant_constraints(original_list, actions[op_id].num_list, actions[op_id].eff_num_conditions[index]);
         }
       }
-    }
 
-    // add intersection
-    set<int>::iterator pre_it = actions[op_id].pre_list.begin();
-    set<int>::iterator pre_end = actions[op_id].pre_list.end();
-    set<int>::iterator del_it = actions[op_id].del_list.begin();
-    set<int>::iterator del_end = actions[op_id].del_list.end();
-    set<int> intersect;
-    set_intersection(pre_it, pre_end, del_it, del_end,
-                     inserter(intersect, intersect.begin()));
-    actions[op_id].pre_del_list = intersect;
-    // cout << "intersections " << op_id << " " << intersect.size() << " " <<
-    // actions[op_id].pre_list.size() << " " << actions[op_id].del_list.size()
-    // << endl; numeric effects
-    // actions[op_id].eff_list.assign(n_numeric_variables, 0);
-    AssEffectsProxy effs = op.get_ass_effects();
-    // cout << op.get_name() << " - " << effs.size() << endl;
-    for (size_t eff_id = 0; eff_id < effs.size(); ++eff_id) {
-      AssEffectProxy eff = effs[eff_id];
-      // cout << "\t" << eff.op_index << " " << eff.eff_index << " " <<
-      // eff.is_axiom << endl;
-      int lhs = eff.get_assignment().get_affected_variable().get_id();
-      int rhs = eff.get_assignment().get_assigned_variable().get_id();
-      f_operator oper = eff.get_assignment().get_assigment_operator_type();
-
-      // cout << "effect " << lhs << " " << rhs << " " << oper << endl;
-      if (num_variables[lhs].get_var_type() == instrumentation) {
-        continue;
-      }
-      int id_num = id_numeric_variable_inv[lhs];
-      if (id_num == -1) {
-        cout << "Error: variable not constant" << endl;
-        assert(false);
-      }
-
-      AssEffectConditionsProxy conditions = eff.get_conditions();
-
-      LinearNumericCondition &av = artificial_variables[rhs];
-      bool is_simple_effect = oper == increase || oper == decrease;
-      if (use_linear_effects) {
-        for (int var = 0; var < n_numeric_variables; ++var) {
-          if (fabs(av.coefficients[var]) >= 0.0001) {
-            is_simple_effect = false;
-            break;
+      std::vector<ap_float> coefficients(n_numeric_variables, 0.0);
+      switch (oper) {
+        case (assign): {
+          for (int var = 0; var < n_numeric_variables; ++var) {
+            coefficients[var] = av.coefficients[var];
           }
+          actions[op_id].linear_eff_coefficeints.push_back(coefficients);
+          actions[op_id].linear_eff_constants.push_back(av.constant);
+          break;
         }
-      }
-      if (is_simple_effect) {
-        if (conditions.size() == 0) {
-          if (oper == increase) actions[op_id].eff_list[id_num] = av.constant;
-          if (oper == decrease) actions[op_id].eff_list[id_num] = -av.constant;
-        } else {
-          int index = actions[op_id].n_conditional_num_eff;
-          ++actions[op_id].n_conditional_num_eff;
-          actions[op_id].num_eff_conditions.push_back(std::set<int>());
-          actions[op_id].num_eff_num_conditions.push_back(std::set<int>());
-          for (FactProxy condition : conditions) {
-            build_precondiiton(condition, actions[op_id].num_eff_conditions[index],
-                               actions[op_id].num_eff_num_conditions[index]);
+        case (increase): {
+          for (int var = 0; var < n_numeric_variables; ++var) {
+            coefficients[var] = av.coefficients[var];
+            if (id_num == var) coefficients[var] += 1.0;
           }
-          if (redundant_constraints) {
-            set<int> original_list = actions[op_id].num_eff_num_conditions[index];
-            build_redundant_constraints(original_list, actions[op_id].eff_num_conditions[index]);
-            build_redundant_constraints(original_list, actions[op_id].num_list, actions[op_id].eff_num_conditions[index]);
-          }
-          if (oper == increase)
-            actions[op_id].conditional_eff_list.push_back(std::make_pair(id_num, av.constant));
-          if (oper == decrease)
-            actions[op_id].conditional_eff_list.push_back(std::make_pair(id_num, -av.constant));
+          actions[op_id].linear_eff_coefficeints.push_back(coefficients);
+          actions[op_id].linear_eff_constants.push_back(av.constant);
+          break;
         }
-      } else {
-        int index = actions[op_id].n_linear_eff;
-        ++actions[op_id].n_linear_eff;
-        actions[op_id].linear_eff_lhs.push_back(id_num);
-        actions[op_id].linear_eff_conditions.push_back(std::set<int>());
-        actions[op_id].linear_eff_num_conditions.push_back(std::set<int>());
-
-        if (conditions.size() > 0) {
-          for (FactProxy condition : conditions) {
-            build_precondiiton(condition, actions[op_id].linear_eff_conditions[index],
-                               actions[op_id].linear_eff_num_conditions[index]);
+        case (decrease): {
+          for (int var = 0; var < n_numeric_variables; ++var) {
+            coefficients[var] = -av.coefficients[var];
+            if (id_num == var) coefficients[var] += 1.0;
           }
-          if (redundant_constraints) {
-            set<int> original_list = actions[op_id].linear_eff_num_conditions[index];
-            build_redundant_constraints(original_list, actions[op_id].eff_num_conditions[index]);
-            build_redundant_constraints(original_list, actions[op_id].num_list, actions[op_id].eff_num_conditions[index]);
-          }
+          actions[op_id].linear_eff_coefficeints.push_back(coefficients);
+          actions[op_id].linear_eff_constants.push_back(-av.constant);
+          break;
         }
-
-        std::vector<ap_float> coefficients(n_numeric_variables, 0.0);
-        switch (oper) {
-          case (assign): {
-            for (int var = 0; var < n_numeric_variables; ++var) {
-              coefficients[var] = av.coefficients[var];
-            }
-            actions[op_id].linear_eff_coefficeints.push_back(coefficients);
-            actions[op_id].linear_eff_constants.push_back(av.constant);
-            break;
-          }
-          case (increase): {
-            for (int var = 0; var < n_numeric_variables; ++var) {
-              coefficients[var] = av.coefficients[var];
-              if (id_num == var) coefficients[var] += 1.0;
-            }
-            actions[op_id].linear_eff_coefficeints.push_back(coefficients);
-            actions[op_id].linear_eff_constants.push_back(av.constant);
-            break;
-          }
-          case (decrease): {
-            for (int var = 0; var < n_numeric_variables; ++var) {
-              coefficients[var] = -av.coefficients[var];
-              if (id_num == var) coefficients[var] += 1.0;
-            }
-            actions[op_id].linear_eff_coefficeints.push_back(coefficients);
-            actions[op_id].linear_eff_constants.push_back(-av.constant);
-            break;
-          }
-          default: {
-            cout << "non-linear numeric effect";
-            assert(false);
-            break;
-          }
+        default: {
+          cout << "non-linear numeric effect";
+          assert(false);
+          break;
         }
       }
     }
   }
+}
+
+void NumericTaskProxy::build_actions(const TaskProxy &task,
+                                     bool use_linear_effects) {
+  OperatorsProxy ops = task.get_operators();
+  AxiomsProxy axioms = task.get_axioms();
+  actions.assign(ops.size() + axioms.size(), Action(n_numeric_variables));
+  achievers.assign(n_propositions + n_conditions, set<int>());
+  n_actions = ops.size();
+  proposition_names.assign(n_propositions + n_conditions, "");
+  for (size_t op_id = 0; op_id < ops.size(); ++op_id)
+    build_action(task, ops[op_id], op_id, use_linear_effects);
+  for (size_t op_id = 0; op_id < axioms.size(); ++op_id)
+    build_action(task, axioms[op_id], ops.size() + op_id, use_linear_effects);
   generate_possible_achievers(task);
 }
 
