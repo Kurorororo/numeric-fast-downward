@@ -33,18 +33,21 @@ void GraphCreator::initialize(const std::shared_ptr<AbstractTask> task) {
     bliss::Stats stats1;
     cout << "Using Bliss to find group generators" << endl;
     graph->canonical_form(stats1,&(Group::add_permutation),&group);
-    cout << "Got " << group.get_num_generators() << " group generators, time step: [t=" << utils::g_timer << "]" << endl;
+    auto start = utils::g_timer();
+    cout << "Got " << group.get_num_generators() << " group generators, time step: [t=" << start << "]" << endl;
 
     group.default_direct_product();
     cout<<"Number of generators: "<< group.get_num_generators()<<endl;
 
-    if (no_search)
-        exit(0);
-
     // Deleting the graph
     delete graph;
 
-    cout << "Done initializing symmetries [t=" << utils::g_timer << "]" << endl;
+    auto end = utils::g_timer();
+    cout << "Done initializing symmetries [t=" << end << "]" << endl;
+    cout << "Detecting symmetry takes " << end - start << endl;
+
+    if (no_search)
+        exit(0);
 }
 
 
