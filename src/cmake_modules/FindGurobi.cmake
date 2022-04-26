@@ -37,6 +37,7 @@ set(GUROBI_LIBRARY_PATH_SUFFIX_DEBUG ${GUROBI_LIBRARY_PATH_SUFFIX_RELEASE})
 find_library(GUROBI_C_LIBRARY_RELEASE
     NAMES
     gurobi
+    gurobi95
     gurobi91
     gurobi90
     HINTS
@@ -57,6 +58,7 @@ find_library(GUROBI_CPP_LIBRARY_RELEASE
 find_library(GUROBI_C_LIBRARY_DEBUG
     NAMES
     gurobi
+    gurobi95
     gurobi91
     gurobi90
     HINTS

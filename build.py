@@ -43,7 +43,8 @@ def print_usage():
     generator_name = CMAKE_GENERATOR.lower()
     default_config_name = DEFAULT_CONFIG_NAME
     debug_config_name = DEBUG_CONFIG_NAME
-    print("""Usage: {script_name} [BUILD [BUILD ...]] [--all] [--debug] [MAKE_OPTIONS]
+    print(
+        """Usage: {script_name} [BUILD [BUILD ...]] [--all] [--debug] [MAKE_OPTIONS]
 
 Build one or more predefined build configurations of Fast Downward. Each build
 uses {cmake_name} to generate {generator_name} and then uses {make_name} to compile the
@@ -62,15 +63,17 @@ Make options
 Example usage:
   ./{script_name} -j4                 # build {default_config_name} in 4 threads
   ./{script_name} -j4 downward        # as above, but only build the planner
-  ./{script_name} debug32 -j4         # build debug32 in 4 threads
-  ./{script_name} --debug -j4         # build {debug_config_name} in 4 threads
   ./{script_name} release64 debug64   # build both 64-bit build configs
   ./{script_name} --all VERBOSE=true  # build all build configs with detailed logs
-""".format(**locals()))
+""".format(
+            **locals()
+        )
+    )
 
 
 def get_project_root_path():
     import __main__
+
     return os.path.dirname(__main__.__file__)
 
 
@@ -98,10 +101,10 @@ def build(config_name, cmake_parameters, make_parameters):
         else:
             raise
 
-    subprocess.check_call([CMAKE, "-G", CMAKE_GENERATOR]
-                          + cmake_parameters
-                          + [rel_src_path],
-                          cwd=build_path)
+    subprocess.check_call(
+        [CMAKE, "-G", CMAKE_GENERATOR] + cmake_parameters + [rel_src_path],
+        cwd=build_path,
+    )
     subprocess.check_call([MAKE] + make_parameters, cwd=build_path)
     print("Built configuration " + config_name + " successfully")
 

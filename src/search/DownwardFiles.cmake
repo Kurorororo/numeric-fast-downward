@@ -520,6 +520,7 @@ fast_downward_plugin(
         numeric_operator_counting/numeric_helper.cc
   	numeric_operator_counting/h_lm_numeric.cc
   	numeric_operator_counting/lm_cut_numeric_constraints.cc
+    DEPENDS LP_SOLVER
 )
 
 fast_downward_plugin(

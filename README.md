@@ -16,13 +16,33 @@ Numeric Fast Downward (NFD), an extension of Fast Downward, has been originally 
 ```
 
 Here is a list of the current additions:
+  - linear numeric LM-cut heuristic
+    ```
+    @inproceedings{kuroiwa2022symmetry
+      title={Symmetry Detection and Breaking in Cost-Optimal Numeric Planning.},
+      author={Shleyfman, Alexander and Kuroiwa, Ryo and J Christopher},
+      booktitle={Proc. HSDIP},
+      year={2022}
+    }
+  ```
+  
+  - linear numeric LM-cut heuristic
+    ```
+    @inproceedings{kuroiwa2022linearlmcut
+      title={LM-Cut Heuristics for Optimal Linear Numeric Planning.},
+      author={Kuroiwa, Ryo and Shleyfman, Alexander and J Christopher},
+      booktitle={Proc. ICAPS},
+      year={2022}
+    }
+    ```
+
   - numeric LM-cut heuristic
     ```
-    @inproceedings{kuroiwa2020lmcut
+    @inproceedings{kuroiwa2021lmcut
       title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
       author={Kuroiwa, Ryo and Shleyfman, Alexander and Piacentini, Chiara and Castro, Margarita P and J Christopher},
       booktitle={Proc. ICAPS},
-      year={2020}
+      year={2021}
     }
     ```
 
@@ -126,8 +146,8 @@ rm -rf Osi-0.107.9
 rm Osi-0.107.9.tgz
 ```
 
-#### Gurobi IP models
-If you want to use the IP models with Gurobi (implemented in `src/search/gurobi_compilation`), please install Gurobi and export the following environment variables.
+#### Gurobi 
+Please install Gurobi and export the following environment variables.
 Suppose that Gurobi is installed in `/opt/gurobi911`.
 
 ```bash
@@ -138,6 +158,14 @@ If you use G++ >= 5.2, change the softlink to the Gurobi C++ library.
 
 ```bash
 ln -s /opt/gurobi911/linux64/lib/libgurobi_g++5.2.a /opt/gurobi911/linux64/lib/libgurobi_c++.a
+```
+
+#### Bliss
+[Bliss](http://www.tcs.hut.fi/Software/bliss/) is a library to detect graph automorphism groups, which are used for symmetry breaking in planning.
+
+```bash
+cd src/search/bliss-0.73
+make
 ```
 
 #### build
@@ -158,99 +186,142 @@ fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(blin
 ```
 
 ### Numeric Heuristics
-
-#### Numeric LM-cut (h^{LM-cut}) (Kuroiwa et al. 2020)
+#### Linear Numeric LM-cut exploiting SOSE (h^{LM-cut}_2) (Kuroiwa et al. 2022)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(use_linear_effects=true, use_second_order_simple=true))"
+```
+
+#### Linear Numeric LM-cut (h^{LM-cut}_1) (Kuroiwa et al. 2022)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(use_linear_effects=true))"
+```
+
+#### Numeric LM-cut (h^{LM-cut}) (Kuroiwa et al. 2021)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric())"
 ```
 
 ##### Options
 
 - \bar{h}^{LM-cut}_{cri}
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, roudning_up=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(roudning_up=true))"
 ```
 - h^{LM-cut}_{cri,+}
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, ceiling_less_than_one=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(ceiling_less_than_one=true))"
 ```
 - h^{LM-cut}_{ir}
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, irmax=true, disable_ma=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(irmax=true, disable_ma=true))"
 ```
 - h^{LM-cut}_{ir,m}
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, irmax=true, disable_ma=false))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(irmax=true, disable_ma=false))"
 ```
 - h^{LM-cut}_{ir,m+}
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, irmax=true, disable_ma=false, ceiling_less_than_one=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(irmax=true, disable_ma=false, ceiling_less_than_one=true))"
 ```
 - h^{LM-cut}_{rnd}
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(redundant_constraints=true, random_pcf=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(random_pcf=true))"
 ```
 
 #### Propositional LM-cut (Kuroiwa et al. 2020)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(ignore_numeric=true, redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(ignore_numeric=true))"
 ```
 
 #### Interval Relaxatoin Based hmax (h^{irmax}) (Aldinger and Nebel 2017)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(irhmax(redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(irhmax())"
 ```
 #### Subgoaling-based hmax (\hat{h}^{rmax}_{hbd+}) (Scala et al. 2020)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(hrmax(restrict_achievers=true, redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(hrmax(restrict_achievers=true))"
 ```
 
 #### Numeric Landmark Heuristic (h^{lm+}_{hbd}) (Scala et al. 2017)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lm_numeric],cplex,lp), redundant_constraints=true)"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lm_numeric],cplex,lp))"
 ```
 
 #### Generalized Subgoaling Heuristic (h^{gen}_{hbd}) (Scala et al. 2020)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(hgen(cplex,lp, redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(hgen(cplex,lp))"
 ```
 
 ### Operator-counting (OC) Heuristics
 
 #### OC with the Numeric LM-cut and SEQ Constraints (h^{LM-cut,SEQ}_{LP}) (Kuroiwa et al. 2020)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints,state_equation_constraints,numeric_state_equation_constraints],cplex,lp,redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints,state_equation_constraints,numeric_state_equation_constraints],cplex,lp))"
 ```
 
 #### OC with the Numeric LM-cut Constraints (h^{LM-cut}_{LP}) (Kuroiwa et al. 2020)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints],cplex,lp,redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints],cplex,lp))"
 ```
 
 ##### Options
 - h^{LM-cut}_{ir,+} constraints
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints(ceiling_less_than_one=true)],cplex,lp,redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([lmcutnumeric_constraints(ceiling_less_than_one=true)],cplex,lp))"
 ```
 
 #### OC with the Delete-relaxation and SEQ Constraints using IP (h^C_{IP}) (Piacentini et al. 2018)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,inverse,relevance]),state_equation_constraints,numeric_state_equation_constraints],cplex,ip,redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,inverse,relevance]),state_equation_constraints,numeric_state_equation_constraints],cplex,ip))"
 ```
 
 #### OC with the Delete-relaxation and SEQ Constraints using LP (h^C_{LP}) (Piacentini et al. 2018)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,inverse,relevance]),state_equation_constraints,numeric_state_equation_constraints],cplex,lp,redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,inverse,relevance]),state_equation_constraints,numeric_state_equation_constraints],cplex,lp))"
 ```
 
 #### OC with the SEQ Constraints (h^{SEQ}_{LP}) (Piacentini et al. 2018)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([state_equation_constraints,numeric_state_equation_constraints],cplex,lp,redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(operatorcounting([state_equation_constraints,numeric_state_equation_constraints],cplex,lp))"
 ```
 
 ### Resource Transformation of Classical Planning (Wilhelm, Steinmetz, and Hoffmann 2018)
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(transform=resource, redundant_constraints=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(transform=resource))"
+```
+
+## Symmetry Breaking (Shleyfman, Kuroiwa, and Beck 2022)
+
+### DKS
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "dks_astar(blind, symmetry=symmetry_state_pruning(symmetries=goal_only, no_search=true))"
+```
+
+### OSS
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "orbit_astar(blind, symmetry=symmetry_state_pruning(symmetries=goal_only, no_search=true))"
+```
+
+## IP Compilation
+
+### Branch-and-Cut for SCT (Kuroiwa and Beck 2021)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "gurobi_ip_compilation(gurobi_ipmodel=[sc_cut(landmark=true),numeric_cut(precondition_relaxation=true),relevance], lazy_constraints=true, user_cuts=true, eval=operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,relevance,inverse]),state_equation_constraints,numeric_state_equation_constraints],cplex,ip))"
+```
+
+### Branch-and-Cut for LT (Kuroiwa and Beck 2021)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "gurobi_ip_compilation(gurobi_ipmodel=[sc_cut,numeric_cut(precondition_relaxation=true,sequence_linear_effects=true),relevance], lazy_constraints=true, user_cuts=true, linear_effects=true, eval=operatorcounting([delete_relaxation_constraints([basic,temporal,inverse,ignore_numeric]),state_equation_constraints],cplex,ip))"
+```
+
+### IP Compilation for SCT (Piacentini et al. 2018)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "gurobi_ip_compilation(gurobi_ipmodel=[sc(landmark=true),numeric,relevance], eval=operatorcounting([delete_relaxation_constraints([basic,landmarks,temporal,relevance,inverse]),state_equation_constraints,numeric_state_equation_constraints],cplex,ip))"
+```
+
+### IP Compilation for LT (Piacentini et al. 2018)
+```
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "gurobi_ip_compilation(gurobi_ipmodel=[sc,numeric,relevance], linear_effects=true, eval=operatorcounting([delete_relaxation_constraints([basic,temporal,inverse,ignore_numeric]),state_equation_constraints],cplex,ip))"
 ```
 
 # ORIGINAL README (Fast Downward) 
