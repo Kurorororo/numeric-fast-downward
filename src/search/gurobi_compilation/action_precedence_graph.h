@@ -1,6 +1,7 @@
 #ifndef ACTION_PRECEDENCE_GRAPH_H_
 #define ACTION_PRECEDENCE_GRAPH_H_
 
+#include <cstddef>
 #include <vector>
 
 namespace gurobi_ip_compilation {
@@ -19,7 +20,7 @@ class ActionPrecedenceGraph {
                                int b, std::vector<int> &path);
 
  public:
-  ActionPrecedenceGraph(size_t num_nodes)
+  ActionPrecedenceGraph(std::size_t num_nodes)
       : max_num_cuts(1),
         n_edges(0),
         edges(num_nodes, std::vector<bool>(num_nodes, false)),

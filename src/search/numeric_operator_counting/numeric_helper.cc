@@ -714,10 +714,18 @@ void NumericTaskProxy::calculates_small_m_and_epsilons() {
     double min_epsilon = 9999999;
     double default_epsilon = 0.0001;
     for (size_t op_id = 0; op_id < get_n_actions(); ++op_id) {
-      double local_epsilon = 0;
+      double effect = 0;
       for (size_t n_id = 0; n_id < get_n_numeric_variables(); ++n_id) {
-        local_epsilon +=
+        effect +=
             lnc.coefficients[n_id] * get_action_eff_list(op_id)[n_id];
+      }
+      double local_epsilon = 1.0;
+      double integral_part;
+      double fractional_part = std::modf(effect, &integral_part);
+      while (fabs(fractional_part) > 0.00001) {
+        effect *= 10;
+        local_epsilon /= 10.0;
+        fractional_part = std::modf(effect, &integral_part);
       }
       if (fabs(local_epsilon) < min_epsilon && fabs(local_epsilon) > 0)
         min_epsilon = fabs(local_epsilon);
