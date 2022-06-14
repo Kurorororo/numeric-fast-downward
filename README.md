@@ -16,38 +16,38 @@ Numeric Fast Downward (NFD), an extension of Fast Downward, has been originally 
 ```
 
 Here is a list of the current additions:
-  - linear numeric LM-cut heuristic
-    ```
+- symmetry breaking
+  ```
     @inproceedings{kuroiwa2022symmetry
       title={Symmetry Detection and Breaking in Cost-Optimal Numeric Planning.},
-      author={Shleyfman, Alexander and Kuroiwa, Ryo and J Christopher},
+      author={Shleyfman, Alexander and Kuroiwa, Ryo and Beck, J Christopher},
       booktitle={Proc. HSDIP},
       year={2022}
     }
   ```
   
-  - linear numeric LM-cut heuristic
-    ```
+- linear numeric LM-cut heuristic
+  ```
     @inproceedings{kuroiwa2022linearlmcut
       title={LM-Cut Heuristics for Optimal Linear Numeric Planning.},
-      author={Kuroiwa, Ryo and Shleyfman, Alexander and J Christopher},
+      author={Kuroiwa, Ryo and Shleyfman, Alexander and Beck, J Christopher},
       booktitle={Proc. ICAPS},
       year={2022}
     }
-    ```
+  ```
 
-  - numeric LM-cut heuristic
-    ```
+- numeric LM-cut heuristic
+  ```
     @inproceedings{kuroiwa2021lmcut
       title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
-      author={Kuroiwa, Ryo and Shleyfman, Alexander and Piacentini, Chiara and Castro, Margarita P and J Christopher},
+      author={Kuroiwa, Ryo and Shleyfman, Alexander and Piacentini, Chiara and Castro, Margarita P and Beck, J Christopher},
       booktitle={Proc. ICAPS},
       year={2021}
     }
-    ```
+  ```
 
-  - numeric delete-relaxation IP/LP heuristics
-    ```
+- numeric delete-relaxation IP/LP heuristics
+  ```
     @inproceedings{piacentini2018linear,
       title={Linear and Integer Programming-Based Heuristics for Cost-Optimal Numeric Planning.},
       author={Piacentini, Chiara and Castro, Margarita P and Cir{\'e}, Andr{\'e} Augusto and Beck, J Christopher},
@@ -55,11 +55,10 @@ Here is a list of the current additions:
       pages={6254--6261}
       year={2018}
     }
-    ```
+  ```
 
 - compilation of planning problems into MIP models 
-
-    ```
+  ```
     @inproceedings{piacentini2018compiling,
       title={Compiling Optimal Numeric Planning to Mixed Integer Linear Programming.},
       author={Piacentini, Chiara and Castro, Margarita P and Cir{\'e}, Andr{\'e} Augusto and Beck, J Christopher},
@@ -67,11 +66,10 @@ Here is a list of the current additions:
       pages={383--387},
       year={2018}
     }
-    ```
+  ```
 
 - resource transformation of classical planning problems
-
-    ```
+  ```
     @inproceedings{wilhelm2018stubborn,
     title={On Stubborn Sets and Planning with Resources.},
     author={wilhelm, anna and steinmetz, marcel and hoffmann, j{\"o}rg},
@@ -79,11 +77,10 @@ Here is a list of the current additions:
     pages={288--297},
     year={2018}
     }
-    ```
+  ```
 
 - landmark based heuristic
-
-    ```
+  ```
     @inproceedings{scala2017landmarks,
     title={Landmarks for Numeric Planning Problems.},
     author={Scala, Enrico and Haslum, Patrik and Magazzeni, Daniele and Thi{\'e}baux, Sylvie},
@@ -91,11 +88,10 @@ Here is a list of the current additions:
     pages={4384--4390},
     year={2017}
     }
-    ```
+  ```
 
 - subgoling-based heuristics
-
-    ```
+  ```
     @article{scala2016heuristics,
     title={Subgoaling Techniques for Satisficing and Optimal Numeric Planning},
     author={Scala, Enrico and Haslum, Patrik and Thi{\'e}baux, Sylvie and Ramirez, Miquel},
@@ -104,7 +100,7 @@ Here is a list of the current additions:
     volume={68},
     pages={691--752}
     }
-    ```
+  ```
 
 ## Build 
 
