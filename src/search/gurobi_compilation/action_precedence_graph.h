@@ -1,6 +1,7 @@
 #ifndef ACTION_PRECEDENCE_GRAPH_H_
 #define ACTION_PRECEDENCE_GRAPH_H_
 
+#include <cstddef>
 #include <vector>
 #include <cstddef>
 
