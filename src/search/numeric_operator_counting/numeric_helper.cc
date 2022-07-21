@@ -58,7 +58,7 @@ NumericVariable::NumericVariable(int id_, int id_at, double lb_, double ub_)
 bool NumericTaskProxy::redundant_constraints = true;
 
 NumericTaskProxy::NumericTaskProxy(const TaskProxy &task, bool additional,
-                                   bool use_linear_effects) {
+                                   bool use_linear_effects, double epsilon) {
   bool numeric = true;
   if (numeric) build_numeric_variables(task);
   if (numeric) build_artificial_variables(task);
@@ -75,6 +75,7 @@ NumericTaskProxy::NumericTaskProxy(const TaskProxy &task, bool additional,
   if (additional) {
     if (numeric) calculates_dominance();
   }
+  default_epsilon = epsilon;
 }
 
 void NumericTaskProxy::calculates_dominance() {
@@ -812,7 +813,6 @@ void NumericTaskProxy::calculates_small_m_and_epsilons() {
     small_m[i] = l_b;
     if (!lnc.is_strictly_greater) continue;
     double min_epsilon = 9999999;
-    double default_epsilon = 0.0001;
     for (size_t op_id = 0; op_id < get_n_actions(); ++op_id) {
       double effect = 0;
       for (size_t n_id = 0; n_id < get_n_numeric_variables(); ++n_id) {

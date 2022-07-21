@@ -13,8 +13,6 @@ enum SymmetryBasedSearchType {
 };
 
 
-enum color_t {PREDICATE_VERTEX, VALUE_VERTEX, NUM_VAR_VERTEX, GOAL_VERTEX, GTE_VERTEX, GT_VERTEX, NUM_EFF_VERTEX, MAX_VALUE};
-
 /**
  * This class will create a bliss graph which will be used to find the
  * automorphism groups

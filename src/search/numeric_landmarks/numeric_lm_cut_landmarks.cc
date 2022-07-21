@@ -19,7 +19,7 @@ namespace numeric_lm_cut_heuristic {
     LandmarkCutLandmarks::LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one, bool ignore_numeric,
                                                bool use_random_pcf, bool use_irmax, bool disable_ma, bool use_linear_effects,
                                                bool use_second_order_simple, ap_float precision, ap_float epsilon)
-        : numeric_task(NumericTaskProxy(task_proxy, false, use_linear_effects)),
+        : numeric_task(NumericTaskProxy(task_proxy, false, use_linear_effects, epsilon)),
           n_infinite_operators(0),
           n_second_order_simple_operators(0),
           ceiling_less_than_one(ceiling_less_than_one),

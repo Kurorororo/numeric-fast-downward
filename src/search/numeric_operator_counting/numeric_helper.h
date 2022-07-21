@@ -112,7 +112,7 @@ struct NumericVariable {
 class NumericTaskProxy {
  public:
   NumericTaskProxy(const TaskProxy &task, bool additional = true,
-                   bool use_linear_effects = false);
+                   bool use_linear_effects = false, double epsilon = 0.001);
   NumericTaskProxy(){};
   size_t get_n_actions() { return n_actions; }
   size_t get_n_propositions() { return n_propositions; }
@@ -239,6 +239,7 @@ class NumericTaskProxy {
   void calculates_small_m_and_epsilons();
   void calculates_dominance();
 
+  double default_epsilon;
   // numeric variables
   size_t n_numeric_variables;  // number of real numeric variables
   std::vector<NumericVariable> numeric_variables;
