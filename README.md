@@ -290,12 +290,12 @@ fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcu
 
 ### DKS
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "dks_astar(blind, symmetry=symmetry_state_pruning(symmetries=goal_only, no_search=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "dks_astar(blind, symmetry=symmetry_state_pruning(symmetries=goal_only))"
 ```
 
 ### OSS
 ```
-fast-downward.py --build=release64 domain.pddl problem.pddl --search "orbit_astar(blind, symmetry=symmetry_state_pruning(symmetries=goal_only, no_search=true))"
+fast-downward.py --build=release64 domain.pddl problem.pddl --search "orbit_astar(blind, symmetry=symmetry_state_pruning(symmetries=goal_only))"
 ```
 
 ## IP Compilation
