@@ -121,18 +121,32 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             }
         }
     }
+
+    unsigned int current_color = 1;
+
     // add a vertex for each numeric variable
     for (auto num_var : num_variables) {
         if (num_var.get_var_type() == regular) {
-            g->add_vertex(0);
+            unsigned int color = 0;
+
+            if (ignore_numeric) {
+                color = current_color;
+                current_color += 1;
+            }
+
+            g->add_vertex(color);
         }
     }
     // add a vertex for a dummy numeric variable for constants
-    int dummy_var_idx = g->add_vertex(0);
+    unsigned int dummy_color = 0;
+    if (ignore_numeric) {
+        dummy_color = current_color;
+        current_color += 1;
+    }
+    int dummy_var_idx = g->add_vertex(dummy_color);
 
     // add vertices for numeric constants
     std::unordered_map<int, unsigned int> constant_to_color; 
-    unsigned int current_color = 1;
     for (OperatorProxy op : task_proxy.get_operators()) {
         for (int pre : numeric_task.get_action_num_list(op.get_id())){
             for (int i : numeric_task.get_numeric_conditions_id(pre)){
@@ -146,18 +160,14 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                             first = false;
                         }
                         int normalized_coeff = float_to_int(coeff / denominator);
-                        if (ignore_numeric) {
-                            current_color += 1;
-                        } else if (constant_to_color.find(normalized_coeff) == constant_to_color.end()) {
+                        if (constant_to_color.find(normalized_coeff) == constant_to_color.end()) {
                             constant_to_color.insert(std::make_pair(normalized_coeff, current_color));
                             current_color += 1;
                         }
                     }
                 }
                 int normalized_constant = float_to_int(lnc.constant / denominator);
-                if (ignore_numeric) {
-                    current_color += 1;
-                } else if (constant_to_color.find(normalized_constant) == constant_to_color.end()) {
+                if (constant_to_color.find(normalized_constant) == constant_to_color.end()) {
                     constant_to_color.insert(std::make_pair(normalized_constant, current_color));
                     current_color += 1;
                 }
@@ -166,9 +176,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             for (ap_float k : numeric_task.get_action_eff_list(op.get_id())) {
                 if (std::fabs(k) > precision) {
                     int normalized_k = float_to_int(k);
-                    if (ignore_numeric) {
-                        current_color += 1;
-                    } else if (constant_to_color.find(normalized_k) == constant_to_color.end()) {
+                    if (constant_to_color.find(normalized_k) == constant_to_color.end()) {
                         constant_to_color.insert(std::make_pair(normalized_k, current_color));
                         current_color += 1;
                     }
@@ -185,9 +193,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                             first = false;
                         }
                         int normalized_coeff = float_to_int(coeff / denominator);
-                        if (ignore_numeric) {
-                            current_color += 1;
-                        } else if (constant_to_color.find(normalized_coeff) == constant_to_color.end()) {
+                        if (constant_to_color.find(normalized_coeff) == constant_to_color.end()) {
                             constant_to_color.insert(std::make_pair(normalized_coeff, current_color));
                             current_color += 1;
                         }
@@ -195,9 +201,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 }
                 ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
                 int normalized_constant = float_to_int(constant / denominator);
-                if (ignore_numeric) {
-                    current_color += 1;
-                } else if (constant_to_color.find(normalized_constant) == constant_to_color.end()) {
+                if (constant_to_color.find(normalized_constant) == constant_to_color.end()) {
                     constant_to_color.insert(std::make_pair(normalized_constant, current_color));
                     current_color += 1;
                 }
@@ -216,18 +220,14 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                         first = false;
                     }
                     int normalized_coeff = float_to_int(coeff / denominator);
-                    if (ignore_numeric) {
-                        current_color += 1;
-                    } else if (constant_to_color.find(normalized_coeff) == constant_to_color.end()) {
+                    if (constant_to_color.find(normalized_coeff) == constant_to_color.end()) {
                         constant_to_color.insert(std::make_pair(normalized_coeff, current_color));
                         current_color += 1;
                     }
                 }
             }
             int normalized_constant = float_to_int(lnc.constant / denominator);
-            if (ignore_numeric) {
-                current_color += 1;
-            } else if (constant_to_color.find(normalized_constant) == constant_to_color.end()) {
+            if (constant_to_color.find(normalized_constant) == constant_to_color.end()) {
                 constant_to_color.insert(std::make_pair(normalized_constant, current_color));
                 current_color += 1;
             }
@@ -238,9 +238,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
     std::unordered_map<int, unsigned int> cost_to_color; 
     for (OperatorProxy op : task_proxy.get_operators()) {
         int cost = float_to_int(op.get_cost());
-        if (ignore_numeric) {
-            current_color += 1;
-        } else if (cost_to_color.find(cost) == cost_to_color.end()) {
+        if (cost_to_color.find(cost) == cost_to_color.end()) {
             cost_to_color.insert(std::make_pair(cost, current_color));
             current_color += 1;
         }
@@ -249,9 +247,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
     std::unordered_map<int, unsigned int> axiom_cost_to_color; 
     for (OperatorProxy op : task_proxy.get_axioms()) {
         int cost = float_to_int(op.get_cost());
-        if (ignore_numeric) {
-            current_color += 1;
-        } else if (axiom_cost_to_color.find(cost) == axiom_cost_to_color.end()) {
+        if (axiom_cost_to_color.find(cost) == axiom_cost_to_color.end()) {
             axiom_cost_to_color.insert(std::make_pair(cost, current_color));
             current_color += 1;
         }
@@ -261,7 +257,6 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
     unsigned int ge_color = current_color + 1;
     unsigned int effect_color = current_color + 2;
     unsigned int goal_color = current_color + 3;
-    unsigned int ignore_numeric_constant_color = 1;
 
     // add vertices for operators
     std::unordered_map<std::pair<int, int>, unsigned int> num_var_constant_to_idx;
@@ -299,47 +294,33 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                             first = false;
                         }
                         int var_idx = Permutation::get_index_by_num_regular_id(j);
-                        if (ignore_numeric) {
-                            unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                        int coeff = float_to_int(lnc.coefficients[j] / denominator);
+                        auto key = std::make_pair(var_idx, coeff);
+                        auto result = num_var_constant_to_idx.find(key);
+                        if (result == num_var_constant_to_idx.end()) {
+                            unsigned int idx = g->add_vertex(constant_to_color[coeff]);
+                            num_var_constant_to_idx[key] = idx;
                             g->add_edge(var_idx, idx);
                             g->add_edge(idx, lnc_idx);
-                            ignore_numeric_constant_color += 1;
                         } else {
-                            int coeff = float_to_int(lnc.coefficients[j] / denominator);
-                            auto key = std::make_pair(var_idx, coeff);
-                            auto result = num_var_constant_to_idx.find(key);
-                            if (result == num_var_constant_to_idx.end()) {
-                                unsigned int idx = g->add_vertex(constant_to_color[coeff]);
-                                num_var_constant_to_idx[key] = idx;
-                                g->add_edge(var_idx, idx);
-                                g->add_edge(idx, lnc_idx);
-                            } else {
-                                unsigned int idx =(*result).second;
-                                g->add_edge(var_idx, idx);
-                                g->add_edge(idx, lnc_idx);
-                            }
+                            unsigned int idx =(*result).second;
+                            g->add_edge(var_idx, idx);
+                            g->add_edge(idx, lnc_idx);
                         }
                     }
                 }
                 int constant = float_to_int(lnc.constant / denominator);
-                if (ignore_numeric) {
-                    unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                auto key = std::make_pair(dummy_var_idx, constant);
+                auto result = num_var_constant_to_idx.find(key);
+                if (result == num_var_constant_to_idx.end()) {
+                    unsigned int idx = g->add_vertex(constant_to_color[constant]);
+                    num_var_constant_to_idx[key] = idx;
                     g->add_edge(dummy_var_idx, idx);
                     g->add_edge(idx, lnc_idx);
-                    ignore_numeric_constant_color += 1;
                 } else {
-                    auto key = std::make_pair(dummy_var_idx, constant);
-                    auto result = num_var_constant_to_idx.find(key);
-                    if (result == num_var_constant_to_idx.end()) {
-                        unsigned int idx = g->add_vertex(constant_to_color[constant]);
-                        num_var_constant_to_idx[key] = idx;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, lnc_idx);
-                    } else {
-                        unsigned int idx =(*result).second;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, lnc_idx);
-                    }
+                    unsigned int idx =(*result).second;
+                    g->add_edge(dummy_var_idx, idx);
+                    g->add_edge(idx, lnc_idx);
                 }
             }
         }
@@ -352,25 +333,18 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 int k_int = float_to_int(k);
                 int var_idx = Permutation::get_index_by_num_regular_id(i);
                 g->add_edge(eff_idx, var_idx);
-                if (ignore_numeric) {
-                    int idx = g->add_vertex(ignore_numeric_constant_color);
+                auto key = std::make_pair(dummy_var_idx, k_int);
+                auto result = num_var_constant_to_idx.find(key);
+                if (result == num_var_constant_to_idx.end()) {
+                    unsigned int k_color = constant_to_color[k_int];
+                    int idx = g->add_vertex(k_color);
+                    num_var_constant_to_idx[key] = idx;
                     g->add_edge(dummy_var_idx, idx);
                     g->add_edge(idx, eff_idx);
-                    ignore_numeric_constant_color += 1;
                 } else {
-                    auto key = std::make_pair(dummy_var_idx, k_int);
-                    auto result = num_var_constant_to_idx.find(key);
-                    if (result == num_var_constant_to_idx.end()) {
-                        unsigned int k_color = constant_to_color[k_int];
-                        int idx = g->add_vertex(k_color);
-                        num_var_constant_to_idx[key] = idx;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, eff_idx);
-                    } else {
-                        int idx = (*result).second;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, eff_idx);
-                    }
+                    int idx = (*result).second;
+                    g->add_edge(dummy_var_idx, idx);
+                    g->add_edge(idx, eff_idx);
                 }
             }
         }
@@ -393,26 +367,19 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                         first = false;
                     }
                     int var_idx = Permutation::get_index_by_num_regular_id(j);
-                    if (ignore_numeric) {
-                        unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                    int coeff_int = float_to_int(coeff / denominator);
+                    auto key = std::make_pair(var_idx, coeff_int);
+                    auto result = num_var_constant_to_idx.find(key);
+                    if (result == num_var_constant_to_idx.end()) {
+                        int coeff_color = constant_to_color[coeff_int];
+                        unsigned int idx = g->add_vertex(coeff_color);
+                        num_var_constant_to_idx[key] = idx;
                         g->add_edge(var_idx, idx);
                         g->add_edge(idx, eff_idx);
-                        ignore_numeric_constant_color += 1;
                     } else {
-                        int coeff_int = float_to_int(coeff / denominator);
-                        auto key = std::make_pair(var_idx, coeff_int);
-                        auto result = num_var_constant_to_idx.find(key);
-                        if (result == num_var_constant_to_idx.end()) {
-                            int coeff_color = constant_to_color[coeff_int];
-                            unsigned int idx = g->add_vertex(coeff_color);
-                            num_var_constant_to_idx[key] = idx;
-                            g->add_edge(var_idx, idx);
-                            g->add_edge(idx, eff_idx);
-                        } else {
-                            unsigned int idx = (*result).second;
-                            g->add_edge(var_idx, idx);
-                            g->add_edge(idx, eff_idx);
-                        }
+                        unsigned int idx = (*result).second;
+                        g->add_edge(var_idx, idx);
+                        g->add_edge(idx, eff_idx);
                     }
                 }
             }
@@ -420,25 +387,18 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
             if (std::fabs(constant) > precision) {
                 int constant_int = float_to_int(constant / denominator);
-                if (ignore_numeric) {
-                    unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                auto key = std::make_pair(dummy_var_idx, constant_int);
+                auto result = num_var_constant_to_idx.find(key);
+                if (result == num_var_constant_to_idx.end()) {
+                    int constant_color = constant_to_color[constant_int];
+                    unsigned int idx = g->add_vertex(constant_color);
+                    num_var_constant_to_idx[key] = idx;
                     g->add_edge(dummy_var_idx, idx);
                     g->add_edge(idx, eff_idx);
-                    ignore_numeric_constant_color += 1;
                 } else {
-                    auto key = std::make_pair(dummy_var_idx, constant_int);
-                    auto result = num_var_constant_to_idx.find(key);
-                    if (result == num_var_constant_to_idx.end()) {
-                        int constant_color = constant_to_color[constant_int];
-                        unsigned int idx = g->add_vertex(constant_color);
-                        num_var_constant_to_idx[key] = idx;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, eff_idx);
-                    } else {
-                        unsigned int idx = (*result).second;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, eff_idx);
-                    }
+                    unsigned int idx = (*result).second;
+                    g->add_edge(dummy_var_idx, idx);
+                    g->add_edge(idx, eff_idx);
                 }
             }
         }
@@ -479,47 +439,33 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                             first = false;
                         }
                         int var_idx = Permutation::get_index_by_num_regular_id(j);
-                        if (ignore_numeric) {
-                            unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                        int coeff = float_to_int(lnc.coefficients[j] / denominator);
+                        auto key = std::make_pair(var_idx, coeff);
+                        auto result = num_var_constant_to_idx.find(key);
+                        if (result == num_var_constant_to_idx.end()) {
+                            unsigned int idx = g->add_vertex(constant_to_color[coeff]);
+                            num_var_constant_to_idx[key] = idx;
                             g->add_edge(var_idx, idx);
                             g->add_edge(idx, lnc_idx);
-                            ignore_numeric_constant_color += 1;
                         } else {
-                            int coeff = float_to_int(lnc.coefficients[j] / denominator);
-                            auto key = std::make_pair(var_idx, coeff);
-                            auto result = num_var_constant_to_idx.find(key);
-                            if (result == num_var_constant_to_idx.end()) {
-                                unsigned int idx = g->add_vertex(constant_to_color[coeff]);
-                                num_var_constant_to_idx[key] = idx;
-                                g->add_edge(var_idx, idx);
-                                g->add_edge(idx, lnc_idx);
-                            } else {
-                                unsigned int idx =(*result).second;
-                                g->add_edge(var_idx, idx);
-                                g->add_edge(idx, lnc_idx);
-                            }
+                            unsigned int idx =(*result).second;
+                            g->add_edge(var_idx, idx);
+                            g->add_edge(idx, lnc_idx);
                         }
                     }
                 }
-                if (ignore_numeric) {
-                    unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                int constant = float_to_int(lnc.constant / denominator);
+                auto key = std::make_pair(dummy_var_idx, constant);
+                auto result = num_var_constant_to_idx.find(key);
+                if (result == num_var_constant_to_idx.end()) {
+                    unsigned int idx = g->add_vertex(constant_to_color[constant]);
+                    num_var_constant_to_idx[key] = idx;
                     g->add_edge(dummy_var_idx, idx);
                     g->add_edge(idx, lnc_idx);
-                    ignore_numeric_constant_color += 1;
                 } else {
-                    int constant = float_to_int(lnc.constant / denominator);
-                    auto key = std::make_pair(dummy_var_idx, constant);
-                    auto result = num_var_constant_to_idx.find(key);
-                    if (result == num_var_constant_to_idx.end()) {
-                        unsigned int idx = g->add_vertex(constant_to_color[constant]);
-                        num_var_constant_to_idx[key] = idx;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, lnc_idx);
-                    } else {
-                        unsigned int idx =(*result).second;
-                        g->add_edge(dummy_var_idx, idx);
-                        g->add_edge(idx, lnc_idx);
-                    }
+                    unsigned int idx =(*result).second;
+                    g->add_edge(dummy_var_idx, idx);
+                    g->add_edge(idx, lnc_idx);
                 }
             }
         }
@@ -556,47 +502,33 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                         first = false;
                     }
                     int var_idx = Permutation::get_index_by_num_regular_id(j);
-                    if (ignore_numeric) {
-                        unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+                    int coeff = float_to_int(lnc.coefficients[j] / denominator);
+                    auto key = std::make_pair(var_idx, coeff);
+                    auto result = num_var_constant_to_idx.find(key);
+                    if (result == num_var_constant_to_idx.end()) {
+                        unsigned int idx = g->add_vertex(constant_to_color[coeff]);
+                        num_var_constant_to_idx[key] = idx;
                         g->add_edge(var_idx, idx);
                         g->add_edge(idx, lnc_idx);
-                        ignore_numeric_constant_color += 1;
                     } else {
-                        int coeff = float_to_int(lnc.coefficients[j] / denominator);
-                        auto key = std::make_pair(var_idx, coeff);
-                        auto result = num_var_constant_to_idx.find(key);
-                        if (result == num_var_constant_to_idx.end()) {
-                            unsigned int idx = g->add_vertex(constant_to_color[coeff]);
-                            num_var_constant_to_idx[key] = idx;
-                            g->add_edge(var_idx, idx);
-                            g->add_edge(idx, lnc_idx);
-                        } else {
-                            unsigned int idx =(*result).second;
-                            g->add_edge(var_idx, idx);
-                            g->add_edge(idx, lnc_idx);
-                        }
+                        unsigned int idx =(*result).second;
+                        g->add_edge(var_idx, idx);
+                        g->add_edge(idx, lnc_idx);
                     }
                 }
             }
-            if (ignore_numeric) {
-                unsigned int idx = g->add_vertex(ignore_numeric_constant_color);
+            int constant = float_to_int(lnc.constant / denominator);
+            auto key = std::make_pair(dummy_var_idx, constant);
+            auto result = num_var_constant_to_idx.find(key);
+            if (result == num_var_constant_to_idx.end()) {
+                unsigned int idx = g->add_vertex(constant_to_color[constant]);
+                num_var_constant_to_idx[key] = idx;
                 g->add_edge(dummy_var_idx, idx);
                 g->add_edge(idx, lnc_idx);
-                ignore_numeric_constant_color += 1;
             } else {
-                int constant = float_to_int(lnc.constant / denominator);
-                auto key = std::make_pair(dummy_var_idx, constant);
-                auto result = num_var_constant_to_idx.find(key);
-                if (result == num_var_constant_to_idx.end()) {
-                    unsigned int idx = g->add_vertex(constant_to_color[constant]);
-                    num_var_constant_to_idx[key] = idx;
-                    g->add_edge(dummy_var_idx, idx);
-                    g->add_edge(idx, lnc_idx);
-                } else {
-                    unsigned int idx =(*result).second;
-                    g->add_edge(dummy_var_idx, idx);
-                    g->add_edge(idx, lnc_idx);
-                }
+                unsigned int idx =(*result).second;
+                g->add_edge(dummy_var_idx, idx);
+                g->add_edge(idx, lnc_idx);
             }
         }
     }
