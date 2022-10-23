@@ -23,6 +23,7 @@ class GraphCreator  {
 
     bool no_search;
     bool initialized;
+    bool ignore_numeric;
     ap_float precision;
 
 public:
