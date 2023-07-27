@@ -252,7 +252,7 @@ python fast-downward.py --build=release64 domain.pddl problem.pddl --search "ast
 python fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric(use_second_order_simple=true))"
 ```
 
-#### h^{LM-cut}_1 (Kuroiwa et al. 2022b) and h^{LM-cut} (h^{LM-cut}_{cri}) (Kuroiwa et al. 2022)
+#### h^{LM-cut}\_1 (Kuroiwa et al. 2022b) and h^{LM-cut} (h^{LM-cut}_{cri}) (Kuroiwa et al. 2022)
 
 ```bash
 python fast-downward.py --build=release64 domain.pddl problem.pddl --search "astar(lmcutnumeric)"
