@@ -42,7 +42,7 @@ void LandmarkFactoryScala::generate_link_precondition_action(){
             condition_to_action[c].insert(op_id);
             facts_collection[c] = precondition;
         }
-        set<int> &preconditions = numeric_task.get_action_num_list(op_id);
+        const set<int> &preconditions = numeric_task.get_action_num_list(op_id);
         for (size_t c_id : preconditions) {
             // numeric preconditions
             for (int nc_id : numeric_task.get_numeric_conditions_id(c_id)){
@@ -67,7 +67,7 @@ void LandmarkFactoryScala::generate_possible_achievers(){
     size_t n_numeric_variables = numeric_task.get_n_numeric_variables();
     for (size_t nc_id = 0; nc_id < numeric_task.get_n_conditions(); ++nc_id){
         for (size_t op_id = 0; op_id < task.get_operators().size(); ++op_id){
-            LinearNumericCondition &nc = numeric_task.get_condition(nc_id);
+            const LinearNumericCondition &nc = numeric_task.get_condition(nc_id);
             double cumulative_effect = 0;//nc.constant;
             for (size_t v = 0; v < n_numeric_variables; ++v){
                 cumulative_effect+=(nc.coefficients[v]*numeric_task.get_action_eff_list(op_id)[v]);
@@ -120,7 +120,7 @@ set<int> & LandmarkFactoryScala::compute_landmarks(const State &state) {
     }
     
     for (size_t var = 0; var < numeric_task.get_n_conditions(); ++var) {
-        LinearNumericCondition &num_values = numeric_task.get_condition(var);
+        const LinearNumericCondition &num_values = numeric_task.get_condition(var);
         double lower_bound = - num_values.constant;
         for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
             int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -144,10 +144,10 @@ set<int> & LandmarkFactoryScala::compute_landmarks(const State &state) {
             }
         }
         // add there numeric actions
-        set<int> &preconditions = numeric_task.get_action_num_list(op_id);
+        const set<int> &preconditions = numeric_task.get_action_num_list(op_id);
         for (int pre : preconditions){
             for (int c : numeric_task.get_numeric_conditions_id(pre)){
-                LinearNumericCondition &lnc = numeric_task.get_condition(c);
+                const LinearNumericCondition &lnc = numeric_task.get_condition(c);
                 double value = lnc.constant;
                 for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
                     int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -268,7 +268,7 @@ bool LandmarkFactoryScala::check_conditions(int gr2){
         }
     }
     // add numeric precondition
-    set<int> &preconditions = numeric_task.get_action_num_list(gr2);
+    const set<int> &preconditions = numeric_task.get_action_num_list(gr2);
     for (int precondition : preconditions){
         for (int nc_id : numeric_task.get_numeric_conditions_id(precondition)){
             if (cond_num_dist[nc_id] == max_float)  {
@@ -360,7 +360,7 @@ bool LandmarkFactoryScala::update_lm(int p, OperatorProxy &gr, vector<set<int> >
                 previous.insert(c);
             }
         }
-        set<int> &preconditions = numeric_task.get_action_num_list(gr.get_id());
+        const set<int> &preconditions = numeric_task.get_action_num_list(gr.get_id());
         for (int precondition : preconditions){
             for (int nc_id : numeric_task.get_numeric_conditions_id(precondition)){
                 if (cond_num_dist[nc_id] == 1)  {
@@ -392,7 +392,7 @@ bool LandmarkFactoryScala::update_lm(int p, OperatorProxy &gr, vector<set<int> >
                     temp.insert(c);
                 }
             }
-            set<int> &preconditions = numeric_task.get_action_num_list(gr.get_id());
+            const set<int> &preconditions = numeric_task.get_action_num_list(gr.get_id());
             for (int precondition : preconditions){
                 for (int nc_id : numeric_task.get_numeric_conditions_id(precondition)){
                     if (cond_num_dist[nc_id] == 1)  {
@@ -428,7 +428,7 @@ bool LandmarkFactoryScala::update_lm(int p, OperatorProxy &gr, vector<set<int> >
                     }
                     
                 }
-                set<int> &preconditions = numeric_task.get_action_num_list(gr.get_id());
+                const set<int> &preconditions = numeric_task.get_action_num_list(gr.get_id());
                 for (int precondition : preconditions){
                     for (int nc_id : numeric_task.get_numeric_conditions_id(precondition)){
                         int c = nc_id + numeric_task.get_n_propositions();
@@ -497,9 +497,9 @@ set<int> LandmarkFactoryScala::metric_sensitive_intersection(set<int> & previous
 
 bool LandmarkFactoryScala::check_if_smark_intersection_needed(){
     for (size_t nc_id = 0; nc_id < numeric_task.get_n_conditions(); ++nc_id ){
-        LinearNumericCondition &lnc = numeric_task.get_condition(nc_id);
+        const LinearNumericCondition &lnc = numeric_task.get_condition(nc_id);
         for (size_t nc2_id = 0; nc2_id < numeric_task.get_n_conditions(); ++nc2_id ){
-            LinearNumericCondition &lnc2 = numeric_task.get_condition(nc2_id);
+            const LinearNumericCondition &lnc2 = numeric_task.get_condition(nc2_id);
             // if there is at least one domination, than it's needed
             if (numeric_task.get_dominance(nc_id,nc2_id)) return true;
             //if (lnc.dominate(lnc2)) return true;

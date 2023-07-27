@@ -154,7 +154,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 ap_float denominator = 1.0;
                 bool first = true;
                 for (auto coeff : lnc.coefficients) {
-                    if (std::fabs(coeff) > precision) {
+                    if (std::fabs(coeff) >= precision) {
                         if (first) {
                             denominator = std::fabs(coeff);
                             first = false;
@@ -174,7 +174,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             }
 
             for (ap_float k : numeric_task.get_action_eff_list(op.get_id())) {
-                if (std::fabs(k) > precision) {
+                if (std::fabs(k) >= precision) {
                     int normalized_k = float_to_int(k);
                     if (constant_to_color.find(normalized_k) == constant_to_color.end()) {
                         constant_to_color.insert(std::make_pair(normalized_k, current_color));
@@ -183,11 +183,11 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 }
             }
 
-            for (int i = 0; i < numeric_task.get_action_n_linear_eff(op.get_id()); ++i) {
+            for (size_t i = 0; i < numeric_task.get_action_n_linear_eff(op.get_id()); ++i) {
                 ap_float denominator = 1.0;
                 bool first = true;
                 for (auto coeff : numeric_task.get_action_linear_coefficients(op.get_id())[i]) {
-                    if (std::fabs(coeff) > precision) {
+                    if (std::fabs(coeff) >= precision) {
                         if (first) {
                             denominator = std::fabs(coeff);
                             first = false;
@@ -214,7 +214,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             ap_float denominator = 1.0;
             bool first = true;
             for (auto coeff : lnc.coefficients) {
-                if (std::fabs(coeff) > precision) {
+                if (std::fabs(coeff) >= precision) {
                     if (first) {
                         denominator = std::fabs(coeff);
                         first = false;
@@ -288,7 +288,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 ap_float denominator = 1.0;
                 bool first = true;
                 for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
-                    if (std::fabs(lnc.coefficients[j]) > precision) {
+                    if (std::fabs(lnc.coefficients[j]) >= precision) {
                         if (first) {
                             denominator = std::fabs(lnc.coefficients[j]);
                             first = false;
@@ -327,7 +327,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
 
         for (int i = 0, n = Permutation::regular_id_to_num_var.size(); i < n; ++i) {
             ap_float k = numeric_task.get_action_eff_list(op.get_id())[i];
-            if (std::fabs(k) > precision) {
+            if (std::fabs(k) >= precision) {
                 unsigned int eff_idx = g->add_vertex(effect_color);
                 g->add_edge(op_idx, eff_idx);
                 int k_int = float_to_int(k);
@@ -349,7 +349,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             }
         }
 
-        for (int i = 0; i < numeric_task.get_action_n_linear_eff(op.get_id()); ++i) {
+        for (size_t i = 0; i < numeric_task.get_action_n_linear_eff(op.get_id()); ++i) {
             unsigned int eff_idx = g->add_vertex(effect_color);
             g->add_edge(op_idx, eff_idx);
             int lhs = numeric_task.get_action_linear_lhs(op.get_id())[i];
@@ -361,7 +361,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
 
             for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
                 ap_float coeff = numeric_task.get_action_linear_coefficients(op.get_id())[i][j];
-                if (std::fabs(coeff) > precision) {
+                if (std::fabs(coeff) >= precision) {
                     if (first) {
                         denominator = coeff;
                         first = false;
@@ -385,7 +385,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             }
 
             ap_float constant = numeric_task.get_action_linear_constants(op.get_id())[i];
-            if (std::fabs(constant) > precision) {
+            if (std::fabs(constant) >= precision) {
                 int constant_int = float_to_int(constant / denominator);
                 auto key = std::make_pair(dummy_var_idx, constant_int);
                 auto result = num_var_constant_to_idx.find(key);
@@ -433,7 +433,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
                 ap_float denominator = 1.0;
                 bool first = true;
                 for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
-                    if (std::fabs(lnc.coefficients[j]) > precision) {
+                    if (std::fabs(lnc.coefficients[j]) >= precision) {
                         if (first) {
                             denominator = std::fabs(lnc.coefficients[j]);
                             first = false;
@@ -480,14 +480,14 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
         }
     }
     for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-        for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+        for (pair<int, int> var_value: numeric_task.get_propositional_goals(id_goal)) {
             if (!numeric_task.is_numeric_axiom(var_value.first)) {
                 int val_idx = Permutation::get_index_by_var_val(var_value.first, var_value.second);
                 g->add_edge(val_idx, goal_idx);
             }
         }
         for (int id_n_con : numeric_task.get_numeric_goals(id_goal)) {
-            LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
+            const LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
             unsigned int lnc_color = lnc.is_strictly_greater ? gt_color : ge_color;
             unsigned int lnc_idx = g->add_vertex(lnc_color);
             g->add_edge(lnc_idx, goal_idx);
@@ -496,7 +496,7 @@ bliss::Digraph* GraphCreator::create_bliss_directed_graph(const std::shared_ptr<
             bool first = true;
 
             for (int j = 0, n = Permutation::regular_id_to_num_var.size(); j < n; ++j) {
-                if (std::fabs(lnc.coefficients[j]) > precision) {
+                if (std::fabs(lnc.coefficients[j]) >= precision) {
                     if (first) {
                         denominator = std::fabs(lnc.coefficients[j]);
                         first = false;

@@ -29,7 +29,7 @@ void RelevanceConstraints::push_numeric(NumericTaskProxy &numeric_task, int c,
   size_t n_actions = numeric_task.get_n_actions();
   for (size_t op_id = 0; op_id < n_actions; ++op_id) {
     if (action_relevant[op_id]) continue;
-    LinearNumericCondition &lnc = numeric_task.get_condition(c);
+    const LinearNumericCondition &lnc = numeric_task.get_condition(c);
     ap_float net = 0;
     for (size_t var = 0; var < numeric_task.get_n_numeric_variables(); ++var) {
       net +=

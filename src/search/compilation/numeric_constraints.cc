@@ -153,7 +153,7 @@ void NumericConstraints::action_precondition_constraint(
     for (int pre : numeric_task.get_action_num_list(op_id)) {
       for (int i : numeric_task.get_numeric_conditions_id(pre)) {
         for (int t = t_min; t < t_max; ++t) {
-          LinearNumericCondition &lnc = numeric_task.get_condition(i);
+          const LinearNumericCondition &lnc = numeric_task.get_condition(i);
           double big_m = lnc.constant - numeric_task.get_epsilon(i);
 
           for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
@@ -250,7 +250,7 @@ void NumericConstraints::goal_state_constraint(
     list<int> numeric_goals = numeric_task.get_numeric_goals(id_goal);
     if (numeric_goals.empty()) continue;  // this is not a numeric goal
     for (int id_n_con : numeric_goals) {
-      LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
+      const LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
       lp::LPConstraint constraint(
           numeric_task.get_epsilon(id_n_con) - lnc.constant, infinity);
       for (size_t n_id = 0; n_id < numeric_task.get_n_numeric_variables();
@@ -282,7 +282,7 @@ void NumericConstraints::initialize_numeric_mutex() {
       if (op_id1 == op_id2 || numeric_mutex[op_id1][op_id2]) continue;
       for (int pre : numeric_task.get_action_num_list(op_id1)) {
         for (int i : numeric_task.get_numeric_conditions_id(pre)) {
-          LinearNumericCondition &lnc = numeric_task.get_condition(i);
+          const LinearNumericCondition &lnc = numeric_task.get_condition(i);
           ap_float net = 0;
           for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
             net += lnc.coefficients[nv_id] *

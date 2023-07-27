@@ -6,6 +6,7 @@
 #include "../task_tools.h"
 #include "../numeric_operator_counting/numeric_helper.h"
 #include "../utils/rng.h"
+#include "numeric_bound.h"
 
 #include <cassert>
 #include <functional>
@@ -30,10 +31,9 @@ namespace numeric_lm_cut_heuristic {
         int original_op_id_2;
         std::vector<RelaxedProposition *> preconditions;
         std::vector<RelaxedProposition *> effects;
-        std::vector<ap_float> numeric_effects;
+        std::vector<ap_float> sose_constants;
+        bool conditional;
         bool infinite;
-        int infinite_lhs;
-        bool plus_infinity;
         
         ap_float base_cost_1; // 0 for axioms, 1 for regular operators
         ap_float base_cost_2; // 0 for axioms, 1 for regular operators
@@ -46,48 +46,47 @@ namespace numeric_lm_cut_heuristic {
         
         string name;
         
-        RelaxedOperator(int id, std::vector<RelaxedProposition *> &&pre,
+        RelaxedOperator(std::vector<RelaxedProposition *> &&pre,
                         std::vector<RelaxedProposition *> &&eff,
-                        int op_id, ap_float base, string &n)
-        : id(id),
-          original_op_id_1(-1),
+                        int op_id, ap_float base, string &n, bool conditional)
+        : original_op_id_1(-1),
           original_op_id_2(op_id),
           preconditions(pre),
           effects(eff),
+          conditional(conditional),
           infinite(false),
-          infinite_lhs(-1),
           base_cost_1(0),
           base_cost_2(base),
           name(n) {
         }
 
-        RelaxedOperator(int id, std::vector<RelaxedProposition *> &&pre_1,
-                        const std::vector<RelaxedProposition *> &pre_2,
+        RelaxedOperator(std::vector<RelaxedProposition *> &&pre,
+                        int op_id, ap_float base, string &n, bool conditional, bool infinite)
+        : original_op_id_1(-1),
+          original_op_id_2(op_id),
+          preconditions(pre),
+          conditional(conditional),
+          infinite(infinite),
+          base_cost_1(0),
+          base_cost_2(base),
+          name(n) {
+        }
+
+        RelaxedOperator(std::vector<RelaxedProposition *> &&pre_1, const std::vector<RelaxedProposition *> &pre_2,
+                        std::vector<RelaxedProposition *> &&eff, std::vector<ap_float> &&sose_constants,
                         int op_id_1, int op_id_2, ap_float base_1, ap_float base_2, string &n_1, string& n_2)
-        : id(id),
-          original_op_id_1(op_id_1),
+        : original_op_id_1(op_id_1),
           original_op_id_2(op_id_2),
           preconditions(pre_1),
+          effects(eff),
+          sose_constants(sose_constants),
+          conditional(false),
           infinite(false),
-          infinite_lhs(-1),
           base_cost_1(base_1),
           base_cost_2(base_2),
           name(n_1 + " " + n_2) {
           preconditions.insert(preconditions.end(), pre_2.begin(), pre_2.end());
         }
-
-        RelaxedOperator(int id, std::vector<RelaxedProposition *> &&pre, int infinite_lhs, bool plus_infinity, int op_id, int base,
-                        string &n)
-        : id(id),
-          original_op_id_1(-1),
-          original_op_id_2(op_id),
-          preconditions(pre),
-          infinite(true),
-          infinite_lhs(infinite_lhs),
-          plus_infinity(plus_infinity),
-          base_cost_1(0),
-          base_cost_2(base),
-          name(n) {}
 
         void update_h_max_supporter();
         void select_random_supporter();
@@ -122,31 +121,42 @@ namespace numeric_lm_cut_heuristic {
         bool use_random_pcf;
         bool use_irmax;
         bool disable_ma;
-        bool use_linear_effects;
         bool use_second_order_simple;
+        bool use_constant_assignment;
         ap_float precision;
         ap_float epsilon;
         std::vector<ap_float> numeric_initial_state;
         std::vector<vector<RelaxedOperator *>> original_to_relaxed_operators;
+        std::vector<std::vector<std::vector<int>>> linear_effect_to_conditions_plus;
+        std::vector<std::vector<std::vector<int>>> linear_effect_to_conditions_minus;
+        std::vector<int> condition_to_op_id;
+        std::vector<std::vector<ap_float>> operator_to_simple_effects;
+        std::vector<std::vector<std::vector<ap_float>>> operator_condition_to_composite_coefficients;
+        std::vector<std::vector<bool>> operator_condition_to_has_upper_bound;
+        std::vector<std::vector<ap_float>> operator_condition_to_upper_bound;
+        bool use_bounds;
+        numeric_bound::NumericBound numeric_bound;
+        std::vector<std::vector<bool>> has_sose;
+        std::vector<double> op_base_cost;
         
         HeapQueue<RelaxedProposition *> priority_queue;
         
         void initialize();
+        ap_float calculate_base_operator_cost(size_t op_id) const;
         void build_relaxed_operator(const OperatorProxy &op, size_t op_id);
-        void add_relaxed_operator(std::vector<RelaxedProposition *> &&precondition,
-                                  std::vector<RelaxedProposition *> &&effects,
-                                  int op_id, ap_float base_cost, string &n);
+        std::vector<RelaxedProposition*> build_precondition(const OperatorProxy &op, size_t op_id);
+        void add_linear_conditions(const OperatorProxy &op);
+        size_t add_numeric_condition(numeric_helper::LinearNumericCondition lnc);
+        std::vector<numeric_helper::LinearNumericCondition> make_redundant_conditions(const numeric_helper::LinearNumericCondition &lnc, const std::set<int> &condition_ids) const;
+        bool has_effect(int op_id, const std::vector<ap_float> &coefficients) const;
+        bool has_constant_assignment_effect(int op_id, const std::vector<ap_float> &coefficients, bool use_bounded_linear) const;
+        bool has_linear_effect(int op_id, const std::vector<ap_float> &coefficients, bool use_bounded_linear, bool only_conditional) const;
+        std::vector<ap_float> calculate_composite_coefficients(int op_id, const numeric_helper::LinearNumericCondition &lnc) const;
+        std::pair<bool, ap_float> calculate_simple_effect_constant(int op_id, const std::vector<ap_float> &coefficients, bool use_bounded_linear) const;
+        std::pair<bool, std::vector<std::pair<int, ap_float>>> get_sose_supporters(const TaskProxy &task_proxy, int op_id, const numeric_helper::LinearNumericCondition &lnc) const;
         void build_linear_operators(const TaskProxy &task_proxy, const OperatorProxy &op);
-        void add_second_order_simple_operator(std::vector<RelaxedProposition *> &&precondition_1,
-                                              const std::vector<RelaxedProposition *> precondition_2,
-                                              int op_id_1, int op_id_2, ap_float base_cost_1, ap_float base_cost_2,
-                                              string &n_1, string &n_2);
-        void add_infinite_operators(const std::vector<RelaxedProposition *> &precondition, const std::vector<ap_float> &coeff,
-                                    ap_float constant, int infinite_lhs, int op_id, ap_float base_cost, string &n);
-        void add_infinite_operator(const std::vector<RelaxedProposition *> &precondiiton, numeric_helper::LinearNumericCondition &&lnc,
-                                   int lhs, bool plus_infinity, int op_id, ap_float base_cost, string &n);
-        void build_composite_conditions(const TaskProxy &task_proxy);
-        void build_numeric_effects();
+        void build_simple_effects();
+        void delete_noops();
         RelaxedProposition *get_proposition(const FactProxy &fact);
         RelaxedProposition *get_proposition(const int &n_condition);
         void setup_exploration_queue();
@@ -171,6 +181,8 @@ namespace numeric_lm_cut_heuristic {
         
         void update_queue(const State &state, RelaxedProposition *prec, RelaxedProposition *eff, RelaxedOperator *op);
         std::pair<ap_float, ap_float> calculate_numeric_times(const State &state, RelaxedProposition *effect, RelaxedOperator *relaxed_op, bool use_ma);
+        ap_float calculate_constant_assignment_effect(const State &state, int op_id, const std::vector<ap_float> &coefficients, bool use_bounded_linear) const;
+        ap_float calculate_linear_expression(const State &state, const std::vector<ap_float> &coefficients) const;
         
         void mark_goal_plateau(const State &state, RelaxedProposition *subgoal);
         void validate_h_max() const;
@@ -180,8 +192,9 @@ namespace numeric_lm_cut_heuristic {
         using LandmarkCallback = std::function<void (const Landmark &, int)>;
         
         LandmarkCutLandmarks(const TaskProxy &task_proxy, bool ceiling_less_than_one = false, bool ignore_numeric = false,
-                             bool use_random_pcf = false, bool use_irmax = false, bool disable_ma = false, bool use_linear_effects = false,
-                             bool use_second_order_simple = false, ap_float precision = 0.000001, ap_float epsilon = 0.001);
+                             bool use_random_pcf = false, bool use_irmax = false, bool disable_ma = false,
+                             bool use_second_order_simple = false, ap_float precision = 0.000001, ap_float epsilon = 0,
+                             bool use_constant_assignment = false, int bound_iterations = 0);
         virtual ~LandmarkCutLandmarks();
         
         /*

@@ -544,23 +544,23 @@ fast_downward_plugin(
   DEPENDS LP_SOLVER LANDMARK_CUT_HEURISTIC PDBS
 )
 
-fast_downward_plugin(
-    NAME GUROBI_IP_COMPILATION
-    HELP "IP compilations (Gurobi)"
-    SOURCES 
-        gurobi_compilation/iterative_horizon.cc
-        gurobi_compilation/ip_compilation.cc
-        gurobi_compilation/ip_constraint_generator.cc
-        gurobi_compilation/sc_compilation.cc
-        gurobi_compilation/sas_compilation.cc
-        gurobi_compilation/numeric_constraints.cc
-        gurobi_compilation/action_precedence_graph.cc
-        gurobi_compilation/action_cycle_elimination_callback.cc
-        gurobi_compilation/sc_cut_compilation.cc
-        gurobi_compilation/sas_cut_compilation.cc
-        gurobi_compilation/numeric_constraints_with_cuts.cc
-        gurobi_compilation/relevance_constraints.cc
-)
+# fast_downward_plugin(
+#     NAME GUROBI_IP_COMPILATION
+#     HELP "IP compilations (Gurobi)"
+#     SOURCES 
+#         gurobi_compilation/iterative_horizon.cc
+#         gurobi_compilation/ip_compilation.cc
+#         gurobi_compilation/ip_constraint_generator.cc
+#         gurobi_compilation/sc_compilation.cc
+#         gurobi_compilation/sas_compilation.cc
+#         gurobi_compilation/numeric_constraints.cc
+#         gurobi_compilation/action_precedence_graph.cc
+#         gurobi_compilation/action_cycle_elimination_callback.cc
+#         gurobi_compilation/sc_cut_compilation.cc
+#         gurobi_compilation/sas_cut_compilation.cc
+#         gurobi_compilation/numeric_constraints_with_cuts.cc
+#         gurobi_compilation/relevance_constraints.cc
+# )
 
 fast_downward_plugin(
     NAME PDBS
@@ -614,6 +614,14 @@ fast_downward_plugin(
         symmetries/graph_creator.cc
         symmetries/group.cc
         symmetries/permutation.cc
+)
+
+fast_downward_plugin(
+    NAME NUMERIC_BOUND
+    HELP "Bounds for numeric variables and effects"
+    SOURCES
+    numeric_landmarks/numeric_bound.cc
+	numeric_landmarks/bound_test.cc
 )
 
 fast_downward_add_plugin_sources(PLANNER_SOURCES)

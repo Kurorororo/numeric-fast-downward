@@ -70,7 +70,7 @@ namespace generalized_subgoaling_heuristic {
             initial_conditions.push_back(condition);
         }
         for (size_t var = 0; var < numeric_task.get_n_conditions(); ++var) {
-            LinearNumericCondition &num_values = numeric_task.get_condition(var);
+            const LinearNumericCondition &num_values = numeric_task.get_condition(var);
             double lower_bound = - num_values.constant + numeric_task.get_epsilon(var);
             for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
                 int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -175,7 +175,7 @@ namespace generalized_subgoaling_heuristic {
                 }
             } else {
                 int c = entry.first - n_propositons;
-                LinearNumericCondition &num_values = numeric_task.get_condition(c);
+                const LinearNumericCondition &num_values = numeric_task.get_condition(c);
                 double lower_bound = - num_values.constant + numeric_task.get_epsilon(c);
                 for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
                     int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -285,7 +285,7 @@ namespace generalized_subgoaling_heuristic {
         size_t n_numeric_variables = numeric_task.get_n_numeric_variables();
         for (size_t nc_id = 0; nc_id < numeric_task.get_n_conditions(); ++nc_id){
             for (size_t op_id = 0; op_id < task_proxy.get_operators().size(); ++op_id){
-                LinearNumericCondition &nc = numeric_task.get_condition(nc_id);
+                const LinearNumericCondition &nc = numeric_task.get_condition(nc_id);
                 double cumulative_effect = 0;//nc.constant;
                 for (size_t v = 0; v < n_numeric_variables; ++v){
                     cumulative_effect+=(nc.coefficients[v]*numeric_task.get_action_eff_list(op_id)[v]);

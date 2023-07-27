@@ -78,7 +78,7 @@ void DeleteRelaxationConstraints::add_goal_state_constraints(
     }
   }
   for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-    for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+    for (pair<int, int> var_value: numeric_task.get_propositional_goals(id_goal)) {
       lp::LPConstraint constraint(1., 1.);
       constraint.insert(indices_u_p[numeric_task.get_proposition(var_value.first, var_value.second)], 1.);
       goals.insert(numeric_task.get_proposition(var_value.first, var_value.second));
@@ -166,7 +166,7 @@ void DeleteRelaxationConstraints::add_numeric_conditions_constraints(
     std::vector<lp::LPConstraint> &constraints, double infinity) {
   // cout << "add numeric conditions constraints" << endl;
   for (size_t i = 0; i < numeric_task.get_n_conditions(); ++i) {
-    LinearNumericCondition &lnc = numeric_task.get_condition(i);
+    const LinearNumericCondition &lnc = numeric_task.get_condition(i);
     double l_b = lnc.constant;
     lp::LPConstraint constraint(-infinity, infinity);
     for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
@@ -531,7 +531,7 @@ bool DeleteRelaxationConstraints::dominated_action_first_condition(int i,
 
 bool DeleteRelaxationConstraints::numeric_condition_satisfied(
     int n, const State &state) {
-  LinearNumericCondition &num_values = numeric_task.get_condition(n);
+  const LinearNumericCondition &num_values = numeric_task.get_condition(n);
   double lower_bound = num_values.constant - numeric_task.get_epsilon(n);
   for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++) {
     int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -559,8 +559,8 @@ bool DeleteRelaxationConstraints::dominated_action_second_condition(
 
 // this is state-independent, can be precomputed
 bool DeleteRelaxationConstraints::dominated_seq_condition(int i, int j) {
-  set<int> &set_i = numeric_task.get_action_pre_del_list(i);
-  set<int> &set_j = numeric_task.get_action_pre_del_list(j);
+  const set<int> &set_i = numeric_task.get_action_pre_del_list(i);
+  const set<int> &set_j = numeric_task.get_action_pre_del_list(j);
   if (set_i.size() < set_j.size()) return false;
   for (int p : set_j) {
     if (set_i.find(p) != set_i.end()) return false;
@@ -677,13 +677,13 @@ void DeleteRelaxationConstraints::build_first_achiever(
   // find action landmarks
   int n_propositions = numeric_task.get_n_propositions();
   for (size_t op_id = 0; op_id < numeric_task.get_n_actions(); ++op_id) {
-    set<int> &pre_list = numeric_task.get_action_pre_list(op_id);
+    const set<int> &pre_list = numeric_task.get_action_pre_list(op_id);
     for (int p : pre_list) {
       set<int> &landmarks = landmarks_table[p];
       for (int l : landmarks) action_landmarks[op_id][l] = true;
     }
 
-    set<int> &num_list = numeric_task.get_action_num_list(op_id);
+    const set<int> &num_list = numeric_task.get_action_num_list(op_id);
     // cout << "op : " << op_id << endl;
     for (int pre : num_list) {
       // cout << "\tpre : " << pre << endl;
@@ -695,7 +695,7 @@ void DeleteRelaxationConstraints::build_first_achiever(
     }
 
     // now find the first achievers
-    set<int> &add_list = numeric_task.get_action_add_list(op_id);
+    const set<int> &add_list = numeric_task.get_action_add_list(op_id);
     for (int p : add_list) {
       if (!action_landmarks[op_id][p]) {
         fadd[op_id][p] = true;
@@ -703,7 +703,7 @@ void DeleteRelaxationConstraints::build_first_achiever(
       }
     }
 
-    set<int> &possible_add_list =
+    const set<int> &possible_add_list =
         numeric_task.get_action_possible_add_list(op_id);
     for (int c : possible_add_list) {
       if (!action_landmarks[op_id][c]) {
@@ -745,10 +745,10 @@ void DeleteRelaxationConstraints::inverse_action_detection() {
   for (int i = 0; i < n_ops; ++i) {
     for (int j = 0; j < n_ops; ++j) {
       // TODO: for inverse action you can use effects on numeric conditions
-      set<int> &pre_i = numeric_task.get_action_pre_list(i);
-      set<int> &pre_j = numeric_task.get_action_pre_list(j);
-      set<int> &add_i = numeric_task.get_action_add_list(i);
-      set<int> &add_j = numeric_task.get_action_add_list(j);
+      const set<int> &pre_i = numeric_task.get_action_pre_list(i);
+      const set<int> &pre_j = numeric_task.get_action_pre_list(j);
+      const set<int> &add_i = numeric_task.get_action_add_list(i);
+      const set<int> &add_j = numeric_task.get_action_add_list(j);
 
       if (set_include(add_i, pre_j) && set_include(add_j, pre_i)) {
         bool numeric_part = true;
@@ -769,8 +769,8 @@ void DeleteRelaxationConstraints::inverse_action_detection() {
   }
 }
 
-bool DeleteRelaxationConstraints::set_include(set<int> &first,
-                                              set<int> &second) {
+bool DeleteRelaxationConstraints::set_include(const set<int> &first,
+                                              const set<int> &second) {
   return std::includes(first.begin(), first.end(), second.begin(),
                        second.end());
 }
@@ -866,7 +866,7 @@ bool DeleteRelaxationConstraints::update_constraints(const State &state,
 
   if (!ignore_numeric) {
     for (size_t var = 0; var < numeric_task.get_n_conditions(); ++var) {
-      LinearNumericCondition &num_values = numeric_task.get_condition(var);
+      const LinearNumericCondition &num_values = numeric_task.get_condition(var);
       double lower_bound = numeric_task.get_small_m(var) - num_values.constant +
                            numeric_task.get_epsilon(var);
       for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++) {

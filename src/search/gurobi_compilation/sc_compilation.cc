@@ -46,7 +46,7 @@ void GurobiStateChangeModel::update(const int horizon,
 void GurobiStateChangeModel::create_sets(
     const std::shared_ptr<AbstractTask> task, bool use_linear_effects) {
   TaskProxy task_proxy(*task);
-  numeric_task = NumericTaskProxy(task_proxy, true, use_linear_effects);
+  numeric_task = NumericTaskProxy(task_proxy, false, true);
   OperatorsProxy ops = task_proxy.get_operators();
   int n_prop = numeric_task.get_n_propositions();
   VariablesProxy vars = task_proxy.get_variables();
@@ -195,7 +195,7 @@ void GurobiStateChangeModel::goal_state_constraint(
     model->addConstr(y_a[t_max][p] + y_pa[t_max][p] + y_m[t_max][p] >= 1, name);
   }
   for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-    for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+    for (pair<int, int> var_value: numeric_task.get_propositional_goals(id_goal)) {
       int p = numeric_task.get_proposition(var_value.first, var_value.second);
       std::string name = "SC_goal_" + std::to_string(id_goal) + "_" + std::to_string(p);
       if (!first) {

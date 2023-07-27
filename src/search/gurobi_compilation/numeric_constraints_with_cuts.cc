@@ -48,7 +48,7 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
           if (result == net_values.end()) {
             if (net_effect_actions.find(i) == net_effect_actions.end())
               net_effect_actions[i] = std::vector<int>();
-            LinearNumericCondition &lnc = numeric_task.get_condition(i);
+            const LinearNumericCondition &lnc = numeric_task.get_condition(i);
             for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
               net += lnc.coefficients[nv_id] *
                      numeric_task.get_action_eff_list(op_id2)[nv_id];
@@ -64,7 +64,7 @@ void NumericConstraintsWithCuts::initialize_numeric_mutex(
 
           // pre(op_id1) vs. linear(op_id2)
           if (has_linear_effects) {
-            LinearNumericCondition &lnc = numeric_task.get_condition(i);
+            const LinearNumericCondition &lnc = numeric_task.get_condition(i);
             for (int j = 0; j < numeric_task.get_action_n_linear_eff(op_id2);
                  ++j) {
               if (!precondition_to_negative[op_id1][op_id1]) {
@@ -303,7 +303,7 @@ void NumericConstraintsWithCuts::precondition_constraint(
           auto effect_actions = net_effect_actions.find(i);
 
           for (int t = t_min; t < t_max; ++t) {
-            LinearNumericCondition &lnc = numeric_task.get_condition(i);
+            const LinearNumericCondition &lnc = numeric_task.get_condition(i);
             double big_m = lnc.constant - numeric_task.get_epsilon(i);
 
             for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {

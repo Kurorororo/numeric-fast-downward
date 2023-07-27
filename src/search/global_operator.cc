@@ -182,7 +182,7 @@ void GlobalOperator::set_cost(ap_float init_cost) {
     	assert(g_state_registry);
     	vector<ap_float> initial_numeric = g_initial_state().get_numeric_vars();
     	vector<ap_float> initial_metric = vector<ap_float>(g_initial_state_numeric.size()); // this is bigger than needed, but we discard it anyways
-    	g_state_registry->get_numeric_successor(initial_numeric, initial_metric, (*this), 0);
+    	g_state_registry->get_numeric_successor(initial_numeric, initial_metric, (*this));
     	cost = g_state_registry->evaluate_metric(initial_numeric) - init_cost;
     } else
     	cost = 1;

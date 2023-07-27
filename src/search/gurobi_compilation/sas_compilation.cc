@@ -48,7 +48,7 @@ void GurobiSASStateChangeModel::update(const int horizon,
 void GurobiSASStateChangeModel::create_sets(
     const std::shared_ptr<AbstractTask> task, bool use_linear_effects) {
   TaskProxy task_proxy(*task);
-  numeric_task = NumericTaskProxy(task_proxy, true, use_linear_effects);
+  numeric_task = NumericTaskProxy(task_proxy, false, true);
   OperatorsProxy ops = task_proxy.get_operators();
   VariablesProxy vars = task_proxy.get_variables();
 
@@ -187,7 +187,7 @@ void GurobiSASStateChangeModel::goal_state_constraint(
     model->addConstr(lhs == 1, name);
   }
   for (size_t id_goal = 0; id_goal < numeric_task.get_n_numeric_goals(); ++id_goal) {
-    for (pair<int, int> var_value: numeric_task.get_propositoinal_goals(id_goal)) {
+    for (pair<int, int> var_value: numeric_task.get_propositional_goals(id_goal)) {
       std::string name = "SAS_goal_" + std::to_string(id_goal) + "_" + std::to_string(var_value.first);
       if (!first) {
         GRBConstr constraint = model->getConstrByName(name);

@@ -33,7 +33,7 @@ void NumericConstraints::initialize(
   cout << "initializing numeric" << endl;
   TaskProxy task_proxy(*task);
   has_linear_effects = use_linear_effects;
-  numeric_task = NumericTaskProxy(task_proxy, true, has_linear_effects);
+  numeric_task = NumericTaskProxy(task_proxy, false, true);
   initialize_numeric_mutex(action_mutex);
 
   if (num_repetition > 1) initialize_repetable_actions();
@@ -68,7 +68,7 @@ void NumericConstraints::initialize_numeric_mutex(
       if (op_id1 == op_id2 || action_mutex[op_id1][op_id2]) continue;
       for (int pre : numeric_task.get_action_num_list(op_id1)) {
         for (int i : numeric_task.get_numeric_conditions_id(pre)) {
-          LinearNumericCondition &lnc = numeric_task.get_condition(i);
+          const LinearNumericCondition &lnc = numeric_task.get_condition(i);
           ap_float net = 0;
           for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
             net += lnc.coefficients[nv_id] *
@@ -154,7 +154,7 @@ void NumericConstraints::initialize_repetable_actions() {
     bool is_repetable = true;
     for (int pre : numeric_task.get_action_num_list(op_id)) {
       for (int i : numeric_task.get_numeric_conditions_id(pre)) {
-        LinearNumericCondition &lnc = numeric_task.get_condition(i);
+        const LinearNumericCondition &lnc = numeric_task.get_condition(i);
         ap_float net = 0;
         ap_float coefficent_sum = 0.0;
         for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
@@ -314,7 +314,7 @@ void NumericConstraints::precondition_constraint(
     for (int pre : numeric_task.get_action_num_list(op_id)) {
       for (int i : numeric_task.get_numeric_conditions_id(pre)) {
         for (int t = t_min; t < t_max; ++t) {
-          LinearNumericCondition &lnc = numeric_task.get_condition(i);
+          const LinearNumericCondition &lnc = numeric_task.get_condition(i);
           double big_m = lnc.constant - numeric_task.get_epsilon(i);
 
           for (int nv_id = 0; nv_id < n_numeric_variables; ++nv_id) {
@@ -435,7 +435,7 @@ void NumericConstraints::goal_state_constraint(
         GRBConstr constraint = model->getConstrByName(name);
         model->remove(constraint);
       }
-      LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
+      const LinearNumericCondition &lnc = numeric_task.get_condition(id_n_con);
       GRBLinExpr lhs(lnc.constant);
       for (size_t var = 0; var < numeric_task.get_n_numeric_variables();
            ++var) {

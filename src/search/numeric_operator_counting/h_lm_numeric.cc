@@ -16,7 +16,7 @@ void LMNumericConstriants::initialize_constraints(
                                               const shared_ptr<AbstractTask> task, vector<lp::LPConstraint> & /*constraints*/,
                                               double /*infinity*/) {
     TaskProxy task_proxy(*task);
-    numeric_task = NumericTaskProxy(task_proxy,false);
+    numeric_task = NumericTaskProxy(task_proxy, false, false);
     factory = utils::make_unique_ptr<landmarks::LandmarkFactoryScala>(task);
 
 }
@@ -56,7 +56,7 @@ bool LMNumericConstriants::update_constraints(const State &state,
         } else {
             //cout << numeric_task.get_condition(i - numeric_task.get_n_propositions()) << " is a condition landmark" << endl;
             int id_n_con = i - numeric_task.get_n_propositions();
-            LinearNumericCondition& lnc = numeric_task.get_condition(id_n_con);
+            const LinearNumericCondition& lnc = numeric_task.get_condition(id_n_con);
             double lower_bound = -lnc.constant + numeric_task.get_epsilon(id_n_con);
             for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
                 int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;

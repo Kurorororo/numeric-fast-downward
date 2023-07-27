@@ -65,7 +65,7 @@ class DeleteRelaxationConstraints : public ConstraintGenerator {
 
   void inverse_action_detection();
 
-  bool set_include(set<int> &first, set<int> &second);
+  bool set_include(const set<int> &first, const set<int> &second);
 
   // update fact and action eliminated, return true if something is change,
   // false if not;

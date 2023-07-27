@@ -9,25 +9,24 @@ using namespace std;
 
 namespace numeric_helper {
 
-bool LinearNumericCondition::dominate(LinearNumericCondition &other) const {
+bool LinearNumericCondition::dominate(LinearNumericCondition &other, double precision) const {
   // if they are linearly dependent, than
   assert(coefficients.size() == other.coefficients.size());
-  const double epsilon = 0.00001;
   double ratio = 0;
   for (size_t v = 0; v < coefficients.size(); ++v) {
     double rhs = coefficients[v];
     double lhs = other.coefficients[v];
-    if (fabs(lhs) < epsilon) {
-      if (abs(rhs) > epsilon) return false;
+    if (fabs(lhs) < precision) {
+      if (abs(rhs) >= precision) return false;
     } else {
-      if (fabs(ratio) < epsilon) {
+      if (fabs(ratio) < precision) {
         ratio = rhs / lhs;
       }
-      if (ratio < epsilon) return false;
-      if (fabs(rhs / lhs - ratio) > epsilon) return false;
+      if (ratio < precision) return false;
+      if (fabs(rhs / lhs - ratio) >= precision) return false;
     }
   }
-  if (fabs(constant) - fabs(ratio * other.constant) > -epsilon) return true;
+  if (fabs(constant) - fabs(ratio * other.constant) >= -precision) return true;
   return false;
 }
 
@@ -52,30 +51,32 @@ std::ostream &operator<<(std::ostream &os, const LinearNumericCondition &lnc) {
 NumericVariable::NumericVariable(int id_, int id_at, double lb_, double ub_)
     : id_var(id_),
       id_abstract_task(id_at),
-      lower_bound(lb_),
-      upper_bound(ub_) {}
+      upper_bound(ub_),
+      lower_bound(lb_) {}
 
 bool NumericTaskProxy::redundant_constraints = true;
 
-NumericTaskProxy::NumericTaskProxy(const TaskProxy &task, bool additional,
-                                   bool use_linear_effects, double epsilon) {
+NumericTaskProxy::NumericTaskProxy(const TaskProxy &task, bool separate_constant_assignment, bool additional, double epsilon, double precision, double infinity)
+    : precision(precision), default_epsilon(epsilon) {
   bool numeric = true;
   if (numeric) build_numeric_variables(task);
   if (numeric) build_artificial_variables(task);
   if (numeric) build_numeric_conditions(task);
   if (numeric) build_numeric_goals(task);
   build_propositions(task);
-  build_actions(task, use_linear_effects);
+  build_actions(task, separate_constant_assignment);
   if (additional) {
     build_mutex_actions(task);
   }
 
-  if (numeric) calculates_bounds_numeric_variables();
-  if (numeric) calculates_small_m_and_epsilons();
+  if (numeric) {
+    calculates_bounds_numeric_variables(infinity);
+    calculates_small_m(infinity);
+    calculates_epsilons();
+  }
   if (additional) {
     if (numeric) calculates_dominance();
   }
-  default_epsilon = epsilon;
 }
 
 void NumericTaskProxy::calculates_dominance() {
@@ -85,8 +86,8 @@ void NumericTaskProxy::calculates_dominance() {
     LinearNumericCondition &lnc_i = numeric_conditions[i];
     for (int j = i; j < size; j++) {
       LinearNumericCondition &lnc_j = numeric_conditions[j];
-      if (lnc_i.dominate(lnc_j)) dominance_conditions[i][j] = true;
-      if (lnc_j.dominate(lnc_i)) dominance_conditions[j][i] = true;
+      if (lnc_i.dominate(lnc_j, precision)) dominance_conditions[i][j] = true;
+      if (lnc_j.dominate(lnc_i, precision)) dominance_conditions[j][i] = true;
     }
   }
 }
@@ -301,7 +302,7 @@ void NumericTaskProxy::build_propositions(const TaskProxy &task) {
 }
 
 
-void NumericTaskProxy::build_precondiiton(const FactProxy &condition,
+void NumericTaskProxy::build_precondition(const FactProxy &condition,
                                           std::set<int> &pre_list,
                                           std::set<int> &num_list) {
   int pre_var_id = condition.get_variable().get_id();
@@ -373,7 +374,7 @@ void NumericTaskProxy::build_redundant_constraints(const std::set<int> &list1, c
   }
 }
 
-void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &op, size_t op_id, bool use_linear_effects) {
+void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &op, size_t op_id, bool separate_constant_assignment) {
   vector<int> precondition(task.get_variables().size(), -1);
   actions[op_id].cost = op.get_cost();
   //cout << op_id << " " << op.get_name() <<  " " <<
@@ -382,7 +383,7 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
   for (FactProxy condition : op.get_preconditions()) {
     int pre_var_id = condition.get_variable().get_id();
     precondition[pre_var_id] = condition.get_value();
-    build_precondiiton(condition, actions[op_id].pre_list, actions[op_id].num_list);
+    build_precondition(condition, actions[op_id].pre_list, actions[op_id].num_list);
   }
 
   if (redundant_constraints) {
@@ -423,7 +424,7 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
       for (FactProxy condition : conditions) {
         int pre_var_id = condition.get_variable().get_id();
         extended_precondition[pre_var_id] = condition.get_value();
-        build_precondiiton(condition, actions[op_id].eff_conditions[index],
+        build_precondition(condition, actions[op_id].eff_conditions[index],
                            actions[op_id].eff_num_conditions[index]);
       }
 
@@ -435,11 +436,11 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
 
       int pre = extended_precondition[var];
       if (pre != -1) {
-        actions[op_id].conidiontal_add_list.push_back(propositions[var][post]);
-        actions[op_id].conidiontal_del_list.push_back(propositions[var][pre]);
+        actions[op_id].conditional_add_list.push_back(propositions[var][post]);
+        actions[op_id].conditional_del_list.push_back(propositions[var][pre]);
       } else {
-        actions[op_id].conidiontal_add_list.push_back(propositions[var][post]);
-        actions[op_id].conidiontal_del_list.push_back(-1);
+        actions[op_id].conditional_add_list.push_back(propositions[var][post]);
+        actions[op_id].conditional_del_list.push_back(-1);
       }
     }
   }
@@ -466,29 +467,71 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
     int lhs = eff.get_assignment().get_affected_variable().get_id();
     int rhs = eff.get_assignment().get_assigned_variable().get_id();
     f_operator oper = eff.get_assignment().get_assigment_operator_type();
+    AssEffectConditionsProxy conditions = eff.get_conditions();
+    LinearNumericCondition &av = artificial_variables[rhs];
 
     // cout << "effect " << lhs << " " << rhs << " " << oper << endl;
     if (task.get_numeric_variables()[lhs].get_var_type() == instrumentation) {
+      // conditional or non-linear cost
+      if (conditions.size() > 0 || (oper != increase && oper != decrease)) {
+        continue;
+      }
+
+      // linear cost
+      std::vector<ap_float> coefficients(n_numeric_variables, 0.0);
+      bool no_coefficient = true;
+
+      for (size_t var = 0; var < n_numeric_variables; ++var) {
+        if (fabs(av.coefficients[var]) >= precision) {
+          no_coefficient = false;
+
+          if (oper == decrease) {
+            coefficients[var] = -av.coefficients[var];
+          } else {
+            coefficients[var] = av.coefficients[var];
+          }
+        }
+      }
+
+      if (no_coefficient) {
+        if ((oper == decrease && av.constant >= precision) || (oper == increase && av.constant <= -precision)) {
+          std::cout << "negative action cost";
+          assert(false);
+        } else {
+          // constant cost
+          continue;
+        }
+      }
+
+      actions[op_id].cost = 0;
+      actions[op_id].linear_cost = true;
+      ap_float constant = oper == increase ? av.constant : -av.constant;
+      actions[op_id].cost_coefficients = coefficients;
+      actions[op_id].cost_constant = constant;
       continue;
     }
+
     int id_num = id_numeric_variable_inv[lhs];
     if (id_num == -1) {
       cout << "Error: variable not constant" << endl;
       assert(false);
     }
 
-    AssEffectConditionsProxy conditions = eff.get_conditions();
-
-    LinearNumericCondition &av = artificial_variables[rhs];
-    bool is_simple_effect = oper == increase || oper == decrease;
-    if (use_linear_effects) {
-      for (int var = 0; var < n_numeric_variables; ++var) {
-        if (fabs(av.coefficients[var]) >= 0.0001) {
-          is_simple_effect = false;
-          break;
-        }
+    bool has_other_coefficients = false;
+    for (size_t var = 0; var < n_numeric_variables; ++var) {
+      if (var != static_cast<size_t>(id_num) && fabs(av.coefficients[var]) >= precision) {
+        has_other_coefficients = true;
+        break;
       }
     }
+
+    bool is_constant_effect = !has_other_coefficients && fabs(av.coefficients[id_num]) < precision;
+    bool is_simple_effect = is_constant_effect && (oper == increase || oper == decrease);
+    bool is_assignment_effect = separate_constant_assignment && !has_other_coefficients
+                                  && ((is_constant_effect && oper == assign)
+                                    || (fabs(av.coefficients[id_num] + 1) < precision && oper == increase)
+                                    || (fabs(av.coefficients[id_num] - 1) < precision && oper == decrease));
+
     if (is_simple_effect) {
       if (conditions.size() == 0) {
         if (oper == increase) actions[op_id].eff_list[id_num] = av.constant;
@@ -499,7 +542,7 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
         actions[op_id].num_eff_conditions.push_back(std::set<int>());
         actions[op_id].num_eff_num_conditions.push_back(std::set<int>());
         for (FactProxy condition : conditions) {
-          build_precondiiton(condition, actions[op_id].num_eff_conditions[index],
+          build_precondition(condition, actions[op_id].num_eff_conditions[index],
                              actions[op_id].num_eff_num_conditions[index]);
         }
         if (redundant_constraints) {
@@ -512,6 +555,34 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
         if (oper == decrease)
           actions[op_id].conditional_eff_list.push_back(std::make_pair(id_num, -av.constant));
       }
+    } else if (is_assignment_effect) {
+      if (conditions.size() == 0) {
+        if (oper == increase || oper == assign) {
+          actions[op_id].assign_list[id_num] = av.constant;
+        } else if (oper == decrease) {
+          actions[op_id].assign_list[id_num] = -av.constant;
+        } 
+        actions[op_id].is_assignment[id_num] = true;
+      } else {
+        int index = actions[op_id].n_conditional_assign_eff;
+        ++actions[op_id].n_conditional_assign_eff;
+        actions[op_id].assign_eff_conditions.push_back(std::set<int>());
+        actions[op_id].assign_eff_num_conditions.push_back(std::set<int>());
+        for (FactProxy condition : conditions) {
+          build_precondition(condition, actions[op_id].assign_eff_conditions[index],
+                             actions[op_id].assign_eff_num_conditions[index]);
+        }
+        if (redundant_constraints) {
+          set<int> original_list = actions[op_id].assign_eff_num_conditions[index];
+          build_redundant_constraints(original_list, actions[op_id].assign_eff_num_conditions[index]);
+          build_redundant_constraints(original_list, actions[op_id].num_list, actions[op_id].assign_eff_num_conditions[index]);
+        }
+        if (oper == increase || oper == assign) {
+          actions[op_id].conditional_assign_list.push_back(std::make_pair(id_num, av.constant));
+        } else if (oper == decrease) {
+          actions[op_id].conditional_assign_list.push_back(std::make_pair(id_num, -av.constant));
+        }
+      }
     } else {
       int index = actions[op_id].n_linear_eff;
       ++actions[op_id].n_linear_eff;
@@ -521,7 +592,7 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
 
       if (conditions.size() > 0) {
         for (FactProxy condition : conditions) {
-          build_precondiiton(condition, actions[op_id].linear_eff_conditions[index],
+          build_precondition(condition, actions[op_id].linear_eff_conditions[index],
                              actions[op_id].linear_eff_num_conditions[index]);
         }
         if (redundant_constraints) {
@@ -534,28 +605,28 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
       std::vector<ap_float> coefficients(n_numeric_variables, 0.0);
       switch (oper) {
         case (assign): {
-          for (int var = 0; var < n_numeric_variables; ++var) {
+          for (size_t var = 0; var < n_numeric_variables; ++var) {
             coefficients[var] = av.coefficients[var];
           }
-          actions[op_id].linear_eff_coefficeints.push_back(coefficients);
+          actions[op_id].linear_eff_coefficients.push_back(coefficients);
           actions[op_id].linear_eff_constants.push_back(av.constant);
           break;
         }
         case (increase): {
-          for (int var = 0; var < n_numeric_variables; ++var) {
+          for (size_t var = 0; var < n_numeric_variables; ++var) {
             coefficients[var] = av.coefficients[var];
-            if (id_num == var) coefficients[var] += 1.0;
+            if (static_cast<size_t>(id_num) == var) coefficients[var] += 1.0;
           }
-          actions[op_id].linear_eff_coefficeints.push_back(coefficients);
+          actions[op_id].linear_eff_coefficients.push_back(coefficients);
           actions[op_id].linear_eff_constants.push_back(av.constant);
           break;
         }
         case (decrease): {
-          for (int var = 0; var < n_numeric_variables; ++var) {
+          for (size_t var = 0; var < n_numeric_variables; ++var) {
             coefficients[var] = -av.coefficients[var];
-            if (id_num == var) coefficients[var] += 1.0;
+            if (static_cast<size_t>(id_num) == var) coefficients[var] += 1.0;
           }
-          actions[op_id].linear_eff_coefficeints.push_back(coefficients);
+          actions[op_id].linear_eff_coefficients.push_back(coefficients);
           actions[op_id].linear_eff_constants.push_back(-av.constant);
           break;
         }
@@ -569,8 +640,7 @@ void NumericTaskProxy::build_action(const TaskProxy &task, const OperatorProxy &
   }
 }
 
-void NumericTaskProxy::build_actions(const TaskProxy &task,
-                                     bool use_linear_effects) {
+void NumericTaskProxy::build_actions(const TaskProxy &task, bool separate_constant_assignment) {
   OperatorsProxy ops = task.get_operators();
   AxiomsProxy axioms = task.get_axioms();
   actions.assign(ops.size() + axioms.size(), Action(n_numeric_variables));
@@ -578,9 +648,9 @@ void NumericTaskProxy::build_actions(const TaskProxy &task,
   n_actions = ops.size();
   proposition_names.assign(n_propositions + n_conditions, "");
   for (size_t op_id = 0; op_id < ops.size(); ++op_id)
-    build_action(task, ops[op_id], op_id, use_linear_effects);
+    build_action(task, ops[op_id], op_id, separate_constant_assignment);
   for (size_t op_id = 0; op_id < axioms.size(); ++op_id)
-    build_action(task, axioms[op_id], ops.size() + op_id, use_linear_effects);
+    build_action(task, axioms[op_id], ops.size() + op_id, separate_constant_assignment);
   generate_possible_achievers(task);
 }
 
@@ -632,7 +702,7 @@ void NumericTaskProxy::generate_possible_achievers(const TaskProxy &task) {
   size_t n_numeric_variables = get_n_numeric_variables();
   for (size_t nc_id = 0; nc_id < get_n_conditions(); ++nc_id) {
     for (size_t op_id = 0; op_id < task.get_operators().size(); ++op_id) {
-      LinearNumericCondition &nc = get_condition(nc_id);
+      const LinearNumericCondition &nc = get_condition(nc_id);
       double cumulative_effect = 0;
       for (size_t v = 0; v < n_numeric_variables; ++v) {
         cumulative_effect +=
@@ -736,7 +806,7 @@ void NumericTaskProxy::build_numeric_goals(const TaskProxy &task) {
 }
 
 // this is for numeric simple plans only
-void NumericTaskProxy::calculates_bounds_numeric_variables() {
+void NumericTaskProxy::calculates_bounds_numeric_variables(double infinity) {
   // check if actions with effects on a real variable x : x + c have a
   // precondition - w*x > b, with c > 0, than upperbound is max(current state,
   // b+c)
@@ -745,7 +815,7 @@ void NumericTaskProxy::calculates_bounds_numeric_variables() {
     // cout << "check variable " << num_id << endl;
     for (size_t op_id = 0; op_id < n_actions; ++op_id) {
       double eff = actions[op_id].eff_list[num_id];
-      if (fabs(eff) < 0.0001) continue;  // action is not effecting the variable
+      if (fabs(eff) < precision) continue;  // action is not effecting the variable
       // cout << "\teffect on action " << op_id << " " << eff << endl;
       bool bound_for_this_action = false;
       double bound = 0;
@@ -757,7 +827,7 @@ void NumericTaskProxy::calculates_bounds_numeric_variables() {
           double k = numeric_conditions[nc_id].constant;
           // check if it's a condition of the form x + c : all other
           // coefficients are 0
-          if (!numeric_conditions[nc_id].simple_condition(num_id)) continue;
+          if (!numeric_conditions[nc_id].simple_condition(num_id, precision)) continue;
           // we have a condition of the simple type, we calculate the
           // constraints
           if (w * eff > 0) continue;  //
@@ -780,11 +850,11 @@ void NumericTaskProxy::calculates_bounds_numeric_variables() {
         // bound not found, set to infinity and interrupt cycle (cannot because
         // we might find a lower/upper bound)
         if (eff > 0) {
-          numeric_variables[num_id].upper_bound = 9999999;
+          numeric_variables[num_id].upper_bound = infinity;
           // cout << "upper bound of " << num_id << " cannot be calculated" <<
           // endl;
         } else {
-          numeric_variables[num_id].lower_bound = -9999999;
+          numeric_variables[num_id].lower_bound = -infinity;
           // cout << "lower bound of " << num_id << " cannot be calculated" <<
           // endl;
         }
@@ -797,47 +867,83 @@ void NumericTaskProxy::calculates_bounds_numeric_variables() {
   }
 }
 
-void NumericTaskProxy::calculates_small_m_and_epsilons() {
-  small_m.assign(n_conditions, -9999999);
-  epsilon.assign(n_conditions, 0);
+void NumericTaskProxy::calculates_small_m(double infinity) {
+  small_m.assign(n_conditions, -infinity);
   for (size_t i = 0; i < n_conditions; ++i) {
-    LinearNumericCondition &lnc = get_condition(i);
+    const LinearNumericCondition &lnc = get_condition(i);
     double l_b = lnc.constant;
 
     for (size_t n_id = 0; n_id < get_n_numeric_variables(); ++n_id) {
-      if (lnc.coefficients[n_id] > 0)
-        l_b += lnc.coefficients[n_id] * get_numeric_variable(n_id).lower_bound;
-      else
-        l_b += lnc.coefficients[n_id] * get_numeric_variable(n_id).upper_bound;
-    }
-    small_m[i] = l_b;
-    if (!lnc.is_strictly_greater) continue;
-    double min_epsilon = 9999999;
-    for (size_t op_id = 0; op_id < get_n_actions(); ++op_id) {
-      double effect = 0;
-      for (size_t n_id = 0; n_id < get_n_numeric_variables(); ++n_id) {
-        effect +=
-            lnc.coefficients[n_id] * get_action_eff_list(op_id)[n_id];
-      }
-      double local_epsilon = 1.0;
-      double integral_part;
-      double fractional_part = std::modf(effect, &integral_part);
-      while (fabs(fractional_part) > 0.00001) {
-        effect *= 10;
-        local_epsilon /= 10.0;
-        fractional_part = std::modf(effect, &integral_part);
-      }
-      if (fabs(local_epsilon) < min_epsilon && fabs(local_epsilon) > 0)
-        min_epsilon = fabs(local_epsilon);
-      for (int j = 0; j < get_action_n_linear_eff(op_id); ++j) {
-        int lhs = get_action_linear_lhs(op_id)[j];
-        if (fabs(lnc.coefficients[lhs]) > 0.0001) {
-          min_epsilon = default_epsilon;
+      if (lnc.coefficients[n_id] >= precision) {
+        auto v_l_b = get_numeric_variable(n_id).lower_bound;
+        if (v_l_b > -infinity) {
+          l_b += lnc.coefficients[n_id] * v_l_b;
+        } else {
+          l_b = -infinity;
+          break;
+        }
+      } else if (lnc.coefficients[n_id] <= -precision) {
+        auto v_u_b = get_numeric_variable(n_id).upper_bound;
+        if (v_u_b < infinity) {
+          l_b += lnc.coefficients[n_id] * v_u_b;
+        } else {
+          l_b = -infinity;
           break;
         }
       }
     }
-    epsilon[i] = min_epsilon;
+    small_m[i] = l_b;
   }
+}
+
+void NumericTaskProxy::calculates_epsilons() {
+  epsilon.assign(n_conditions, 0);
+  for (size_t i = 0; i < n_conditions; ++i) {
+    const LinearNumericCondition &lnc = get_condition(i);
+    if (!lnc.is_strictly_greater) continue;
+    double min_epsilon = calculates_epsilon(lnc.constant);
+    bool use_default_epsilon = false;
+    for (size_t op_id = 0; op_id < get_n_actions(); ++op_id) {
+      for (size_t j = 0; j < get_action_n_linear_eff(op_id); ++j) {
+        int lhs = get_action_linear_lhs(op_id)[j];
+        if (fabs(lnc.coefficients[lhs]) >= precision) {
+          use_default_epsilon = true;
+          break;
+        }
+      }
+
+      if (use_default_epsilon) {
+        break;
+      } else {
+        for (size_t n_id = 0; n_id < get_n_numeric_variables(); ++n_id) {
+          if (get_action_is_assignment(op_id)[n_id])
+            min_epsilon = std::min(min_epsilon, calculates_epsilon(get_action_assign_list(op_id)[n_id]));
+        }
+
+        double effect = 0;
+        for (size_t n_id = 0; n_id < get_n_numeric_variables(); ++n_id) {
+          effect += lnc.coefficients[n_id] * get_action_eff_list(op_id)[n_id];
+        }
+        min_epsilon = std::min(min_epsilon, calculates_epsilon(effect));
+      }
+    }
+    if (use_default_epsilon)
+      epsilon[i] = default_epsilon;
+    else
+      epsilon[i] = std::max(min_epsilon, default_epsilon);
+  }
+}
+
+double NumericTaskProxy::calculates_epsilon(double value) const {
+  double epsilon = 1.0;
+  double fractional_part = fabs(round(value) - value);
+
+  while (fractional_part >= precision) {
+    value *= 10;
+    epsilon /= 10.0;
+    fractional_part = fabs(round(value) - value);
+  }
+
+  return epsilon;
 }
 }  // namespace numeric_helper

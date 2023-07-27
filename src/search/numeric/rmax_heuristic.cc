@@ -74,7 +74,7 @@ namespace rmax_heuristic {
         }
         
         for (size_t var = 0; var < numeric_task.get_n_conditions(); ++var) {
-            LinearNumericCondition &num_values = numeric_task.get_condition(var);
+            const LinearNumericCondition &num_values = numeric_task.get_condition(var);
             double lower_bound = - num_values.constant + numeric_task.get_epsilon(var);
             for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
                 int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -100,7 +100,7 @@ namespace rmax_heuristic {
             // add there numeric actions
             for (int pre : numeric_task.get_action_num_list(op_id)){
                 for (int c : numeric_task.get_numeric_conditions_id(pre)){
-                    LinearNumericCondition &lnc = numeric_task.get_condition(c);
+                    const LinearNumericCondition &lnc = numeric_task.get_condition(c);
                     double value = lnc.constant - numeric_task.get_epsilon(c);
                     for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
                         int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -188,7 +188,7 @@ namespace rmax_heuristic {
             if (!satisfied_goals) continue;
             list<int> goals = numeric_task.get_numeric_goals(id_goal);
             for (int id_n_con : goals){
-                LinearNumericCondition& lnc = numeric_task.get_condition(id_n_con);
+                const LinearNumericCondition& lnc = numeric_task.get_condition(id_n_con);
                 //cout << "\t\tchecking goal " << lnc << " (" << id_n_con << ") " << cond_num_dist[id_n_con] << endl;
 //                /int c = id_n_con + n_propositions;
                 if (cond_num_dist[id_n_con] == max_float){
@@ -226,7 +226,7 @@ namespace rmax_heuristic {
         }
         
         for (int nc_id : possible_achievers[gr_id]){
-            LinearNumericCondition &lnc = numeric_task.get_condition(nc_id);
+            const LinearNumericCondition &lnc = numeric_task.get_condition(nc_id);
             double current_distance = cond_num_dist[nc_id];
             //cout << "\tpossible achiever " << lnc << ", " << current_distance << endl;
             if (current_distance > 0){
@@ -302,7 +302,7 @@ namespace rmax_heuristic {
     }
     
     double RMaxHeuristic::get_number_of_execution(int gr, const State &state, int n_condition){
-        LinearNumericCondition &num_values = numeric_task.get_condition(n_condition);
+        const LinearNumericCondition &num_values = numeric_task.get_condition(n_condition);
         double lower_bound =   -num_values.constant + numeric_task.get_epsilon(n_condition);
         for (size_t i = 0; i < numeric_task.get_n_numeric_variables(); i++){
             int id_num = numeric_task.get_numeric_variable(i).id_abstract_task;
@@ -341,7 +341,7 @@ namespace rmax_heuristic {
         size_t n_numeric_variables = numeric_task.get_n_numeric_variables();
         for (size_t nc_id = 0; nc_id < numeric_task.get_n_conditions(); ++nc_id){
             for (size_t op_id = 0; op_id < task_proxy.get_operators().size(); ++op_id){
-                LinearNumericCondition &nc = numeric_task.get_condition(nc_id);
+                const LinearNumericCondition &nc = numeric_task.get_condition(nc_id);
                 double cumulative_effect = 0;//nc.constant;
                 for (size_t v = 0; v < n_numeric_variables; ++v){
                     cumulative_effect+=(nc.coefficients[v]*numeric_task.get_action_eff_list(op_id)[v]);

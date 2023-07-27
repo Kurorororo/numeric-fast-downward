@@ -17,6 +17,11 @@ class LMCutNumericConstraints : public ConstraintGenerator {
     bool use_random_pcf;
     bool use_irmax;
     bool disable_ma;
+    bool use_second_order_simple;
+    bool use_constant_assignment;
+    bool use_bounds;
+    ap_float precision;
+    ap_float epsilon;
     std::unique_ptr<numeric_lm_cut_heuristic::LandmarkCutLandmarks> landmark_generator;
 public:
     LMCutNumericConstraints(const Options &opts);

@@ -187,9 +187,12 @@ public:
     /*
       Evaluate the instrumentation effects on the given state
      */
-    void get_numeric_successor(std::vector<ap_float> &predecessor_vals, std::vector<ap_float> &metric_part, const GlobalOperator &op, PackedStateBin *buffer);
+    void get_numeric_successor(std::vector<ap_float> &predecessor_vals, std::vector<ap_float> &metric_part, const GlobalOperator &op);
+    void get_numeric_successor(std::vector<ap_float> &predecessor_vals, std::vector<ap_float> &metric_part, const GlobalOperator &op, PackedStateBin *buffer,
+                               PackedStateBin const *previous_buffer);
 
-    void get_canonical_numeric_successor(std::vector<ap_float> &predecessor_vals, std::vector<ap_float> &metric_part, const GlobalOperator &op, PackedStateBin *buffer);
+    void get_canonical_numeric_successor(std::vector<ap_float> &predecessor_vals, std::vector<ap_float> &metric_part, const GlobalOperator &op, PackedStateBin *buffer,
+                                         PackedStateBin const *previous_buffer);
 
     GlobalState register_state(const std::vector<container_int> &values, std::vector<ap_float> &numeric_values);
 
