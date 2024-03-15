@@ -59,7 +59,8 @@ void dump_preprocessed_problem_description(const vector<Variable *> &variables,
 
 void dump_DTGs(const vector<Variable *> &ordering,
                vector<DomainTransitionGraph> &transition_graphs);
-void generate_cpp_input(bool causal_graph_acyclic,
+void generate_cpp_input(const string in_file,
+                        bool causal_graph_acyclic,
                         const vector<Variable *> &ordered_var,
                         const vector<NumericVariable *> &numeric_var,
                         const Metric &metric,

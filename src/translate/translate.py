@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import sys
 
+
 def python_version_supported():
     major, minor = sys.version_info[:2]
     return (major == 2 and minor >= 7) or (major, minor) >= (3, 2)
@@ -18,10 +19,10 @@ from copy import deepcopy
 from itertools import product
 
 import axiom_rules
-import numeric_axiom_rules
 import fact_groups
 import instantiate
 import normalize
+import numeric_axiom_rules
 import options
 import pddl
 import pddl_parser
@@ -1023,7 +1024,7 @@ def main():
 #         print("Init = %s" % [sas_task.init.values[avar]])
 
     with timers.timing("Writing output"):
-        with open("output.sas", "w") as output_file:
+        with open(options.sas_file, "w") as output_file:
             sas_task.output(output_file)
     print("Done! %s" % timer)
 
