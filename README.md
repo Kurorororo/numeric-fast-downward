@@ -151,6 +151,7 @@ Instal open solver interface.
 export DOWNWARD_COIN_ROOT=/path/to/osi
 sudo apt install zlib1g-dev
 wget http://www.coin-or.org/download/source/Osi/Osi-0.107.9.tgz
+tar -xzf Osi-0.107.9.tgz
 cd Osi-0.107.9
 ./configure CC="gcc"  CFLAGS="-pthread -Wno-long-long" \
             CXX="g++" CXXFLAGS="-pthread -Wno-long-long" \

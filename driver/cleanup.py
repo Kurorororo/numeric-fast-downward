@@ -1,5 +1,6 @@
-from itertools import count
 import os
+from itertools import count
+
 
 def _try_remove(f):
     try:
@@ -9,8 +10,8 @@ def _try_remove(f):
     return True
 
 def cleanup_temporary_files(args):
-    _try_remove("output.sas")
-    _try_remove("output")
+    _try_remove(args.sas_file)
+    _try_remove(args.sas_file + ".num")
     _try_remove(args.plan_file)
 
     for i in count(1):

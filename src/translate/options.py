@@ -11,6 +11,8 @@ def parse_args():
     argparser.add_argument(
         "task", help="path to task pddl file")
     argparser.add_argument(
+        "--sas_file", help="path to output sas file")
+    argparser.add_argument(
         "--relaxed", dest="generate_relaxed_task", action="store_true",
         help="output relaxed task (no delete effects)")
     argparser.add_argument(

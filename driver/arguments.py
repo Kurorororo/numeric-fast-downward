@@ -3,10 +3,7 @@
 import argparse
 import os.path
 
-from . import aliases
-from . import limits
-from . import util
-
+from . import aliases, limits, util
 
 DESCRIPTION = """Fast Downward driver script.
 
@@ -232,8 +229,13 @@ def _set_components_and_inputs(parser, args):
         args.components.append("validate")
 
     args.translate_inputs = []
-    args.preprocess_input = "output.sas"
-    args.search_input = "output"
+    args.preprocess_input = args.sas_file
+
+    # see src/preprocess/planner.cc main
+    args.preprocess_options = [args.sas_file]
+
+    # see src/preprocess/helper_functions.cc generate_cpp_input
+    args.search_input = args.sas_file + ".num"
 
     assert args.components
     first = args.components[0]
@@ -253,6 +255,7 @@ def _set_components_and_inputs(parser, args):
             args.translate_inputs = args.filenames
         else:
             parser.error("translator needs one or two input files")
+        args.translate_inputs += ["--sas_file", args.sas_file]
     elif first == "preprocess":
         if "--help" in args.preprocess_options:
             args.preprocess_input = None
@@ -267,6 +270,7 @@ def _set_components_and_inputs(parser, args):
             args.search_input, = args.filenames
         else:
             parser.error("search needs exactly one input file")
+        # args.search_input += ["--num_sas_file", nsas_file]
     else:
         assert False, first
 
@@ -365,6 +369,8 @@ def parse_args():
     # because the argument is a filename; in exceptional cases, "--"
     # can be used as an explicit separator. For example, "./fast-downward.py --
     # --help" passes "--help" to the search code.
+
+    parser.add_argument("--sas_file", help="path to output sas file")
 
     args = parser.parse_args()
 

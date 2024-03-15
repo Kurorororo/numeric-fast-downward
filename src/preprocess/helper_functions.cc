@@ -303,7 +303,8 @@ void dump_DTGs(const vector<Variable *> &ordering,
     }
 }
 
-void generate_cpp_input(bool /*solvable_in_poly_time*/,
+void generate_cpp_input(const string in_file,
+                        bool /*solvable_in_poly_time*/,
                         const vector<Variable *> &ordered_vars,
                         const vector<NumericVariable *> &numeric_vars,
                         const Metric &metric,
@@ -322,7 +323,7 @@ void generate_cpp_input(bool /*solvable_in_poly_time*/,
        since the planner doesn't handle it specially any more anyway. */
 
     ofstream outfile;
-    outfile.open("output", ios::out);
+    outfile.open(in_file + ".num", ios::out);
 
     outfile << "begin_version" << endl;
     outfile << PRE_FILE_VERSION << endl;

@@ -44,10 +44,12 @@ int main(int argc, const char **argv) {
      */
 	string line;
 	stringstream result;
+  string in_file = "_none_";
     if (argc == 2) {
         ifstream file_content;
-    	cout << "opening file " << argv[1] << endl;
-    	file_content.open(argv[1]);
+        in_file = argv[1];
+    	cout << "opening file " << in_file << endl;
+    	file_content.open(in_file);
     	while(getline(file_content, line)) {
         	result << line << endl;
         }
@@ -145,8 +147,8 @@ int main(int argc, const char **argv) {
     cout << "Preprocessor task size: " << task_size << endl;
 
     cout << "Writing output..." << endl;
-    generate_cpp_input(solveable_in_poly_time, ordering, numeric_ordering, metric,
-                       mutexes, initial_state, goals, operators, axioms_rel,
+    generate_cpp_input(in_file, solveable_in_poly_time, ordering, numeric_ordering, 
+             metric, mutexes, initial_state, goals, operators, axioms_rel,
 					   axioms_numeric, axioms_func_comp, global_constraint,
 					   successor_generator, transition_graphs, causal_graph);
     cout << "done" << endl;
